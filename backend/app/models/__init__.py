@@ -1,7 +1,10 @@
+from app.models.audit import AuditLog
 from app.models.case import Case, CaseMember
 from app.models.document import Document, StructuredRecord
 from app.models.entity import Entity, EntityCaseLink, EntityMention
 from app.models.enums import (
+    AuditAction,
+    AuditResult,
     CaseStatus,
     EntityType,
     RecordType,
@@ -9,10 +12,14 @@ from app.models.enums import (
     RelationshipType,
     UserRole,
 )
+from app.models.evidence import EvidenceBlock
 from app.models.relationship import RelationshipStaging
 from app.models.user import User
 
 __all__ = [
+    "AuditAction",
+    "AuditLog",
+    "AuditResult",
     "Case",
     "CaseMember",
     "CaseStatus",
@@ -21,6 +28,7 @@ __all__ = [
     "EntityCaseLink",
     "EntityMention",
     "EntityType",
+    "EvidenceBlock",
     "RecordType",
     "RelationshipStaging",
     "RelationshipStatus",

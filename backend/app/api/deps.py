@@ -8,8 +8,10 @@ from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.models.case import Case
 from app.models.document import Document
+from app.models.enums import AuditAction, AuditResult
 from app.models.user import User
 from app.services.access import user_can_access_case
+from app.services.audit import AuditWriteError, record_audit
 from app.services.auth import InvalidTokenError_, TokenExpiredError, decode_access_token
 from app.services.documents import DocumentNotFoundError, get_document
 
@@ -57,7 +59,37 @@ def require_case_access(
     if case is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found")
     if not user_can_access_case(db, user, case_id):
+        try:
+            record_audit(
+                db,
+                action=AuditAction.CASE_ACCESS_DENIED,
+                result=AuditResult.FAILURE,
+                user_id=user.id,
+                case_id=case_id,
+                resource_type="case",
+                resource_id=case_id,
+            )
+        except AuditWriteError:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="A database error occurred.",
+            ) from None
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    try:
+        record_audit(
+            db,
+            action=AuditAction.CASE_ACCESS_GRANTED,
+            result=AuditResult.SUCCESS,
+            user_id=user.id,
+            case_id=case_id,
+            resource_type="case",
+            resource_id=case_id,
+        )
+    except AuditWriteError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="A database error occurred.",
+        ) from None
     return case
 
 
@@ -77,5 +109,35 @@ def require_document_access(
     if case is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     if not user_can_access_case(db, user, document.case_id):
+        try:
+            record_audit(
+                db,
+                action=AuditAction.CASE_ACCESS_DENIED,
+                result=AuditResult.FAILURE,
+                user_id=user.id,
+                case_id=document.case_id,
+                resource_type="document",
+                resource_id=document.id,
+            )
+        except AuditWriteError:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="A database error occurred.",
+            ) from None
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    try:
+        record_audit(
+            db,
+            action=AuditAction.CASE_ACCESS_GRANTED,
+            result=AuditResult.SUCCESS,
+            user_id=user.id,
+            case_id=document.case_id,
+            resource_type="document",
+            resource_id=document.id,
+        )
+    except AuditWriteError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="A database error occurred.",
+        ) from None
     return document

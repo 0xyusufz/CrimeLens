@@ -13,9 +13,11 @@ from app.api.deps import get_current_user, get_db, require_case_access, require_
 from app.ml.adapter import MlContractError, MlDocumentProcessor, MlUnavailableError, get_ml_processor
 from app.models.case import Case
 from app.models.document import Document
+from app.models.enums import AuditAction, AuditResult
 from app.models.user import User
 from app.schemas.document import DocumentRead
 from app.schemas.processing import DocumentProcessResult
+from app.services.audit import AuditWriteError, record_audit
 from app.services.documents import (
     EmptyUploadError,
     FileTooLargeError,
@@ -76,6 +78,19 @@ def upload_document(
     except SQLAlchemyError:
         db.rollback()
         raise _database_error() from None
+    try:
+        record_audit(
+            db,
+            action=AuditAction.DOCUMENT_UPLOADED,
+            result=AuditResult.SUCCESS,
+            user_id=user.id,
+            case_id=case.id,
+            resource_type="document",
+            resource_id=document.id,
+            details={"filename": document.filename},
+        )
+    except AuditWriteError:
+        raise _database_error() from None
     return DocumentRead.model_validate(document)
 
 
@@ -95,7 +110,22 @@ def list_documents(
 @router.get("/documents/{document_id}", response_model=DocumentRead)
 def get_document_metadata(
     document: Document = Depends(require_document_access),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ) -> DocumentRead:
+    try:
+        record_audit(
+            db,
+            action=AuditAction.DOCUMENT_VIEWED,
+            result=AuditResult.SUCCESS,
+            user_id=user.id,
+            case_id=document.case_id,
+            resource_type="document",
+            resource_id=document.id,
+            details={"filename": document.filename},
+        )
+    except AuditWriteError:
+        raise _database_error() from None
     return DocumentRead.model_validate(document)
 
 
@@ -103,30 +133,76 @@ def get_document_metadata(
 def process_document(
     document: Document = Depends(require_document_access),
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
     processor: MlDocumentProcessor = Depends(get_ml_processor),
 ) -> DocumentProcessResult:
+    def _failed(reason: str) -> None:
+        record_audit(
+            db,
+            action=AuditAction.DOCUMENT_PROCESS_FAILED,
+            result=AuditResult.FAILURE,
+            user_id=user.id,
+            case_id=document.case_id,
+            resource_type="document",
+            resource_id=document.id,
+            details={"reason": reason},
+        )
+
     try:
-        return process_uploaded_document(db, document.id, processor)
+        result = process_uploaded_document(db, document.id, processor)
     except StoredFileMissingError:
+        try:
+            _failed("stored_file_missing")
+        except AuditWriteError:
+            raise _database_error() from None
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="The stored document file is missing.",
         ) from None
     except MlUnavailableError:
+        try:
+            _failed("ml_unavailable")
+        except AuditWriteError:
+            raise _database_error() from None
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="ML processing is not available yet.",
         ) from None
     except MlContractError:
+        try:
+            _failed("contract_validation")
+        except AuditWriteError:
+            raise _database_error() from None
         raise HTTPException(
             status_code=422,
             detail="ML output failed contract validation.",
         ) from None
     except GraphProjectionError:
+        try:
+            _failed("graph_projection")
+        except AuditWriteError:
+            raise _database_error() from None
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Graph projection failed.",
         ) from None
     except SQLAlchemyError:
         db.rollback()
+        try:
+            _failed("database")
+        except AuditWriteError:
+            raise _database_error() from None
         raise _database_error() from None
+    try:
+        record_audit(
+            db,
+            action=AuditAction.DOCUMENT_PROCESSED,
+            result=AuditResult.SUCCESS,
+            user_id=user.id,
+            case_id=document.case_id,
+            resource_type="document",
+            resource_id=document.id,
+        )
+    except AuditWriteError:
+        raise _database_error() from None
+    return result

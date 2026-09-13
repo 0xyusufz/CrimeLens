@@ -6,12 +6,14 @@ from sqlalchemy import create_engine, pool
 from app.config import postgres_url
 from app.db.base import Base
 from app.models import (  # noqa: F401
+    AuditLog,
     Case,
     CaseMember,
     Document,
     Entity,
     EntityCaseLink,
     EntityMention,
+    EvidenceBlock,
     RelationshipStaging,
     StructuredRecord,
     User,

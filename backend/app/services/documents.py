@@ -107,6 +107,10 @@ def read_upload_bytes(file_obj, *, max_bytes: int | None = None) -> bytes:
     return b"".join(chunks)
 
 
+def sha256_hex(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
 def create_document(
     session: Session,
     *,
@@ -121,7 +125,7 @@ def create_document(
     validate_upload(filename, content_type, data)
 
     document_id = uuid.uuid4()
-    digest = hashlib.sha256(data).hexdigest()
+    digest = sha256_hex(data)
     path = stored_file_path(document_id)
     path.write_bytes(data)
     document = Document(
