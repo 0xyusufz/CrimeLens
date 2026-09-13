@@ -56,6 +56,10 @@ class Case(Base):
         back_populates="case",
         cascade="all, delete-orphan",
     )
+    staged_relationships: Mapped[list["RelationshipStaging"]] = relationship(
+        back_populates="case",
+        cascade="all, delete-orphan",
+    )
 
 
 class CaseMember(Base):

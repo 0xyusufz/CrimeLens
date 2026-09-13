@@ -50,6 +50,9 @@ class Document(Base):
         back_populates="document",
         cascade="all, delete-orphan",
     )
+    staged_relationships: Mapped[list["RelationshipStaging"]] = relationship(
+        back_populates="source_document",
+    )
 
 
 class StructuredRecord(Base):
@@ -82,3 +85,6 @@ class StructuredRecord(Base):
 
     case: Mapped["Case"] = relationship(back_populates="structured_records")
     document: Mapped[Document] = relationship(back_populates="structured_records")
+    staged_relationships: Mapped[list["RelationshipStaging"]] = relationship(
+        back_populates="source_record",
+    )

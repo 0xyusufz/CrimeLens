@@ -12,6 +12,7 @@ from app.models import (  # noqa: F401
     Entity,
     EntityCaseLink,
     EntityMention,
+    RelationshipStaging,
     StructuredRecord,
     User,
 )

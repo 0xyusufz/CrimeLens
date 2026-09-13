@@ -53,6 +53,14 @@ class Entity(Base):
         back_populates="entity",
         cascade="all, delete-orphan",
     )
+    outgoing_staged_relationships: Mapped[list["RelationshipStaging"]] = relationship(
+        back_populates="source_entity",
+        foreign_keys="RelationshipStaging.source_entity_id",
+    )
+    incoming_staged_relationships: Mapped[list["RelationshipStaging"]] = relationship(
+        back_populates="target_entity",
+        foreign_keys="RelationshipStaging.target_entity_id",
+    )
 
 
 class EntityMention(Base):

@@ -9,6 +9,7 @@ from __future__ import annotations
 import sys
 import unittest
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,6 +30,9 @@ from app.models import (
     EntityMention,
     EntityType,
     RecordType,
+    RelationshipStaging,
+    RelationshipStatus,
+    RelationshipType,
     StructuredRecord,
     User,
     UserRole,
@@ -54,6 +58,7 @@ class PostgresFoundationTests(unittest.TestCase):
                 "entities",
                 "entity_mentions",
                 "entity_case_links",
+                "relationships_staging",
             }.issubset(tables)
         )
 
@@ -307,6 +312,191 @@ class PostgresFoundationTests(unittest.TestCase):
             self.assertIsNone(session.get(Entity, person.id))
             self.assertIsNone(session.get(EntityMention, linked_mention.id))
             self.assertIsNone(session.get(EntityCaseLink, link_a.id))
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    def test_relationships_staging(self):
+        session = SessionLocal()
+        suffix = uuid.uuid4().hex[:8]
+        extracted_at = datetime(2026, 9, 13, 10, 30, tzinfo=timezone.utc)
+        user = User(
+            name="Rel Tester",
+            email=f"rel-test-{suffix}@example.invalid",
+            password_hash="not-a-real-hash",
+            role=UserRole.INVESTIGATOR,
+        )
+        try:
+            session.add(user)
+            session.flush()
+
+            case = Case(
+                case_number=f"REL-{suffix}",
+                title="Relationship staging test",
+                status=CaseStatus.OPEN,
+                created_by=user.id,
+            )
+            session.add(case)
+            session.flush()
+
+            document = Document(
+                case_id=case.id,
+                filename="fir_rel.txt",
+                sha256_hash="2" * 64,
+                uploaded_by=user.id,
+            )
+            session.add(document)
+            session.flush()
+
+            cdr = StructuredRecord(
+                case_id=case.id,
+                document_id=document.id,
+                record_type=RecordType.CDR,
+                raw_json={"caller": "9876543210", "receiver": "9123456789", "duration": 120},
+            )
+            txn = StructuredRecord(
+                case_id=case.id,
+                document_id=document.id,
+                record_type=RecordType.TRANSACTION,
+                raw_json={"sender_account": "ACC001", "receiver_account": "ACC002", "amount": 45000},
+            )
+            session.add_all([cdr, txn])
+            session.flush()
+
+            source = Entity(type=EntityType.PERSON, canonical_name="Rahul Sharma")
+            target = Entity(type=EntityType.PERSON, canonical_name="Amit Kumar")
+            session.add_all([source, target])
+            session.flush()
+
+            called = RelationshipStaging(
+                source_occurrence_id="rel_001",
+                source_entity_id=source.id,
+                target_entity_id=target.id,
+                relationship_type=RelationshipType.CALLED,
+                confidence=0.98,
+                status=RelationshipStatus.CONFIRMED,
+                source_document_id=document.id,
+                source_record_id=None,
+                evidence_snippet="Rahul called Amit Kumar.",
+                extracted_at=extracted_at,
+                case_id=case.id,
+            )
+            sent = RelationshipStaging(
+                source_occurrence_id="rel_txn_001",
+                source_entity_id=source.id,
+                target_entity_id=target.id,
+                relationship_type=RelationshipType.SENT_MONEY_TO,
+                confidence=1.0,
+                status=RelationshipStatus.INFERRED,
+                source_document_id=None,
+                source_record_id=txn.id,
+                evidence_snippet=None,
+                extracted_at=extracted_at,
+                case_id=case.id,
+            )
+            predicted = RelationshipStaging(
+                source_occurrence_id="rel_002",
+                source_entity_id=source.id,
+                target_entity_id=target.id,
+                relationship_type=RelationshipType.CALLED,
+                confidence=0.82,
+                status=RelationshipStatus.PREDICTED,
+                source_document_id=document.id,
+                evidence_snippet="Possible additional call.",
+                extracted_at=extracted_at,
+                case_id=case.id,
+            )
+            session.add_all([called, sent, predicted])
+            session.flush()
+
+            loaded_called = session.get(RelationshipStaging, called.id)
+            loaded_sent = session.get(RelationshipStaging, sent.id)
+            self.assertEqual(loaded_called.status, RelationshipStatus.CONFIRMED)
+            self.assertEqual(loaded_called.source_document_id, document.id)
+            self.assertIsNone(loaded_called.source_record_id)
+            self.assertEqual(loaded_sent.status, RelationshipStatus.INFERRED)
+            self.assertEqual(loaded_sent.source_record_id, txn.id)
+            self.assertEqual(predicted.status, RelationshipStatus.PREDICTED)
+            self.assertNotEqual(loaded_called.status, RelationshipStatus.INFERRED)
+
+            same_entities = (
+                session.query(RelationshipStaging)
+                .filter(
+                    RelationshipStaging.source_entity_id == source.id,
+                    RelationshipStaging.target_entity_id == target.id,
+                    RelationshipStaging.relationship_type == RelationshipType.CALLED,
+                )
+                .all()
+            )
+            self.assertEqual(len(same_entities), 2)
+
+            with self.assertRaises(IntegrityError):
+                with session.begin_nested():
+                    session.add(
+                        RelationshipStaging(
+                            source_occurrence_id="rel_001",
+                            source_entity_id=source.id,
+                            target_entity_id=target.id,
+                            relationship_type=RelationshipType.CALLED,
+                            confidence=0.5,
+                            status=RelationshipStatus.CONFIRMED,
+                            source_document_id=document.id,
+                            extracted_at=extracted_at,
+                            case_id=case.id,
+                        )
+                    )
+                    session.flush()
+
+            with self.assertRaises(IntegrityError):
+                with session.begin_nested():
+                    session.add(
+                        RelationshipStaging(
+                            source_occurrence_id="rel_bad_conf",
+                            source_entity_id=source.id,
+                            target_entity_id=target.id,
+                            relationship_type=RelationshipType.CALLED,
+                            confidence=95,
+                            status=RelationshipStatus.CONFIRMED,
+                            source_document_id=document.id,
+                            extracted_at=extracted_at,
+                            case_id=case.id,
+                        )
+                    )
+                    session.flush()
+
+            with self.assertRaises(IntegrityError):
+                with session.begin_nested():
+                    session.add(
+                        RelationshipStaging(
+                            source_occurrence_id="rel_no_prov",
+                            source_entity_id=source.id,
+                            target_entity_id=target.id,
+                            relationship_type=RelationshipType.CALLED,
+                            confidence=0.5,
+                            status=RelationshipStatus.CONFIRMED,
+                            source_document_id=None,
+                            source_record_id=None,
+                            extracted_at=extracted_at,
+                            case_id=case.id,
+                        )
+                    )
+                    session.flush()
+
+            session.delete(called)
+            session.delete(sent)
+            session.delete(predicted)
+            session.delete(source)
+            session.delete(target)
+            session.delete(txn)
+            session.delete(cdr)
+            session.delete(document)
+            session.delete(case)
+            session.delete(user)
+            session.commit()
+
+            self.assertIsNone(session.get(RelationshipStaging, called.id))
         except Exception:
             session.rollback()
             raise

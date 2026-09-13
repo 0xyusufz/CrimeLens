@@ -24,3 +24,20 @@ class EntityType(str, Enum):
     ORGANIZATION = "ORGANIZATION"
     LOCATION = "LOCATION"
     EVENT = "EVENT"
+
+
+class RelationshipType(str, Enum):
+    CALLED = "CALLED"
+    SENT_MONEY_TO = "SENT_MONEY_TO"
+    OWNS_VEHICLE = "OWNS_VEHICLE"
+    USED_VEHICLE = "USED_VEHICLE"
+    WORKS_FOR = "WORKS_FOR"
+    LOCATED_AT = "LOCATED_AT"
+    ASSOCIATED_WITH = "ASSOCIATED_WITH"
+    PART_OF_EVENT = "PART_OF_EVENT"
+
+
+class RelationshipStatus(str, Enum):
+    CONFIRMED = "CONFIRMED"
+    INFERRED = "INFERRED"
+    PREDICTED = "PREDICTED"
