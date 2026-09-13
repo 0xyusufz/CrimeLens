@@ -9,3 +9,8 @@ class UserRole(str, Enum):
 class CaseStatus(str, Enum):
     OPEN = "OPEN"
     CLOSED = "CLOSED"
+
+
+class RecordType(str, Enum):
+    CDR = "CDR"
+    TRANSACTION = "TRANSACTION"

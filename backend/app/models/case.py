@@ -44,6 +44,14 @@ class Case(Base):
         back_populates="case",
         cascade="all, delete-orphan",
     )
+    documents: Mapped[list["Document"]] = relationship(
+        back_populates="case",
+        cascade="all, delete-orphan",
+    )
+    structured_records: Mapped[list["StructuredRecord"]] = relationship(
+        back_populates="case",
+        cascade="all, delete-orphan",
+    )
 
 
 class CaseMember(Base):

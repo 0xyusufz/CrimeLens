@@ -35,3 +35,7 @@ class User(Base):
         foreign_keys="Case.created_by",
     )
     case_memberships: Mapped[list["CaseMember"]] = relationship(back_populates="user")
+    uploaded_documents: Mapped[list["Document"]] = relationship(
+        back_populates="uploader",
+        foreign_keys="Document.uploaded_by",
+    )

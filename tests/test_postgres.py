@@ -18,7 +18,16 @@ sys.path.insert(0, str(ROOT))
 from sqlalchemy import inspect, text
 
 from app.db.session import SessionLocal, engine
-from app.models import Case, CaseMember, CaseStatus, User, UserRole
+from app.models import (
+    Case,
+    CaseMember,
+    CaseStatus,
+    Document,
+    RecordType,
+    StructuredRecord,
+    User,
+    UserRole,
+)
 
 
 class PostgresFoundationTests(unittest.TestCase):
@@ -30,7 +39,11 @@ class PostgresFoundationTests(unittest.TestCase):
     def test_core_tables_exist(self):
         inspector = inspect(engine)
         tables = set(inspector.get_table_names())
-        self.assertTrue({"users", "cases", "case_members"}.issubset(tables))
+        self.assertTrue(
+            {"users", "cases", "case_members", "documents", "structured_records"}.issubset(
+                tables
+            )
+        )
 
     def test_insert_read_delete(self):
         session = SessionLocal()
@@ -82,6 +95,89 @@ class PostgresFoundationTests(unittest.TestCase):
             self.assertIsNone(session.get(User, user.id))
             self.assertIsNone(session.get(Case, case.id))
             self.assertIsNone(session.get(CaseMember, member.id))
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    def test_documents_and_structured_records_insert_read_delete(self):
+        session = SessionLocal()
+        suffix = uuid.uuid4().hex[:8]
+        user = User(
+            name="Document Tester",
+            email=f"doc-test-{suffix}@example.invalid",
+            password_hash="not-a-real-hash",
+            role=UserRole.INVESTIGATOR,
+        )
+        try:
+            session.add(user)
+            session.flush()
+
+            case = Case(
+                case_number=f"DOC-{suffix}",
+                title="Document layer test case",
+                status=CaseStatus.OPEN,
+                created_by=user.id,
+            )
+            session.add(case)
+            session.flush()
+
+            document = Document(
+                case_id=case.id,
+                filename="cdr_and_txn.csv",
+                sha256_hash="0" * 64,
+                uploaded_by=user.id,
+            )
+            session.add(document)
+            session.flush()
+
+            cdr = StructuredRecord(
+                case_id=case.id,
+                document_id=document.id,
+                record_type=RecordType.CDR,
+                raw_json={
+                    "caller": "9876543210",
+                    "receiver": "9123456789",
+                    "duration": 120,
+                    "location": "Bhubaneswar",
+                },
+            )
+            txn = StructuredRecord(
+                case_id=case.id,
+                document_id=document.id,
+                record_type=RecordType.TRANSACTION,
+                raw_json={
+                    "sender_account": "ACC001",
+                    "receiver_account": "ACC002",
+                    "amount": 45000,
+                    "location": "Bhubaneswar",
+                },
+            )
+            session.add_all([cdr, txn])
+            session.flush()
+
+            loaded_doc = session.get(Document, document.id)
+            loaded_cdr = session.get(StructuredRecord, cdr.id)
+            loaded_txn = session.get(StructuredRecord, txn.id)
+            self.assertIsNotNone(loaded_doc)
+            self.assertEqual(loaded_doc.case_id, case.id)
+            self.assertEqual(loaded_doc.uploaded_by, user.id)
+            self.assertEqual(loaded_cdr.record_type, RecordType.CDR)
+            self.assertEqual(loaded_cdr.raw_json["caller"], "9876543210")
+            self.assertEqual(loaded_txn.record_type, RecordType.TRANSACTION)
+            self.assertEqual(loaded_txn.raw_json["amount"], 45000)
+
+            session.delete(txn)
+            session.delete(cdr)
+            session.delete(document)
+            session.delete(case)
+            session.delete(user)
+            session.commit()
+
+            self.assertIsNone(session.get(Document, document.id))
+            self.assertIsNone(session.get(StructuredRecord, cdr.id))
+            self.assertIsNone(session.get(StructuredRecord, txn.id))
         except Exception:
             session.rollback()
             raise
