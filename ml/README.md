@@ -72,7 +72,11 @@ FastAPI Schema Validation (`backend/` - Person A)
   - `rapid_transfer.py`: Detects rapid pass-through / layering chains (`RAPID_TRANSFER_CHAIN`: A → B → C) where A, B, and C are distinct nodes, $t_1 \le t_2$, and $t_2 - t_1 \le 48\text{ hours}$ (fixed MVP demo threshold). Rejects two-node back-and-forth loops and single transaction reuse.
   - `location_time_overlap.py`: Detects spatio-temporal co-presence (`LOCATION_TIME_OVERLAP`) across distinct entities at the same normalized location within $|t_1 - t_2| \le 2\text{ hours}$ (fixed MVP demo threshold). Safely rejects records with missing location, missing timestamp, or identical entities.
   - *Pattern Schema Contract*: Emits `shared.schemas.Pattern` instances with `status=RelationshipStatus.INFERRED` (NEVER `DETECTED`, never coerced to `CONFIRMED`) and `severity` (`HIGH` for financial flow, `MEDIUM` for spatio-temporal overlap). Note that `Pattern` has `extra="forbid"` and no confidence field.
-  - *Non-Persisting & Investigative*: Patterns are deterministic investigation-support findings only. ML does NOT persist patterns to PostgreSQL or Neo4j, mints zero database UUIDs, and performs NO criminal prediction or guilt scoring. Lead generation belongs to Phase 9.
+- **`ml/leads/`** (Phase 9):
+  - `lead_generator.py`: Generates deterministic, explainable investigative leads (`Lead`) from Phase 8 pattern outputs and evidence. Maps `CIRCULAR_TRANSACTION` and `RAPID_TRANSFER_CHAIN` to `HIGH` priority leads, and `LOCATION_TIME_OVERLAP` to `MEDIUM` priority leads.
+  - *Schema Adherence*: Emits `shared.schemas.Lead` instances with `priority` (`HIGH`, `MEDIUM`, `LOW`) and `status=LeadStatus.REVIEW_REQUIRED`. Strictly adheres to `extra="forbid"`: Lead contains NO `severity` field and NO `confidence` field.
+  - *Investigative Safety*: Leads are objective, explainable recommendations for investigator review. ML never generates person-level criminal risk scores, guilt determinations, or automated accusations.
+  - *Traceability & Boundary*: Preserves ML staging entity keys and source evidence record IDs without generating canonical PostgreSQL UUIDs or `case_id`. ML does not persist leads to databases.
 - **`ml/validation/`**:
   - `output_validator.py`: Validates all outgoing envelopes against the frozen schemas in `shared.schemas`.
 - **`ml/fixtures/`**: Test datasets, mock inputs, and sample payloads.
