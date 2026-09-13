@@ -53,8 +53,15 @@ FastAPI Schema Validation (`backend/` - Person A)
   - *Negation & Co-occurrence*: Co-occurrence alone never generates a relationship; basic negation is conservatively respected.
   - *Extraction vs Resolution Distinction*: Phase 5 identifies relationships between document mentions using staging mention IDs (`mention_001` -> `mention_002`). It does NOT perform cross-document entity resolution, canonical UUID generation, or graph edge writing in Neo4j.
   - *Backend Handoff*: Staged `Relationship` records are packaged in `ExtractionResult.relationships` and validated by FastAPI/Pydantic schemas before persistence by Person A.
-- **`ml/resolution/`**:
-  - `resolver.py`: Generates `ResolutionProposal` instances with signals (e.g., `phone_match`, `name_similarity`) for backend evaluation.
+- **`ml/resolution/`** (Phase 6):
+  - `resolver.py`: Compares extracted `EntityMention` instances and emits structured `shared.schemas.ResolutionProposal` objects.
+  - *Core Principle*: **ML proposes. Backend/database decides canonical persistence.** ML assigns grouping keys (`entity_001`, `entity_002`), never canonical database UUIDs or `case_id`.
+  - *Exact Strong Identifiers*: Exact normalized phone (`phone_match`), bank account (`account_match`), and vehicle registration (`vehicle_match`) produce high-confidence proposals (>= 0.90).
+  - *Multi-Signal Matching*: Combining name similarity with verified auxiliary identifiers (phone, account) strengthens proposal confidence to 0.98.
+  - *Fuzzy Name Policy*: Name-only fuzzy matching (`Rahul Kumar` vs `Rahul K.`) produces conservative review suggestions (confidence=0.60) and **NEVER** automatically merges entities.
+  - *Conflicting Identifiers*: Conflicting strong identifiers (e.g. same name but conflicting phones) suppress resolution proposals.
+  - *Type Safety*: Cross-type matching is strictly disallowed (e.g. PERSON ↔ BANK_ACCOUNT never resolve).
+  - *Backend Handoff*: Emitted proposals are validated against the frozen `ResolutionProposal` schema and handed off to Person A / FastAPI / PostgreSQL for canonicalization.
 - **`ml/patterns/`**:
   - `circular_transaction.py`: Detects cyclic money flow (`CIRCULAR_TRANSACTION`).
   - `rapid_transfer.py`: Detects rapid pass-through / layering chains (`RAPID_TRANSFER_CHAIN`).
