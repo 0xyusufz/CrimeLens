@@ -1,5 +1,27 @@
-"""OCR interfaces (Foundation stub)."""
+"""OCR interfaces and execution subpackage."""
 
-from ml.ocr.tesseract import extract_text_from_image
+from ml.ocr.tesseract import (
+    InvalidImageError,
+    OCREngineUnavailableError,
+    OCRError,
+    OCRProcessingError,
+    OCRResult,
+    UnsupportedImageFormatError,
+    extract_ocr_result,
+    extract_text_from_image,
+    is_ocr_available,
+    run_tesseract,
+)
 
-__all__ = ["extract_text_from_image"]
+__all__ = [
+    "InvalidImageError",
+    "OCREngineUnavailableError",
+    "OCRError",
+    "OCRProcessingError",
+    "OCRResult",
+    "UnsupportedImageFormatError",
+    "extract_ocr_result",
+    "extract_text_from_image",
+    "is_ocr_available",
+    "run_tesseract",
+]

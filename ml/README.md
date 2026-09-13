@@ -37,9 +37,10 @@ FastAPI Schema Validation (`backend/` - Person A)
 - **`ml/preprocessing/`** (Phase 2):
   - `document_loader.py`: Ingestion and reading of raw text and document files; flags scanned/image documents for Phase 3 OCR.
   - `text_normalizer.py`: Whitespace cleaning, CRLF->LF normalization, and Unicode NFC normalization while strictly preserving numbers, dates, amounts, phone/vehicle/account identifiers, and evidence phrasing.
-  - *Boundary*: Preprocessing does NOT perform OCR, entity extraction, or summarization. In Phase 3, OCR will extract raw text from image files, which will then be passed directly into this normalizer.
-- **`ml/ocr/`**:
-  - `tesseract.py`: Optical character recognition interface for image/scanned inputs.
+  - *Boundary*: Preprocessing does NOT perform OCR, entity extraction, or summarization. It receives text from document loader or raw text from Phase 3 OCR.
+- **`ml/ocr/`** (Phase 3):
+  - `tesseract.py`: Validates image bytes/files (PNG, JPEG, TIFF, BMP) and executes local Tesseract CLI; provides `extract_text_from_image(...)` and `extract_ocr_result(...)` with structured metadata.
+  - *Boundary*: OCR only extracts raw text from images and forwards it to Phase 2 `normalize_text`. It does NOT perform entity extraction, relationship extraction, or database writes.
 - **`ml/extraction/`**:
   - `ner.py`: Named entity recognition (`PERSON`, `LOCATION`, `ORGANIZATION`).
   - `regex.py`: Regular expression extractors (`PHONE`, `BANK_ACCOUNT`, `VEHICLE`).
