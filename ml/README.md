@@ -41,10 +41,11 @@ FastAPI Schema Validation (`backend/` - Person A)
 - **`ml/ocr/`** (Phase 3):
   - `tesseract.py`: Validates image bytes/files (PNG, JPEG, TIFF, BMP) and executes local Tesseract CLI; provides `extract_text_from_image(...)` and `extract_ocr_result(...)` with structured metadata.
   - *Boundary*: OCR only extracts raw text from images and forwards it to Phase 2 `normalize_text`. It does NOT perform entity extraction, relationship extraction, or database writes.
-- **`ml/extraction/`**:
-  - `ner.py`: Named entity recognition (`PERSON`, `LOCATION`, `ORGANIZATION`).
-  - `regex.py`: Regular expression extractors (`PHONE`, `BANK_ACCOUNT`, `VEHICLE`).
-  - `entity_extractor.py`: Unified entity extraction coordinator.
+- **`ml/extraction/`** (Phase 4):
+  - `regex.py`: Deterministic rule/regex extraction for structured identifiers (`PHONE`, `BANK_ACCOUNT`, `VEHICLE`).
+  - `ner.py`: Named entity recognition for contextual mentions (`PERSON`, `ORGANIZATION`, `LOCATION`, `EVENT`).
+  - `entity_extractor.py`: Coordinates regex and NER extraction, normalizes formatting, deduplicates safe overlapping candidates, and assigns unique document-level staging IDs (`mention_001`, `mention_002`, ...).
+  - *Boundary*: Entity extraction extracts mentions into schema-compliant `EntityMention` objects. It does NOT create relationships (Phase 5) or resolve/merge entities across mentions (Phase 6).
 - **`ml/relationships/`**:
   - `rule_extractor.py`: Rule- and pattern-based relationship extraction (`CALLED`, `SENT_MONEY_TO`, etc.) with required provenance and evidence snippets.
 - **`ml/resolution/`**:

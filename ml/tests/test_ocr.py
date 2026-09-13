@@ -96,8 +96,8 @@ class TestOCRIntegration(unittest.TestCase):
 
         self.assertIsInstance(result, ExtractionResult)
         self.assertEqual(result.document_id, "doc_text_001")
-        self.assertEqual(result.entities, [])
         self.assertEqual(result.relationships, [])
+        self.assertTrue(any(e.name == "Amit Kumar" for e in result.entities))
 
     def test_5_invalid_image(self):
         """TEST 5: Corrupt or non-image bytes raise InvalidImageError."""
