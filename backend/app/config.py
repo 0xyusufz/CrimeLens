@@ -22,3 +22,15 @@ def postgres_url() -> URL:
         port=int(os.environ["POSTGRES_PORT"]),
         database=os.environ["POSTGRES_DB"],
     )
+
+
+def neo4j_settings() -> tuple[str, str, str]:
+    """Return (uri, user, password) from environment. Never log the password."""
+    import os
+
+    load_env()
+    return (
+        os.environ["NEO4J_URI"],
+        os.environ["NEO4J_USER"],
+        os.environ["NEO4J_PASSWORD"],
+    )
