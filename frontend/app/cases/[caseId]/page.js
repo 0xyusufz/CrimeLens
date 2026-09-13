@@ -5,11 +5,15 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiClient } from "../../../lib/apiClient";
 import AuthLayout from "../../../components/Layout";
+import CaseGraphView from "../../../components/CaseGraphView";
 
 export default function CaseDetailsPage() {
   const { caseId } = useParams();
   const router = useRouter();
   const fileInputRef = useRef(null);
+
+  // Workspace Tab: "graph" | "documents"
+  const [activeTab, setActiveTab] = useState("graph");
 
   // Case data states
   const [caseData, setCaseData] = useState(null);
@@ -321,18 +325,54 @@ export default function CaseDetailsPage() {
               </div>
             </section>
 
-            {/* 2. DOCUMENTS MANAGEMENT SECTION */}
-            <section className="documents-section">
-              <div className="section-header-bar">
-                <div className="section-title-group">
-                  <div className="title-with-count">
-                    <h2 className="section-title">Evidence & Documents</h2>
-                    {!loadingDocs && (
-                      <span className="doc-count-badge">
-                        {documents.length} {documents.length === 1 ? "document" : "documents"}
-                      </span>
-                    )}
-                  </div>
+            {/* WORKSPACE NAVIGATION TABS */}
+            <div className="workspace-tabs-bar">
+              <button
+                onClick={() => setActiveTab("graph")}
+                className={`workspace-tab-btn ${activeTab === "graph" ? "tab-btn-active" : ""}`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="6" cy="6" r="3" />
+                  <circle cx="18" cy="18" r="3" />
+                  <circle cx="18" cy="6" r="3" />
+                  <line x1="8.5" y1="7.5" x2="15.5" y2="16.5" />
+                  <line x1="9" y1="6" x2="15" y2="6" />
+                </svg>
+                <span>Network Graph</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab("documents")}
+                className={`workspace-tab-btn ${activeTab === "documents" ? "tab-btn-active" : ""}`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+                <span>Evidence & Documents ({documents.length})</span>
+              </button>
+            </div>
+
+            {/* TAB 1: NETWORK GRAPH INVESTIGATION */}
+            {activeTab === "graph" && (
+              <section className="graph-workspace-section">
+                <CaseGraphView caseId={caseId} />
+              </section>
+            )}
+
+            {/* TAB 2: DOCUMENTS MANAGEMENT SECTION */}
+            {activeTab === "documents" && (
+              <section className="documents-section">
+                <div className="section-header-bar">
+                  <div className="section-title-group">
+                    <div className="title-with-count">
+                      <h2 className="section-title">Evidence & Documents</h2>
+                      {!loadingDocs && (
+                        <span className="doc-count-badge">
+                          {documents.length} {documents.length === 1 ? "document" : "documents"}
+                        </span>
+                      )}
+                    </div>
                   <p className="section-desc">
                     Evidentiary files, seized records, and analysis inputs registered to this investigation.
                   </p>
@@ -548,15 +588,57 @@ export default function CaseDetailsPage() {
                 )}
               </div>
             </section>
+          )}
           </div>
         )}
       </div>
 
       <style>{`
         .case-details-container {
-          max-width: 1100px;
+          max-width: 1240px;
           margin: 0 auto;
           padding: 1.5rem 1.5rem 4rem;
+        }
+
+        .workspace-tabs-bar {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          margin-bottom: 1.75rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          padding-bottom: 0.85rem;
+        }
+
+        .workspace-tab-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.55rem;
+          padding: 0.6rem 1.15rem;
+          background: rgba(15, 23, 42, 0.65);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 8px;
+          color: #94a3b8;
+          font-size: 0.84rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .workspace-tab-btn:hover {
+          background: rgba(22, 33, 58, 0.85);
+          color: #f1f5f9;
+          border-color: rgba(56, 189, 248, 0.3);
+        }
+
+        .tab-btn-active {
+          background: rgba(14, 165, 233, 0.15);
+          border-color: rgba(56, 189, 248, 0.45);
+          color: #38bdf8;
+          box-shadow: 0 0 14px rgba(14, 165, 233, 0.18);
+        }
+
+        .graph-workspace-section {
+          margin-bottom: 2rem;
         }
 
         .top-nav-bar {
