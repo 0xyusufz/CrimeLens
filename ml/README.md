@@ -34,9 +34,10 @@ FastAPI Schema Validation (`backend/` - Person A)
 
 - **`ml/pipeline.py`**: Main entry interface coordinating document analysis (`process_document(...)`).
 - **`ml/config.py`**: Lightweight ML parameters (confidence thresholds, max token lengths). Contains no database credentials.
-- **`ml/preprocessing/`**:
-  - `document_loader.py`: Ingestion and reading of raw text and document files.
-  - `text_normalizer.py`: Whitespace cleaning, unicode normalization, and formatting.
+- **`ml/preprocessing/`** (Phase 2):
+  - `document_loader.py`: Ingestion and reading of raw text and document files; flags scanned/image documents for Phase 3 OCR.
+  - `text_normalizer.py`: Whitespace cleaning, CRLF->LF normalization, and Unicode NFC normalization while strictly preserving numbers, dates, amounts, phone/vehicle/account identifiers, and evidence phrasing.
+  - *Boundary*: Preprocessing does NOT perform OCR, entity extraction, or summarization. In Phase 3, OCR will extract raw text from image files, which will then be passed directly into this normalizer.
 - **`ml/ocr/`**:
   - `tesseract.py`: Optical character recognition interface for image/scanned inputs.
 - **`ml/extraction/`**:
