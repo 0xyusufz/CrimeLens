@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from neo4j.exceptions import Neo4jError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -12,8 +15,16 @@ from app.models.enums import AuditAction, AuditResult
 from app.models.user import User
 from app.schemas.audit import AuditRead
 from app.schemas.case import CaseCreate, CaseListItem, CaseRead
+from app.schemas.entity import CaseGraphResult
 from app.schemas.ledger import EvidenceBlockRead
 from app.services.audit import AuditWriteError, list_audit_for_case, record_audit
+from app.services.case_graph import (
+    DEFAULT_GRAPH_LIMIT,
+    MAX_GRAPH_LIMIT,
+    EntityNotInCaseError,
+    InvalidGraphLimitError,
+    get_case_graph,
+)
 from app.services.cases import create_case as create_case_row
 from app.services.cases import list_cases_for_user
 from app.services.ledger import list_case_ledger
@@ -103,3 +114,45 @@ def list_case_ledger_blocks(
         db.rollback()
         raise _database_error() from None
     return [EvidenceBlockRead.model_validate(row) for row in rows]
+
+
+@router.get("/{case_id}/graph", response_model=CaseGraphResult)
+def get_case_subgraph(
+    case: Case = Depends(require_case_access),
+    entity_id: UUID | None = None,
+    limit: int = Query(default=DEFAULT_GRAPH_LIMIT, ge=1, le=MAX_GRAPH_LIMIT),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> CaseGraphResult:
+    try:
+        result = get_case_graph(db, case.id, entity_id=entity_id, limit=limit)
+        record_audit(
+            db,
+            action=AuditAction.CASE_GRAPH_VIEWED,
+            result=AuditResult.SUCCESS,
+            user_id=user.id,
+            case_id=case.id,
+            resource_type="case",
+            resource_id=case.id,
+            details={
+                "limit": limit,
+                "node_count": len(result.nodes),
+                "relationship_count": len(result.relationships),
+                "truncated": result.truncated,
+            },
+        )
+    except InvalidGraphLimitError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"limit must be between 1 and {MAX_GRAPH_LIMIT}.",
+        ) from None
+    except EntityNotInCaseError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Entity not found"
+        ) from None
+    except AuditWriteError:
+        raise _database_error() from None
+    except (SQLAlchemyError, Neo4jError):
+        db.rollback()
+        raise _database_error() from None
+    return result
