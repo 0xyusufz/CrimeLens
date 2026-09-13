@@ -40,6 +40,10 @@ class FileTooLargeError(Exception):
         super().__init__("Upload exceeds the maximum allowed size.")
 
 
+class StoredFileMissingError(Exception):
+    """The documents row exists but the local file is gone."""
+
+
 def stored_file_path(document_id: uuid.UUID) -> Path:
     base = upload_dir()
     base.mkdir(parents=True, exist_ok=True)
@@ -153,3 +157,10 @@ def get_document(session: Session, document_id: uuid.UUID) -> Document:
     if document is None:
         raise DocumentNotFoundError(document_id)
     return document
+
+
+def read_stored_document_bytes(document_id: uuid.UUID) -> bytes:
+    path = stored_file_path(document_id)
+    if not path.is_file():
+        raise StoredFileMissingError()
+    return path.read_bytes()

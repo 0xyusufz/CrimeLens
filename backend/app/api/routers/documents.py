@@ -1,9 +1,9 @@
-"""Document upload and metadata endpoints.
+"""Document upload, metadata, and ML processing endpoints.
 
 Unauthenticated in this milestone. `uploaded_by` uses the same development
 placeholder as case `created_by` until JWT exists. Files are stored locally
-under UPLOAD_DIR named by document UUID. ML processing and the evidence
-ledger are not invoked here.
+under UPLOAD_DIR named by document UUID. Processing validates Person B's
+ExtractionEnvelope, persists PostgreSQL, then projects Neo4j.
 """
 
 from __future__ import annotations
@@ -15,12 +15,15 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.ml.adapter import get_ml_processor, MlContractError, MlDocumentProcessor, MlUnavailableError
 from app.schemas.document import DocumentRead
+from app.schemas.processing import DocumentProcessResult
 from app.services.cases import CaseNotFoundError
 from app.services.documents import (
     DocumentNotFoundError,
     EmptyUploadError,
     FileTooLargeError,
+    StoredFileMissingError,
     UnsupportedFileTypeError,
     create_document,
     get_document,
@@ -28,6 +31,7 @@ from app.services.documents import (
     read_upload_bytes,
 )
 from app.services.identity import get_request_creator_id
+from app.services.processing import GraphProjectionError, process_uploaded_document
 
 router = APIRouter()
 
@@ -117,3 +121,41 @@ def get_document_metadata(
         db.rollback()
         raise _database_error() from None
     return DocumentRead.model_validate(document)
+
+
+@router.post("/documents/{document_id}/process", response_model=DocumentProcessResult)
+def process_document(
+    document_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    processor: MlDocumentProcessor = Depends(get_ml_processor),
+) -> DocumentProcessResult:
+    try:
+        return process_uploaded_document(db, document_id, processor)
+    except DocumentNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        ) from None
+    except StoredFileMissingError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="The stored document file is missing.",
+        ) from None
+    except MlUnavailableError:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="ML processing is not available yet.",
+        ) from None
+    except MlContractError:
+        raise HTTPException(
+            status_code=422,
+            detail="ML output failed contract validation.",
+        ) from None
+    except GraphProjectionError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Graph projection failed.",
+        ) from None
+    except SQLAlchemyError:
+        db.rollback()
+        raise _database_error() from None

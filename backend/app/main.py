@@ -8,8 +8,9 @@ app = FastAPI(
     description=(
         "Case and document APIs are unauthenticated in this milestone. "
         "created_by and uploaded_by use a development-only placeholder user "
-        "until JWT/RBAC is implemented. Uploaded files are stored locally; "
-        "ML processing and the evidence ledger are not invoked."
+        "until JWT/RBAC is implemented. Uploaded files are stored locally. "
+        "POST /api/documents/{document_id}/process validates Person B's "
+        "ExtractionEnvelope, persists to PostgreSQL, then projects Neo4j."
     ),
 )
 
