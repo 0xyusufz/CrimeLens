@@ -61,7 +61,12 @@ FastAPI Schema Validation (`backend/` - Person A)
   - *Fuzzy Name Policy*: Name-only fuzzy matching (`Rahul Kumar` vs `Rahul K.`) produces conservative review suggestions (confidence=0.60) and **NEVER** automatically merges entities.
   - *Conflicting Identifiers*: Conflicting strong identifiers (e.g. same name but conflicting phones) suppress resolution proposals.
   - *Type Safety*: Cross-type matching is strictly disallowed (e.g. PERSON ↔ BANK_ACCOUNT never resolve).
-  - *Backend Handoff*: Emitted proposals are validated against the frozen `ResolutionProposal` schema and handed off to Person A / FastAPI / PostgreSQL for canonicalization.
+- **`ml/structured/`** (Phase 7):
+  - `cdr.py`: Validates and normalizes Call Detail Records (`CDRRecord`), preserving `caller`, `callee`, `call_time`, `duration`, `location`, and `cell_id`. Enforces caller -> CALLED -> callee direction.
+  - `transactions.py`: Validates and normalizes financial records (`TransactionRecord`), preserving `sender`, `recipient`, `amount` (unrounded), `currency` (unconverted), `transaction_time`, and `location`. Enforces sender -> SENT_MONEY_TO -> recipient direction.
+  - *Pattern-Readiness*: Phase 7 prepares and preserves structured records for downstream analysis. **Phase 7 prepares structured data; Phase 8 detects patterns.** Zero `Pattern` or `Lead` objects are emitted in Phase 7.
+  - *Relationship Integration*: Provides clean adapters (`cdr_to_relationship`, `transaction_to_relationship`) directly compatible with Phase 5 relationship extraction.
+  - *Backend Boundary*: Structured record handling remains internal to ML; no database writes, no canonical UUIDs, and no API changes.
 - **`ml/patterns/`**:
   - `circular_transaction.py`: Detects cyclic money flow (`CIRCULAR_TRANSACTION`).
   - `rapid_transfer.py`: Detects rapid pass-through / layering chains (`RAPID_TRANSFER_CHAIN`).

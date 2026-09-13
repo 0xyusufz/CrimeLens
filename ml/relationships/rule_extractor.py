@@ -197,12 +197,25 @@ def extract_relationships(
     # -------------------------------------------------------------
     if structured_records:
         for rec in structured_records:
-            rec_id = str(rec.get("record_id") or rec.get("id") or f"rec_{rel_counter:03d}")
+            if hasattr(rec, "__dataclass_fields__"):
+                caller_val = getattr(rec, "caller", None)
+                callee_val = getattr(rec, "callee", None)
+                sender_val = getattr(rec, "sender", None)
+                recip_val = getattr(rec, "recipient", None)
+                rec_id = str(getattr(rec, "record_id", None) or f"rec_{rel_counter:03d}")
+                rec_type = "CDR" if caller_val and callee_val else ("TRANSACTION" if sender_val and recip_val else "")
+            else:
+                caller_val = rec.get("caller")
+                callee_val = rec.get("callee")
+                sender_val = rec.get("sender")
+                recip_val = rec.get("recipient")
+                rec_id = str(rec.get("record_id") or rec.get("id") or f"rec_{rel_counter:03d}")
+                rec_type = rec.get("type", "")
 
             # CDR records: caller -> CALLED -> callee
-            if rec.get("type") == "CDR" or ("caller" in rec and "callee" in rec):
-                caller_str = str(rec["caller"]).strip().lower()
-                callee_str = str(rec["callee"]).strip().lower()
+            if rec_type == "CDR" or (caller_val is not None and callee_val is not None):
+                caller_str = str(caller_val).strip().lower()
+                callee_str = str(callee_val).strip().lower()
 
                 src_ent = entity_by_name.get(caller_str)
                 tgt_ent = entity_by_name.get(callee_str)
@@ -230,9 +243,9 @@ def extract_relationships(
                         )
 
             # Transaction records: sender -> SENT_MONEY_TO -> recipient
-            elif rec.get("type") == "TRANSACTION" or ("sender" in rec and "recipient" in rec):
-                sender_str = str(rec["sender"]).strip().lower()
-                recip_str = str(rec["recipient"]).strip().lower()
+            elif rec_type == "TRANSACTION" or (sender_val is not None and recip_val is not None):
+                sender_str = str(sender_val).strip().lower()
+                recip_str = str(recip_val).strip().lower()
 
                 src_ent = entity_by_name.get(sender_str)
                 tgt_ent = entity_by_name.get(recip_str)
