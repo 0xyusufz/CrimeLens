@@ -18,6 +18,17 @@ ENTITY_LABELS = (
     "Event",
 )
 
+RELATIONSHIP_TYPES = (
+    "CALLED",
+    "SENT_MONEY_TO",
+    "OWNS_VEHICLE",
+    "USED_VEHICLE",
+    "WORKS_FOR",
+    "LOCATED_AT",
+    "ASSOCIATED_WITH",
+    "PART_OF_EVENT",
+)
+
 CONSTRAINTS = [
     *[
         (
@@ -37,6 +48,14 @@ CONSTRAINTS = [
         "CREATE CONSTRAINT document_document_id IF NOT EXISTS "
         "FOR (n:Document) REQUIRE n.document_id IS UNIQUE",
     ),
+    *[
+        (
+            f"{rel_type.lower()}_relationship_id",
+            f"CREATE CONSTRAINT {rel_type.lower()}_relationship_id IF NOT EXISTS "
+            f"FOR ()-[r:{rel_type}]-() REQUIRE r.relationship_id IS UNIQUE",
+        )
+        for rel_type in RELATIONSHIP_TYPES
+    ],
 ]
 
 

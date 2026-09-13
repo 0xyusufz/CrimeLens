@@ -67,15 +67,15 @@ class RelationshipStaging(Base):
         nullable=False,
         comment="ML relationship ID for this extracted occurrence, e.g. rel_001",
     )
-    source_entity_id: Mapped[uuid.UUID] = mapped_column(
+    source_entity_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("entities.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
-    target_entity_id: Mapped[uuid.UUID] = mapped_column(
+    target_entity_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("entities.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
     relationship_type: Mapped[RelationshipType] = mapped_column(
         Enum(RelationshipType, name="relationship_type", native_enum=True),
@@ -108,13 +108,13 @@ class RelationshipStaging(Base):
     )
 
     case: Mapped["Case"] = relationship(back_populates="staged_relationships")
-    source_entity: Mapped["Entity"] = relationship(
-        foreign_keys=[source_entity_id],
+    source_entity: Mapped["Entity | None"] = relationship(
         back_populates="outgoing_staged_relationships",
+        foreign_keys=[source_entity_id],
     )
-    target_entity: Mapped["Entity"] = relationship(
-        foreign_keys=[target_entity_id],
+    target_entity: Mapped["Entity | None"] = relationship(
         back_populates="incoming_staged_relationships",
+        foreign_keys=[target_entity_id],
     )
     source_document: Mapped["Document | None"] = relationship(
         back_populates="staged_relationships",

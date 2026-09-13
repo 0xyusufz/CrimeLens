@@ -484,6 +484,35 @@ class PostgresFoundationTests(unittest.TestCase):
                     )
                     session.flush()
 
+            unresolved_source = RelationshipStaging(
+                source_occurrence_id="rel_unresolved_source",
+                source_entity_id=None,
+                target_entity_id=target.id,
+                relationship_type=RelationshipType.CALLED,
+                confidence=0.70,
+                status=RelationshipStatus.INFERRED,
+                source_document_id=document.id,
+                extracted_at=extracted_at,
+                case_id=case.id,
+            )
+            unresolved_target = RelationshipStaging(
+                source_occurrence_id="rel_unresolved_target",
+                source_entity_id=source.id,
+                target_entity_id=None,
+                relationship_type=RelationshipType.CALLED,
+                confidence=0.71,
+                status=RelationshipStatus.INFERRED,
+                source_document_id=document.id,
+                extracted_at=extracted_at,
+                case_id=case.id,
+            )
+            session.add_all([unresolved_source, unresolved_target])
+            session.flush()
+            self.assertIsNone(session.get(RelationshipStaging, unresolved_source.id).source_entity_id)
+            self.assertIsNone(session.get(RelationshipStaging, unresolved_target.id).target_entity_id)
+
+            session.delete(unresolved_source)
+            session.delete(unresolved_target)
             session.delete(called)
             session.delete(sent)
             session.delete(predicted)
