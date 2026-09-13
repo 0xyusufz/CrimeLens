@@ -80,11 +80,42 @@ FastAPI Schema Validation (`backend/` - Person A)
 - **`ml/validation/`**:
   - `output_validator.py`: Validates all outgoing envelopes against the frozen schemas in `shared.schemas`.
 - **`ml/fixtures/`**: Test datasets, mock inputs, and sample payloads.
-- **`ml/tests/`**: Unit and integration test suites for Person B modules.
+- **`ml/tests/`**: Unit and integration test suites for Person B modules (166 tests across Phases 1–10).
+
+## Pipeline Invocation (Phase 10 Integration)
+
+The primary entry point for intelligence orchestration is `ml.pipeline.process_document`:
+
+```python
+from ml.pipeline import process_document
+
+# 1. Standard document analysis (returns ExtractionResult)
+result = process_document("doc_001", "Vikram Sharma (+919876543210) called Amit Kumar in Mumbai.")
+print(result.document_id)
+print(result.entities)
+print(result.relationships)
+
+# 2. Combined document + structured records analysis (returns full intelligence bundle)
+analysis = process_document(
+    "doc_002",
+    "FIR incident report text...",
+    transactions=[...],
+    cdrs=[...],
+    return_full_analysis=True,
+)
+print(analysis["extraction_result"])     # Validated ExtractionResult
+print(analysis["resolution_proposals"])  # Validated ResolutionProposal list
+print(analysis["patterns"])              # Validated Pattern list
+print(analysis["leads"])                 # Validated Lead list
+```
 
 ## Running Tests
 
 ```bash
-# Using project backend virtualenv
+# Run full ML test suite (Phases 1–10)
 .\backend\.venv\Scripts\python -m unittest discover -s ml/tests
+
+# Run shared schema contract validation
+.\backend\.venv\Scripts\python -m unittest tests/test_ml_contract.py
 ```
+
