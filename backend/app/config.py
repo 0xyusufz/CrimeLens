@@ -24,6 +24,17 @@ def postgres_url() -> URL:
     )
 
 
+def dev_case_creator_email() -> str:
+    """Email of the development-only placeholder used as cases.created_by.
+
+    Not authentication. Replace with the JWT subject when auth is implemented.
+    """
+    import os
+
+    load_env()
+    return os.environ.get("DEV_CASE_CREATOR_EMAIL", "dev-creator@crimelens.local")
+
+
 def neo4j_settings() -> tuple[str, str, str]:
     """Return (uri, user, password) from environment. Never log the password."""
     import os
