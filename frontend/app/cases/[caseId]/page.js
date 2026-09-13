@@ -6,6 +6,7 @@ import Link from "next/link";
 import { apiClient } from "../../../lib/apiClient";
 import AuthLayout from "../../../components/Layout";
 import CaseGraphView from "../../../components/CaseGraphView";
+import InvestigationPathView from "../../../components/InvestigationPathView";
 
 export default function CaseDetailsPage() {
   const { caseId } = useParams();
@@ -351,12 +352,29 @@ export default function CaseDetailsPage() {
                 </svg>
                 <span>Evidence & Documents ({documents.length})</span>
               </button>
+
+              <button
+                onClick={() => setActiveTab("path")}
+                className={`workspace-tab-btn ${activeTab === "path" ? "tab-btn-active" : ""}`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                </svg>
+                <span>Investigation Path</span>
+              </button>
             </div>
 
             {/* TAB 1: NETWORK GRAPH INVESTIGATION */}
             {activeTab === "graph" && (
               <section className="graph-workspace-section">
                 <CaseGraphView caseId={caseId} />
+              </section>
+            )}
+
+            {/* TAB 3: INVESTIGATION PATH */}
+            {activeTab === "path" && (
+              <section className="graph-workspace-section">
+                <InvestigationPathView caseId={caseId} />
               </section>
             )}
 
