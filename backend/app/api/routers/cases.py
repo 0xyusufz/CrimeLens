@@ -16,6 +16,7 @@ from app.models.user import User
 from app.schemas.audit import AuditRead
 from app.schemas.case import CaseCreate, CaseListItem, CaseRead
 from app.schemas.entity import CaseGraphResult
+from app.schemas.insights import CaseInsights
 from app.schemas.ledger import EvidenceBlockRead
 from app.services.audit import AuditWriteError, list_audit_for_case, record_audit
 from app.services.case_graph import (
@@ -27,6 +28,7 @@ from app.services.case_graph import (
 )
 from app.services.cases import create_case as create_case_row
 from app.services.cases import list_cases_for_user
+from app.services.insights import list_case_insights
 from app.services.ledger import list_case_ledger
 
 router = APIRouter()
@@ -153,6 +155,35 @@ def get_case_subgraph(
     except AuditWriteError:
         raise _database_error() from None
     except (SQLAlchemyError, Neo4jError):
+        db.rollback()
+        raise _database_error() from None
+    return result
+
+
+@router.get("/{case_id}/insights", response_model=CaseInsights)
+def get_case_insights(
+    case: Case = Depends(require_case_access),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> CaseInsights:
+    try:
+        result = list_case_insights(db, case.id)
+        record_audit(
+            db,
+            action=AuditAction.CASE_INSIGHTS_VIEWED,
+            result=AuditResult.SUCCESS,
+            user_id=user.id,
+            case_id=case.id,
+            resource_type="case",
+            resource_id=case.id,
+            details={
+                "pattern_count": len(result.patterns),
+                "lead_count": len(result.leads),
+            },
+        )
+    except AuditWriteError:
+        raise _database_error() from None
+    except SQLAlchemyError:
         db.rollback()
         raise _database_error() from None
     return result

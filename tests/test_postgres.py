@@ -61,6 +61,7 @@ class PostgresFoundationTests(unittest.TestCase):
                 "relationships_staging",
                 "audit_logs",
                 "evidence_blocks",
+                "intelligence_outputs",
             }.issubset(tables)
         )
 

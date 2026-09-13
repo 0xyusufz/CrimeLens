@@ -14,6 +14,7 @@ from app.models import (  # noqa: F401
     EntityCaseLink,
     EntityMention,
     EvidenceBlock,
+    IntelligenceOutput,
     RelationshipStaging,
     StructuredRecord,
     User,

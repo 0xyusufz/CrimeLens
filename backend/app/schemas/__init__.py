@@ -11,6 +11,7 @@ from app.schemas.entity import (
     EntityConnectionsResult,
     EntityRead,
 )
+from app.schemas.insights import CaseInsights
 from app.schemas.investigation import (
     InvestigationPathNode,
     InvestigationPathRelationship,
@@ -27,6 +28,7 @@ __all__ = [
     "CaseGraphNode",
     "CaseGraphRelationship",
     "CaseGraphResult",
+    "CaseInsights",
     "CaseListItem",
     "CaseRead",
     "DocumentProcessResult",

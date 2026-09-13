@@ -35,6 +35,52 @@ _PERSON_B_CANDIDATES = (
     ("ml.extract", "process_document"),
 )
 
+_PERSON_B_PATTERN_CANDIDATES = (
+    ("ml.process", "detect_patterns"),
+    ("ml.pipeline", "detect_patterns"),
+    ("ml.extract", "detect_patterns"),
+)
+
+
+def load_person_b_detect_patterns():
+    """Return Person B's pattern entry point if it exists. Does not implement patterns here."""
+    for module_name, attr in _PERSON_B_PATTERN_CANDIDATES:
+        try:
+            module = importlib.import_module(module_name)
+        except ImportError:
+            continue
+        fn = getattr(module, attr, None)
+        if callable(fn):
+            return fn
+    return None
+
+
+def collect_person_b_intelligence(
+    processor: MlDocumentProcessor,
+    document_bytes: bytes,
+    filename: str,
+    document_id: uuid.UUID,
+) -> tuple[list, list]:
+    """Return (patterns_raw, leads_raw). Empty when Person B has no pattern entry point."""
+    detect = getattr(processor, "detect_patterns", None)
+    if not callable(detect):
+        detect = load_person_b_detect_patterns()
+    if detect is None:
+        return [], []
+    try:
+        raw = detect(document_bytes, filename, str(document_id))
+    except MlUnavailableError:
+        return [], []
+    except Exception as exc:
+        raise MlContractError("ML pattern output failed contract validation.") from exc
+    if raw is None:
+        return [], []
+    if isinstance(raw, list):
+        return raw, []
+    if isinstance(raw, dict):
+        return raw.get("patterns") or [], raw.get("leads") or []
+    raise MlContractError("ML pattern output failed contract validation.")
+
 
 def load_person_b_process_document():
     """Return Person B's callable if it exists. Does not implement ML here."""

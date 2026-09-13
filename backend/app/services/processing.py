@@ -7,13 +7,25 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.graph.projection import project_case_graph
-from app.ml.adapter import MlDocumentProcessor, run_document_processor
+from app.ml.adapter import (
+    MlContractError,
+    MlDocumentProcessor,
+    collect_person_b_intelligence,
+    run_document_processor,
+)
 from app.models.document import Document, StructuredRecord
 from app.models.entity import Entity, EntityCaseLink, EntityMention
 from app.models.enums import EntityType, RelationshipStatus, RelationshipType
 from app.models.relationship import RelationshipStaging
 from app.schemas.processing import DocumentProcessResult
 from app.services.documents import get_document, read_stored_document_bytes
+from app.services.insights import (
+    IntelligenceContractError,
+    persist_leads,
+    persist_patterns,
+    validate_leads,
+    validate_patterns,
+)
 from shared.schemas import ExtractionEnvelope
 from shared.schemas import EntityMention as MlEntityMention
 from shared.schemas import Relationship as MlRelationship
@@ -245,6 +257,25 @@ def process_uploaded_document(
             for row in staged
             if row.source_entity_id is None or row.target_entity_id is None
         )
+        try:
+            raw_patterns, raw_leads = collect_person_b_intelligence(
+                processor, data, document.filename, document.id
+            )
+            persist_patterns(
+                session,
+                case_id=document.case_id,
+                patterns=validate_patterns(raw_patterns),
+                source_document_id=document.id,
+            )
+            persist_leads(
+                session,
+                case_id=document.case_id,
+                leads=validate_leads(raw_leads),
+                source_document_id=document.id,
+            )
+        except (IntelligenceContractError, MlContractError):
+            # Pattern/lead contract failure must not undo entities/relationships.
+            pass
         session.commit()
     except Exception:
         session.rollback()

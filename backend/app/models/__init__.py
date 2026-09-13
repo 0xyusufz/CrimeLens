@@ -7,12 +7,14 @@ from app.models.enums import (
     AuditResult,
     CaseStatus,
     EntityType,
+    IntelligenceKind,
     RecordType,
     RelationshipStatus,
     RelationshipType,
     UserRole,
 )
 from app.models.evidence import EvidenceBlock
+from app.models.intelligence import IntelligenceOutput
 from app.models.relationship import RelationshipStaging
 from app.models.user import User
 
@@ -29,6 +31,8 @@ __all__ = [
     "EntityMention",
     "EntityType",
     "EvidenceBlock",
+    "IntelligenceKind",
+    "IntelligenceOutput",
     "RecordType",
     "RelationshipStaging",
     "RelationshipStatus",
