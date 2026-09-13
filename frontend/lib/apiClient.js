@@ -13,10 +13,13 @@ class ApiError extends Error {
 export async function apiClient(endpoint, { method = "GET", body, headers = {}, ...customConfig } = {}) {
   const token = getToken();
   
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+  const defaultHeaders = isFormData ? {} : { "Content-Type": "application/json" };
+
   const config = {
     method,
     headers: {
-      "Content-Type": "application/json",
+      ...defaultHeaders,
       ...headers,
     },
     ...customConfig,
@@ -27,7 +30,7 @@ export async function apiClient(endpoint, { method = "GET", body, headers = {}, 
   }
 
   if (body) {
-    config.body = JSON.stringify(body);
+    config.body = isFormData ? body : JSON.stringify(body);
   }
 
   let response;
