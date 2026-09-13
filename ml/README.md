@@ -77,10 +77,10 @@ FastAPI Schema Validation (`backend/` - Person A)
   - *Schema Adherence*: Emits `shared.schemas.Lead` instances with `priority` (`HIGH`, `MEDIUM`, `LOW`) and `status=LeadStatus.REVIEW_REQUIRED`. Strictly adheres to `extra="forbid"`: Lead contains NO `severity` field and NO `confidence` field.
   - *Investigative Safety*: Leads are objective, explainable recommendations for investigator review. ML never generates person-level criminal risk scores, guilt determinations, or automated accusations.
   - *Traceability & Boundary*: Preserves ML staging entity keys and source evidence record IDs without generating canonical PostgreSQL UUIDs or `case_id`. ML does not persist leads to databases.
-- **`ml/validation/`**:
-  - `output_validator.py`: Validates all outgoing envelopes against the frozen schemas in `shared.schemas`.
+- **`ml/validation/`** (Phase 11):
+  - `output_validator.py`: Public validation interface for all contract models (`validate_extraction_result`, `validate_entity_mention`, `validate_relationship`, `validate_resolution_proposal`, `validate_pattern`, `validate_lead`) strictly enforcing the frozen Pydantic contracts in `shared.schemas`.
 - **`ml/fixtures/`**: Test datasets, mock inputs, and sample payloads.
-- **`ml/tests/`**: Unit and integration test suites for Person B modules (166 tests across Phases 1–10).
+- **`ml/tests/`**: Unit and integration test suites for Person B modules (238 tests across Phases 1–11).
 
 ## Pipeline Invocation (Phase 10 Integration)
 
@@ -109,13 +109,30 @@ print(analysis["patterns"])              # Validated Pattern list
 print(analysis["leads"])                 # Validated Lead list
 ```
 
+## Schema Validation & Contract Testing (Phase 11)
+
+All ML outputs are validated against the immutable frozen schemas in `shared.schemas/`:
+1. **Frozen Schemas**: `shared/schemas/` is the single source of truth. Models reject extra fields (`extra="forbid"`), and enums are frozen (`DETECTED` is disallowed; Lead priority is strictly `LOW`/`MEDIUM`/`HIGH`).
+2. **JSON Round-Trip Fidelity**: Every ML model supports lossless round-trip serialization:
+   ```python
+   # Pydantic v2 model -> JSON -> dict -> Contract Model
+   json_str = result.model_dump_json()
+   parsed_dict = json.loads(json_str)
+   revalidated = ExtractionResult.model_validate(parsed_dict)
+   ```
+3. **No Database UUIDs / Case IDs**: Staging IDs (`mention_xxx`, `rel_xxx`) and proposal IDs (`canonical_xxx`) are preserved. Zero PostgreSQL UUIDs or `case_id`s are minted in `ml/`.
+
 ## Running Tests
 
 ```bash
-# Run full ML test suite (Phases 1–10)
+# Run full ML test suite (Phases 1–11: 238 tests)
 .\backend\.venv\Scripts\python -m unittest discover -s ml/tests
 
-# Run shared schema contract validation
+# Run Phase 11 Schema & Contract Validation suite (72 tests)
+.\backend\.venv\Scripts\python -m unittest ml/tests/test_contract_validation.py
+
+# Run shared schema contract validation (Person A contract test)
 .\backend\.venv\Scripts\python -m unittest tests/test_ml_contract.py
 ```
+
 

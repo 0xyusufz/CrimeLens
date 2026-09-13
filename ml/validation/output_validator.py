@@ -10,11 +10,27 @@ Validates:
 from typing import Any
 
 from shared.schemas.models import (
+    EntityMention,
     ExtractionResult,
     Lead,
     Pattern,
+    Relationship,
     ResolutionProposal,
 )
+
+
+def validate_entity_mention(data: dict[str, Any] | EntityMention) -> EntityMention:
+    """Validate an entity mention against the shared Pydantic contract."""
+    if isinstance(data, EntityMention):
+        return data
+    return EntityMention.model_validate(data)
+
+
+def validate_relationship(data: dict[str, Any] | Relationship) -> Relationship:
+    """Validate a relationship against the shared Pydantic contract."""
+    if isinstance(data, Relationship):
+        return data
+    return Relationship.model_validate(data)
 
 
 def validate_extraction_result(data: dict[str, Any] | ExtractionResult) -> ExtractionResult:
