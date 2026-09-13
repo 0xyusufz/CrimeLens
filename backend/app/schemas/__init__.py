@@ -2,6 +2,11 @@ from app.schemas.audit import AuditRead
 from app.schemas.auth import AuthUser, LoginRequest, LoginResponse
 from app.schemas.case import CaseCreate, CaseListItem, CaseRead
 from app.schemas.document import DocumentRead
+from app.schemas.investigation import (
+    InvestigationPathNode,
+    InvestigationPathRelationship,
+    InvestigationPathResult,
+)
 from app.schemas.ledger import EvidenceBlockRead, EvidenceVerifyResult
 from app.schemas.processing import DocumentProcessResult
 
@@ -15,6 +20,9 @@ __all__ = [
     "DocumentRead",
     "EvidenceBlockRead",
     "EvidenceVerifyResult",
+    "InvestigationPathNode",
+    "InvestigationPathRelationship",
+    "InvestigationPathResult",
     "LoginRequest",
     "LoginResponse",
 ]
