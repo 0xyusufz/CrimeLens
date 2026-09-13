@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routers.auth import router as auth_router
 from app.api.routers.cases import router as cases_router
@@ -16,6 +17,17 @@ app = FastAPI(
         "case_members. POST /api/documents/{document_id}/process validates "
         "Person B's ExtractionEnvelope, persists PostgreSQL, then projects Neo4j."
     ),
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
