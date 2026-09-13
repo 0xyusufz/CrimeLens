@@ -1,0 +1,108 @@
+{
+  "$defs": {
+    "RelationshipStatus": {
+      "enum": [
+        "CONFIRMED",
+        "INFERRED",
+        "PREDICTED"
+      ],
+      "title": "RelationshipStatus",
+      "type": "string"
+    },
+    "RelationshipType": {
+      "enum": [
+        "CALLED",
+        "SENT_MONEY_TO",
+        "OWNS_VEHICLE",
+        "USED_VEHICLE",
+        "WORKS_FOR",
+        "LOCATED_AT",
+        "ASSOCIATED_WITH",
+        "PART_OF_EVENT"
+      ],
+      "title": "RelationshipType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Extracted edge. Status must be stored as-is; never upgrade INFERRED/PREDICTED to CONFIRMED.",
+  "properties": {
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "source_entity_id": {
+      "description": "Mention ID of the source",
+      "minLength": 1,
+      "title": "Source Entity Id",
+      "type": "string"
+    },
+    "relationship": {
+      "$ref": "#/$defs/RelationshipType"
+    },
+    "target_entity_id": {
+      "description": "Mention ID of the target",
+      "minLength": 1,
+      "title": "Target Entity Id",
+      "type": "string"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "status": {
+      "$ref": "#/$defs/RelationshipStatus"
+    },
+    "source_document_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "FIR/document provenance. Backend maps document_id \u2192 case_id.",
+      "title": "Source Document Id"
+    },
+    "source_record_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "CDR/transaction provenance, e.g. cdr_000123 or txn_000987",
+      "title": "Source Record Id"
+    },
+    "evidence_snippet": {
+      "minLength": 1,
+      "title": "Evidence Snippet",
+      "type": "string"
+    },
+    "extracted_at": {
+      "format": "date-time",
+      "title": "Extracted At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "source_entity_id",
+    "relationship",
+    "target_entity_id",
+    "confidence",
+    "status",
+    "evidence_snippet",
+    "extracted_at"
+  ],
+  "title": "Relationship",
+  "type": "object"
+}

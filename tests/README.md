@@ -1,5 +1,9 @@
 # Tests
 
-Placeholder. No tests yet.
+```bash
+cd /path/to/CrimeLens
+source backend/.venv/bin/activate
+PYTHONPATH=. python tests/test_ml_contract.py
+```
 
-Later: FastAPI validation, authorization, evidence hash/ledger, and ML JSON contract checks.
+These tests validate ML JSON contracts only. They do not connect to PostgreSQL or Neo4j.

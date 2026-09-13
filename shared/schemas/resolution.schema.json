@@ -1,0 +1,53 @@
+{
+  "$defs": {
+    "ResolutionSignal": {
+      "enum": [
+        "name_similarity",
+        "phone_match",
+        "account_match",
+        "vehicle_match",
+        "location_match",
+        "organization_match"
+      ],
+      "title": "ResolutionSignal",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "ML grouping proposal. canonical_entity_id is not the backend UUID.",
+  "properties": {
+    "canonical_entity_id": {
+      "description": "ML grouping identifier only. Backend mints the database UUID.",
+      "minLength": 1,
+      "title": "Canonical Entity Id",
+      "type": "string"
+    },
+    "mention_id": {
+      "minLength": 1,
+      "title": "Mention Id",
+      "type": "string"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "signals": {
+      "items": {
+        "$ref": "#/$defs/ResolutionSignal"
+      },
+      "minItems": 1,
+      "title": "Signals",
+      "type": "array"
+    }
+  },
+  "required": [
+    "canonical_entity_id",
+    "mention_id",
+    "confidence",
+    "signals"
+  ],
+  "title": "ResolutionProposal",
+  "type": "object"
+}

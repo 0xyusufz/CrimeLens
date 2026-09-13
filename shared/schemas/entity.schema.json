@@ -1,0 +1,49 @@
+{
+  "$defs": {
+    "EntityType": {
+      "enum": [
+        "PERSON",
+        "PHONE",
+        "BANK_ACCOUNT",
+        "VEHICLE",
+        "ORGANIZATION",
+        "LOCATION",
+        "EVENT"
+      ],
+      "title": "EntityType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Document-level mention. `id` is an ML mention ID, not a canonical DB UUID.",
+  "properties": {
+    "id": {
+      "description": "ML mention ID, e.g. mention_001",
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "type": {
+      "$ref": "#/$defs/EntityType"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "name",
+    "confidence"
+  ],
+  "title": "EntityMention",
+  "type": "object"
+}

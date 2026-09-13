@@ -1,0 +1,103 @@
+{
+  "$defs": {
+    "LeadPriority": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ],
+      "title": "LeadPriority",
+      "type": "string"
+    },
+    "LeadStatus": {
+      "description": "Investigative workflow status. Distinct from priority.",
+      "enum": [
+        "REVIEW_REQUIRED"
+      ],
+      "title": "LeadStatus",
+      "type": "string"
+    },
+    "LeadType": {
+      "enum": [
+        "FINANCIAL_NETWORK",
+        "CIRCULAR_TRANSACTION",
+        "RAPID_TRANSFER_CHAIN",
+        "LOCATION_TIME_OVERLAP",
+        "CROSS_CASE"
+      ],
+      "title": "LeadType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Investigative lead. priority \u2260 status. Not a person-level guilt score.",
+  "properties": {
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "type": {
+      "$ref": "#/$defs/LeadType"
+    },
+    "priority": {
+      "$ref": "#/$defs/LeadPriority"
+    },
+    "status": {
+      "$ref": "#/$defs/LeadStatus",
+      "default": "REVIEW_REQUIRED"
+    },
+    "title": {
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "explanation": {
+      "minLength": 1,
+      "title": "Explanation",
+      "type": "string"
+    },
+    "entity_ids": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Entity Ids",
+      "type": "array"
+    },
+    "evidence_ids": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Evidence Ids",
+      "type": "array"
+    },
+    "priority_score": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Lead priority score, never a person criminal-risk score",
+      "title": "Priority Score"
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "priority",
+    "title",
+    "explanation",
+    "entity_ids",
+    "evidence_ids"
+  ],
+  "title": "Lead",
+  "type": "object"
+}
