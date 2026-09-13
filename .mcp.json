@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "jetro": {
+      "type": "stdio",
+      "command": "/Users/mdyusuffatah/.jetro/runtime/node-darwin-arm64",
+      "args": [
+        "/Users/mdyusuffatah/.jetro/mcp-server/index.js"
+      ],
+      "env": {
+        "JET_WORKSPACE": "/Users/mdyusuffatah/Desktop/CrimeLens",
+        "JET_API_URL": "https://api.jetro.ai",
+        "PATH": "/Users/mdyusuffatah/.jetro/runtime:/usr/bin:/bin:/usr/sbin:/sbin"
+      }
+    }
+  }
+}
