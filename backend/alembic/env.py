@@ -5,7 +5,16 @@ from sqlalchemy import create_engine, pool
 
 from app.config import postgres_url
 from app.db.base import Base
-from app.models import Case, CaseMember, Document, StructuredRecord, User  # noqa: F401
+from app.models import (  # noqa: F401
+    Case,
+    CaseMember,
+    Document,
+    Entity,
+    EntityCaseLink,
+    EntityMention,
+    StructuredRecord,
+    User,
+)
 
 config = context.config
 if config.config_file_name is not None:

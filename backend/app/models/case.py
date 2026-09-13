@@ -52,6 +52,10 @@ class Case(Base):
         back_populates="case",
         cascade="all, delete-orphan",
     )
+    entity_links: Mapped[list["EntityCaseLink"]] = relationship(
+        back_populates="case",
+        cascade="all, delete-orphan",
+    )
 
 
 class CaseMember(Base):

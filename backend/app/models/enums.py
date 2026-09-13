@@ -14,3 +14,13 @@ class CaseStatus(str, Enum):
 class RecordType(str, Enum):
     CDR = "CDR"
     TRANSACTION = "TRANSACTION"
+
+
+class EntityType(str, Enum):
+    PERSON = "PERSON"
+    PHONE = "PHONE"
+    BANK_ACCOUNT = "BANK_ACCOUNT"
+    VEHICLE = "VEHICLE"
+    ORGANIZATION = "ORGANIZATION"
+    LOCATION = "LOCATION"
+    EVENT = "EVENT"

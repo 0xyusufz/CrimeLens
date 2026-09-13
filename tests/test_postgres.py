@@ -16,6 +16,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 sys.path.insert(0, str(ROOT))
 
 from sqlalchemy import inspect, text
+from sqlalchemy.exc import IntegrityError
 
 from app.db.session import SessionLocal, engine
 from app.models import (
@@ -23,6 +24,10 @@ from app.models import (
     CaseMember,
     CaseStatus,
     Document,
+    Entity,
+    EntityCaseLink,
+    EntityMention,
+    EntityType,
     RecordType,
     StructuredRecord,
     User,
@@ -40,9 +45,16 @@ class PostgresFoundationTests(unittest.TestCase):
         inspector = inspect(engine)
         tables = set(inspector.get_table_names())
         self.assertTrue(
-            {"users", "cases", "case_members", "documents", "structured_records"}.issubset(
-                tables
-            )
+            {
+                "users",
+                "cases",
+                "case_members",
+                "documents",
+                "structured_records",
+                "entities",
+                "entity_mentions",
+                "entity_case_links",
+            }.issubset(tables)
         )
 
     def test_insert_read_delete(self):
@@ -178,6 +190,123 @@ class PostgresFoundationTests(unittest.TestCase):
             self.assertIsNone(session.get(Document, document.id))
             self.assertIsNone(session.get(StructuredRecord, cdr.id))
             self.assertIsNone(session.get(StructuredRecord, txn.id))
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    def test_entities_mentions_and_case_links(self):
+        session = SessionLocal()
+        suffix = uuid.uuid4().hex[:8]
+        user = User(
+            name="Entity Tester",
+            email=f"ent-test-{suffix}@example.invalid",
+            password_hash="not-a-real-hash",
+            role=UserRole.INVESTIGATOR,
+        )
+        try:
+            session.add(user)
+            session.flush()
+
+            case_a = Case(
+                case_number=f"ENT-A-{suffix}",
+                title="Entity layer case A",
+                status=CaseStatus.OPEN,
+                created_by=user.id,
+            )
+            case_b = Case(
+                case_number=f"ENT-B-{suffix}",
+                title="Entity layer case B",
+                status=CaseStatus.OPEN,
+                created_by=user.id,
+            )
+            session.add_all([case_a, case_b])
+            session.flush()
+
+            document = Document(
+                case_id=case_a.id,
+                filename="fir_001.txt",
+                sha256_hash="1" * 64,
+                uploaded_by=user.id,
+            )
+            session.add(document)
+            session.flush()
+
+            person = Entity(type=EntityType.PERSON, canonical_name="Rahul Sharma")
+            phone = Entity(type=EntityType.PHONE, canonical_name="9876543210")
+            session.add_all([person, phone])
+            session.flush()
+            self.assertIsInstance(person.id, uuid.UUID)
+            self.assertNotEqual(str(person.id), "mention_001")
+
+            linked_mention = EntityMention(
+                document_id=document.id,
+                entity_id=person.id,
+                mention_id="mention_001",
+                entity_type=EntityType.PERSON,
+                name="Rahul Sharma",
+                confidence=0.96,
+                evidence_snippet="Rahul Sharma called Amit Kumar.",
+            )
+            unresolved_mention = EntityMention(
+                document_id=document.id,
+                entity_id=None,
+                mention_id="mention_002",
+                entity_type=EntityType.PERSON,
+                name="Amit Kumar",
+                confidence=0.94,
+                evidence_snippet=None,
+            )
+            phone_mention = EntityMention(
+                document_id=document.id,
+                entity_id=phone.id,
+                mention_id="mention_003",
+                entity_type=EntityType.PHONE,
+                name="9876543210",
+                confidence=0.99,
+            )
+            session.add_all([linked_mention, unresolved_mention, phone_mention])
+            session.flush()
+
+            loaded_linked = session.get(EntityMention, linked_mention.id)
+            loaded_unresolved = session.get(EntityMention, unresolved_mention.id)
+            self.assertEqual(loaded_linked.entity_id, person.id)
+            self.assertEqual(loaded_linked.mention_id, "mention_001")
+            self.assertIsNone(loaded_unresolved.entity_id)
+
+            link_a = EntityCaseLink(entity_id=person.id, case_id=case_a.id)
+            link_b = EntityCaseLink(entity_id=person.id, case_id=case_b.id)
+            session.add_all([link_a, link_b])
+            session.flush()
+            links = (
+                session.query(EntityCaseLink)
+                .filter(EntityCaseLink.entity_id == person.id)
+                .all()
+            )
+            self.assertEqual({link.case_id for link in links}, {case_a.id, case_b.id})
+
+            with self.assertRaises(IntegrityError):
+                with session.begin_nested():
+                    session.add(EntityCaseLink(entity_id=person.id, case_id=case_a.id))
+                    session.flush()
+
+            session.delete(unresolved_mention)
+            session.delete(phone_mention)
+            session.delete(linked_mention)
+            session.delete(link_a)
+            session.delete(link_b)
+            session.delete(person)
+            session.delete(phone)
+            session.delete(document)
+            session.delete(case_a)
+            session.delete(case_b)
+            session.delete(user)
+            session.commit()
+
+            self.assertIsNone(session.get(Entity, person.id))
+            self.assertIsNone(session.get(EntityMention, linked_mention.id))
+            self.assertIsNone(session.get(EntityCaseLink, link_a.id))
         except Exception:
             session.rollback()
             raise

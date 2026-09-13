@@ -46,6 +46,10 @@ class Document(Base):
         back_populates="document",
         cascade="all, delete-orphan",
     )
+    entity_mentions: Mapped[list["EntityMention"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
 
 
 class StructuredRecord(Base):
