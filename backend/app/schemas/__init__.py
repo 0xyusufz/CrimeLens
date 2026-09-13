@@ -18,6 +18,7 @@ from app.schemas.investigation import (
 )
 from app.schemas.ledger import EvidenceBlockRead, EvidenceVerifyResult
 from app.schemas.processing import DocumentProcessResult
+from app.schemas.relationship import RelationshipEvidenceRead
 
 __all__ = [
     "AuditRead",
@@ -41,4 +42,5 @@ __all__ = [
     "InvestigationPathResult",
     "LoginRequest",
     "LoginResponse",
+    "RelationshipEvidenceRead",
 ]

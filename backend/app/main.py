@@ -6,6 +6,7 @@ from app.api.routers.documents import router as documents_router
 from app.api.routers.entities import router as entities_router
 from app.api.routers.evidence import router as evidence_router
 from app.api.routers.investigation import router as investigation_router
+from app.api.routers.relationships import router as relationships_router
 
 app = FastAPI(
     title="CrimeLens API",
@@ -23,6 +24,7 @@ app.include_router(documents_router, prefix="/api", tags=["documents"])
 app.include_router(entities_router, prefix="/api", tags=["entities"])
 app.include_router(evidence_router, prefix="/api", tags=["evidence"])
 app.include_router(investigation_router, prefix="/api/investigation", tags=["investigation"])
+app.include_router(relationships_router, prefix="/api", tags=["relationships"])
 
 
 @app.get("/")
