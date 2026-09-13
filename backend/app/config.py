@@ -35,6 +35,25 @@ def dev_case_creator_email() -> str:
     return os.environ.get("DEV_CASE_CREATOR_EMAIL", "dev-creator@crimelens.local")
 
 
+def upload_dir() -> Path:
+    """Local evidence file store. Files are named by document UUID only."""
+    import os
+
+    load_env()
+    raw = os.environ.get("UPLOAD_DIR", "./data/uploads")
+    path = Path(raw)
+    if not path.is_absolute():
+        path = REPO_ROOT / path
+    return path.resolve()
+
+
+def max_upload_bytes() -> int:
+    import os
+
+    load_env()
+    return int(os.environ.get("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+
+
 def neo4j_settings() -> tuple[str, str, str]:
     """Return (uri, user, password) from environment. Never log the password."""
     import os

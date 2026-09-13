@@ -33,3 +33,5 @@ frontend/node_modules/
 # Docker / local data volumes (if bind-mounted later)
 data/postgres/
 data/neo4j/
+data/uploads/*
+!data/uploads/.gitkeep
