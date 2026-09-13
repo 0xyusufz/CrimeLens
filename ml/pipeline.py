@@ -15,6 +15,7 @@ from ml.config import MLConfig, default_config
 from ml.extraction import extract_entities
 from ml.ocr import extract_text_from_image
 from ml.preprocessing import is_scanned_file, load_document, normalize_text
+from ml.relationships import extract_relationships
 from shared.schemas.models import ExtractionResult
 
 
@@ -36,7 +37,7 @@ def process_document(
         document_id: Staging document identifier (e.g., 'doc_001').
         text: Raw document text string, plain text file path, image file path, or image bytes.
         config: Optional ML configuration instance.
-        **kwargs: Additional metadata or testing hooks (e.g., ocr_engine_runner, ner_runner).
+        **kwargs: Additional metadata, testing hooks, or structured records.
 
     Returns:
         ExtractionResult: Validated Pydantic model envelope containing
@@ -91,6 +92,7 @@ def process_document(
     cfg = config or default_config
     ocr_runner = kwargs.get("ocr_engine_runner")
     ner_runner = kwargs.get("ner_runner")
+    structured_records = kwargs.get("structured_records")
 
     # 1. Document Ingestion: Plain text vs. Scanned/Image via Phase 3 OCR
     if isinstance(text, bytes):
@@ -114,10 +116,18 @@ def process_document(
         ner_runner=ner_runner,
     )
 
-    # 4. Future stages (Phase 5 Relationships) will populate relationships.
-    # In Phase 4, relationships remain empty.
+    # 4. Relationship Extraction (Phase 5): Extract evidence-backed Relationship instances
+    relationships = extract_relationships(
+        clean_text,
+        entities=entities,
+        document_id=str(document_id).strip(),
+        structured_records=structured_records,
+        min_confidence=cfg.min_relationship_confidence,
+    )
+
+    # 5. Future stages (Phase 6 Resolution, Phase 7 Patterns)
     return ExtractionResult(
         document_id=str(document_id).strip(),
         entities=entities,
-        relationships=[],
+        relationships=relationships,
     )

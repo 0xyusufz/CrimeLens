@@ -18,7 +18,6 @@ from shared.schemas.enums import EntityType
 from shared.schemas.models import EntityMention
 
 # PERSON patterns
-# Matches labeled names, e.g. "Person: Rahul Kumar", "Suspects listed: Rahul Kumar"
 PERSON_LABEL_PATTERN = re.compile(
     r"(?i)\b(?:PERSON|Person|Suspect|Complainant|Accused|Officer|Witness|Victim)s?(?:\s+(?:listed|named|identified))?[\s:=-]+"
     r"([A-Z\u0900-\u097F][a-z\u0900-\u097F.'-]*(?:\s+[A-Z\u0900-\u097F][a-z\u0900-\u097F.'-]*){0,3})"
@@ -28,11 +27,11 @@ PERSON_TITLE_PATTERN = re.compile(
     r"([A-Z\u0900-\u097F][a-z\u0900-\u097F.'-]*(?:\s+[A-Z\u0900-\u097F][a-z\u0900-\u097F.'-]*){1,3})\b"
 )
 PERSON_CONTEXT_PATTERN = re.compile(
-    r"(?i)\b(?:called|met|contacted)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)\b"
+    r"\b(?i:called|met|contacted)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b"
 )
 # Standalone capitalized multi-word names (e.g. "Rahul Kumar", "Rahul K.", "Amit Kumar")
 CAPITALIZED_NAME_PATTERN = re.compile(
-    r"\b([A-Z][a-z]+(?:\s+[A-Z](?:[a-z]+|\.?)){1,2})(?=$|[\s,;:])"
+    r"\b([A-Z][a-z]+(?:\s+[A-Z](?:[a-z]+|\.?)){1,2})(?=$|[\s,;:.\n])"
 )
 
 # Non-person words/phrases to reject from generic capitalized name pattern
@@ -43,7 +42,13 @@ NON_PERSON_TOKENS = {
     "registered employer", "abc logistics", "january", "february", "march",
     "april", "may", "june", "july", "august", "september", "october",
     "november", "december", "monday", "tuesday", "wednesday", "thursday",
-    "friday", "saturday", "sunday", "listed", "suspects listed",
+    "friday", "saturday", "sunday", "listed", "suspects listed", "suspect",
+    "suspects", "accused", "complainant", "officer", "witness", "victim",
+}
+
+CORPORATE_WORDS = {
+    "ltd", "pvt", "llc", "llp", "inc", "corp", "corporation", "logistics",
+    "industries", "bank", "enterprises", "company", "technologies", "solutions",
 }
 
 # ORGANIZATION patterns
@@ -52,7 +57,7 @@ ORG_LABEL_PATTERN = re.compile(
     r"([A-Za-z0-9\u0900-\u097F][A-Za-z0-9\u0900-\u097F\s.&'-]{2,50})"
 )
 ORG_SUFFIX_PATTERN = re.compile(
-    r"\b([A-Z][A-Za-z0-9&.\s]{1,40}\s+(?:Pvt\s+Ltd|Ltd|LLC|LLP|Inc|Corp|Corporation|Bank|Logistics|Industries|Enterprises))\b"
+    r"\b([A-Z][A-Za-z0-9&.'-]*(?:\s+(?:of|and|&|[A-Z][A-Za-z0-9&.'-]*))*\s+(?:Pvt\s+Ltd|Ltd|LLC|LLP|Inc|Corp|Corporation|Bank|Logistics|Industries|Enterprises))\b"
 )
 ORG_UNIT_PATTERN = re.compile(
     r"\b([A-Z][A-Za-z\s]{2,30}\s+(?:Police Station|Cyber Cell|Department|Branch))\b"
@@ -81,8 +86,9 @@ EVENT_PHRASE_PATTERN = re.compile(
 # Common words to trim from ends of extracted names
 TRIM_WORDS = {
     "was", "is", "are", "were", "and", "or", "attended", "seen", "held", "near",
-    "at", "in", "to", "from", "on", "the", "a", "an", "listed", "उपस्थित", "थे",
-    "था", "थी", "है", "हैं", "के", "को", "ने", "से", "पर",
+    "at", "in", "to", "from", "on", "the", "a", "an", "listed", "suspect",
+    "suspects", "accused", "complainant", "officer", "witness", "victim",
+    "उपस्थित", "थे", "था", "थी", "है", "हैं", "के", "को", "ने", "से", "पर",
 }
 
 
@@ -126,18 +132,24 @@ def extract_named_entities(
 
     def add_candidate(etype: EntityType, raw_name: str, conf: float):
         norm_name = clean_entity_name(raw_name)
-        if norm_name and len(norm_name) >= 2 and norm_name.lower() not in NON_PERSON_TOKENS:
-            key = (etype.value, norm_name)
-            if key not in seen:
-                seen.add(key)
-                candidates.append(
-                    EntityMention(
-                        id="mention_candidate",
-                        type=etype,
-                        name=norm_name,
-                        confidence=conf,
-                    )
+        if not norm_name or len(norm_name) < 2:
+            return
+        if etype == EntityType.PERSON:
+            if norm_name.lower() in NON_PERSON_TOKENS:
+                return
+            if any(w.strip(".,;:").lower() in CORPORATE_WORDS for w in norm_name.split()):
+                return
+        key = (etype.value, norm_name)
+        if key not in seen:
+            seen.add(key)
+            candidates.append(
+                EntityMention(
+                    id="mention_candidate",
+                    type=etype,
+                    name=norm_name,
+                    confidence=conf,
                 )
+            )
 
     # 1. PERSON extraction
     for match in PERSON_LABEL_PATTERN.finditer(text):
@@ -161,7 +173,7 @@ def extract_named_entities(
         add_candidate(EntityType.ORGANIZATION, match.group(1), 0.95)
 
     for match in ORG_SUFFIX_PATTERN.finditer(text):
-        add_candidate(EntityType.ORGANIZATION, match.group(1), 0.88)
+        add_candidate(EntityType.ORGANIZATION, match.group(1), 0.90)
 
     for match in ORG_UNIT_PATTERN.finditer(text):
         add_candidate(EntityType.ORGANIZATION, match.group(1), 0.85)

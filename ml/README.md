@@ -46,8 +46,13 @@ FastAPI Schema Validation (`backend/` - Person A)
   - `ner.py`: Named entity recognition for contextual mentions (`PERSON`, `ORGANIZATION`, `LOCATION`, `EVENT`).
   - `entity_extractor.py`: Coordinates regex and NER extraction, normalizes formatting, deduplicates safe overlapping candidates, and assigns unique document-level staging IDs (`mention_001`, `mention_002`, ...).
   - *Boundary*: Entity extraction extracts mentions into schema-compliant `EntityMention` objects. It does NOT create relationships (Phase 5) or resolve/merge entities across mentions (Phase 6).
-- **`ml/relationships/`**:
-  - `rule_extractor.py`: Rule- and pattern-based relationship extraction (`CALLED`, `SENT_MONEY_TO`, etc.) with required provenance and evidence snippets.
+- **`ml/relationships/`** (Phase 5):
+  - `rule_extractor.py`: Evidence-backed relationship extraction between extracted `EntityMention`s, emitting structured `shared.schemas.Relationship` instances.
+  - *Supported Vocabulary*: Exclusively the 8 frozen relationship types (`CALLED`, `SENT_MONEY_TO`, `OWNS_VEHICLE`, `USED_VEHICLE`, `WORKS_FOR`, `LOCATED_AT`, `ASSOCIATED_WITH`, `PART_OF_EVENT`).
+  - *Directionality & Evidence*: Strict direction enforcement (e.g. sender -> SENT_MONEY_TO -> recipient; caller -> CALLED -> callee) with non-fabricated evidence snippets sourced directly from the document or structured record.
+  - *Negation & Co-occurrence*: Co-occurrence alone never generates a relationship; basic negation is conservatively respected.
+  - *Extraction vs Resolution Distinction*: Phase 5 identifies relationships between document mentions using staging mention IDs (`mention_001` -> `mention_002`). It does NOT perform cross-document entity resolution, canonical UUID generation, or graph edge writing in Neo4j.
+  - *Backend Handoff*: Staged `Relationship` records are packaged in `ExtractionResult.relationships` and validated by FastAPI/Pydantic schemas before persistence by Person A.
 - **`ml/resolution/`**:
   - `resolver.py`: Generates `ResolutionProposal` instances with signals (e.g., `phone_match`, `name_similarity`) for backend evaluation.
 - **`ml/patterns/`**:
