@@ -21,7 +21,10 @@ from app.db.session import SessionLocal
 from app.main import app
 from app.models.case import Case
 from app.models.document import Document
+from app.models.enums import UserRole
+from app.models.user import User
 from app.services.documents import stored_file_path
+from tests.auth_support import create_test_user, login_headers
 
 client = TestClient(app)
 
@@ -38,8 +41,13 @@ class DocumentApiTests(unittest.TestCase):
         self.session = SessionLocal()
         self.case_ids: list[uuid.UUID] = []
         self.document_ids: list[uuid.UUID] = []
+        self.user_ids: list[uuid.UUID] = []
+        self.user, password = create_test_user(self.session, role=UserRole.INVESTIGATOR)
+        self.user_ids.append(self.user.id)
+        self.headers = login_headers(client, self.user.email, password)
         created = client.post(
             "/api/cases",
+            headers=self.headers,
             json={"title": f"Doc API case {uuid.uuid4().hex[:8]}"},
         )
         self.assertEqual(created.status_code, 201, created.text)
@@ -59,6 +67,11 @@ class DocumentApiTests(unittest.TestCase):
                 case = self.session.get(Case, case_id)
                 if case is not None:
                     self.session.delete(case)
+            self.session.flush()
+            for user_id in self.user_ids:
+                user = self.session.get(User, user_id)
+                if user is not None:
+                    self.session.delete(user)
             self.session.commit()
         except Exception:
             self.session.rollback()
@@ -69,6 +82,7 @@ class DocumentApiTests(unittest.TestCase):
     def _upload(self, filename: str, data: bytes, content_type: str, extra_form: dict | None = None):
         response = client.post(
             f"/api/cases/{self.case_id}/documents",
+            headers=self.headers,
             files={"file": (filename, data, content_type)},
             data=extra_form or {},
         )
@@ -115,7 +129,7 @@ class DocumentApiTests(unittest.TestCase):
         self.assertEqual(txt.json()["filename"], "notes.txt")
         self.assertEqual(txt.json()["sha256_hash"], hashlib.sha256(TXT_BYTES).hexdigest())
 
-        listed = client.get(f"/api/cases/{self.case_id}/documents")
+        listed = client.get(f"/api/cases/{self.case_id}/documents", headers=self.headers)
         self.assertEqual(listed.status_code, 200, listed.text)
         items = listed.json()
         self.assertEqual(len(items), 3)
@@ -127,7 +141,7 @@ class DocumentApiTests(unittest.TestCase):
             self._assert_metadata_only(item)
             self.assertNotIn("file", item)
 
-        fetched = client.get(f"/api/documents/{pdf_id}")
+        fetched = client.get(f"/api/documents/{pdf_id}", headers=self.headers)
         self.assertEqual(fetched.status_code, 200, fetched.text)
         self.assertEqual(fetched.json()["id"], str(pdf_id))
         self.assertEqual(fetched.json()["filename"], "statement.pdf")
@@ -159,19 +173,20 @@ class DocumentApiTests(unittest.TestCase):
     def test_nonexistent_case_and_document(self):
         missing_case = client.post(
             f"/api/cases/{uuid.uuid4()}/documents",
+            headers=self.headers,
             files={"file": ("note.txt", TXT_BYTES, "text/plain")},
         )
         self.assertEqual(missing_case.status_code, 404)
         self.assertEqual(missing_case.json()["detail"], "Case not found")
 
-        missing_list = client.get(f"/api/cases/{uuid.uuid4()}/documents")
+        missing_list = client.get(f"/api/cases/{uuid.uuid4()}/documents", headers=self.headers)
         self.assertEqual(missing_list.status_code, 404)
 
-        missing_doc = client.get(f"/api/documents/{uuid.uuid4()}")
+        missing_doc = client.get(f"/api/documents/{uuid.uuid4()}", headers=self.headers)
         self.assertEqual(missing_doc.status_code, 404)
         self.assertEqual(missing_doc.json()["detail"], "Document not found")
 
-        invalid = client.get("/api/documents/not-a-uuid")
+        invalid = client.get("/api/documents/not-a-uuid", headers=self.headers)
         self.assertEqual(invalid.status_code, 422)
 
     def test_unsupported_empty_and_oversized_uploads(self):

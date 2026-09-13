@@ -8,3 +8,5 @@ alembic
 psycopg2-binary
 python-dotenv
 neo4j
+bcrypt
+PyJWT

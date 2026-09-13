@@ -54,6 +54,28 @@ def max_upload_bytes() -> int:
     return int(os.environ.get("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
 
 
+def jwt_secret() -> str:
+    """Signing secret from the environment. Never log this value."""
+    import os
+
+    load_env()
+    return os.environ.get("JWT_SECRET", "crimelens-dev-jwt-secret-change-me")
+
+
+def jwt_algorithm() -> str:
+    import os
+
+    load_env()
+    return os.environ.get("JWT_ALGORITHM", "HS256")
+
+
+def jwt_expire_minutes() -> int:
+    import os
+
+    load_env()
+    return int(os.environ.get("JWT_EXPIRE_MINUTES", "60"))
+
+
 def neo4j_settings() -> tuple[str, str, str]:
     """Return (uri, user, password) from environment. Never log the password."""
     import os

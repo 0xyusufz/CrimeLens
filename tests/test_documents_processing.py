@@ -29,9 +29,11 @@ from app.ml.adapter import FixtureDocumentProcessor, get_ml_processor
 from app.models.case import Case
 from app.models.document import Document
 from app.models.entity import Entity, EntityCaseLink, EntityMention
-from app.models.enums import RelationshipStatus, RelationshipType
+from app.models.enums import RelationshipStatus, RelationshipType, UserRole
 from app.models.relationship import RelationshipStaging
+from app.models.user import User
 from app.services.documents import stored_file_path
+from tests.auth_support import create_test_user, login_headers
 
 client = TestClient(app)
 TXT_BYTES = b"Rahul called Amit Kumar from 9876543210 in Bhubaneswar.\n"
@@ -60,9 +62,14 @@ class DocumentProcessingApiTests(unittest.TestCase):
         self.case_ids: list[uuid.UUID] = []
         self.document_ids: list[uuid.UUID] = []
         self.entity_ids: list[uuid.UUID] = []
+        self.user_ids: list[uuid.UUID] = []
         app.dependency_overrides[get_ml_processor] = lambda: FixtureDocumentProcessor()
+        self.user, password = create_test_user(self.session, role=UserRole.INVESTIGATOR)
+        self.user_ids.append(self.user.id)
+        self.headers = login_headers(client, self.user.email, password)
         created = client.post(
             "/api/cases",
+            headers=self.headers,
             json={"title": f"Process API case {uuid.uuid4().hex[:8]}"},
         )
         self.assertEqual(created.status_code, 201, created.text)
@@ -70,6 +77,7 @@ class DocumentProcessingApiTests(unittest.TestCase):
         self.case_ids.append(self.case_id)
         uploaded = client.post(
             f"/api/cases/{self.case_id}/documents",
+            headers=self.headers,
             files={"file": ("fir.txt", TXT_BYTES, "text/plain")},
         )
         self.assertEqual(uploaded.status_code, 201, uploaded.text)
@@ -110,6 +118,10 @@ class DocumentProcessingApiTests(unittest.TestCase):
                 if case is not None:
                     self.session.delete(case)
             self.session.flush()
+            for user_id in self.user_ids:
+                user = self.session.get(User, user_id)
+                if user is not None:
+                    self.session.delete(user)
             for entity_id in set(self.entity_ids):
                 leftover_link = self.session.scalar(
                     select(EntityCaseLink).where(EntityCaseLink.entity_id == entity_id)
@@ -135,7 +147,10 @@ class DocumentProcessingApiTests(unittest.TestCase):
             self._tmp.cleanup()
 
     def _process(self):
-        return client.post(f"/api/documents/{self.document_id}/process")
+        return client.post(
+            f"/api/documents/{self.document_id}/process",
+            headers=self.headers,
+        )
 
     def test_valid_extraction_persists_and_projects(self):
         response = self._process()
@@ -298,7 +313,10 @@ class DocumentProcessingApiTests(unittest.TestCase):
         self.assertEqual(called, 1)
 
     def test_missing_document_and_missing_file(self):
-        missing = client.post(f"/api/documents/{uuid.uuid4()}/process")
+        missing = client.post(
+            f"/api/documents/{uuid.uuid4()}/process",
+            headers=self.headers,
+        )
         self.assertEqual(missing.status_code, 404)
         self.assertEqual(missing.json()["detail"], "Document not found")
 
