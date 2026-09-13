@@ -88,6 +88,7 @@ PATTERN_JSON = {
     "id": "pattern_001",
     "type": "CIRCULAR_TRANSACTION",
     "severity": "HIGH",
+    "status": "INFERRED",
     "entities": ["entity_001", "entity_002", "entity_003"],
     "explanation": "A → B → C → A",
     "evidence_ids": ["txn_001", "txn_002", "txn_003"],
@@ -128,9 +129,21 @@ class ContractValidationTests(unittest.TestCase):
 
     def test_valid_pattern(self):
         pattern = Pattern.model_validate(PATTERN_JSON)
+        self.assertEqual(pattern.type.value, "CIRCULAR_TRANSACTION")
         self.assertEqual(pattern.severity.value, "HIGH")
-        self.assertEqual(pattern.status.value, "DETECTED")
+        self.assertEqual(pattern.status.value, "INFERRED")
         self.assertNotEqual(pattern.status.value, pattern.severity.value)
+
+    def test_pattern_detected_status_is_rejected(self):
+        payload = dict(PATTERN_JSON)
+        payload["status"] = "DETECTED"
+        with self.assertRaises(ValidationError):
+            Pattern.model_validate(payload)
+
+    def test_pattern_status_is_not_coerced_to_confirmed(self):
+        pattern = Pattern.model_validate(PATTERN_JSON)
+        self.assertEqual(pattern.status.value, "INFERRED")
+        self.assertNotEqual(pattern.status.value, "CONFIRMED")
 
     def test_valid_lead(self):
         lead = Lead.model_validate(LEAD_JSON)
@@ -149,6 +162,21 @@ class ContractValidationTests(unittest.TestCase):
         payload["type"] = "HUMAN"
         with self.assertRaises(ValidationError):
             EntityMention.model_validate(payload)
+
+    def test_lead_uses_priority_not_severity(self):
+        lead = Lead.model_validate(LEAD_JSON)
+        self.assertEqual(lead.priority.value, "HIGH")
+        self.assertEqual(lead.status.value, "REVIEW_REQUIRED")
+        payload = dict(LEAD_JSON)
+        payload["severity"] = "HIGH"
+        with self.assertRaises(ValidationError):
+            Lead.model_validate(payload)
+
+    def test_relationship_rejects_structured_record_fields(self):
+        payload = dict(RELATIONSHIP_JSON)
+        payload["amount"] = 50000
+        with self.assertRaises(ValidationError):
+            Relationship.model_validate(payload)
 
     def test_inferred_status_is_not_confirmed(self):
         payload = dict(RELATIONSHIP_JSON)

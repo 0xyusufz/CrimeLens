@@ -15,7 +15,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Document-level mention. `id` is an ML mention ID, not a canonical DB UUID.",
+  "description": "Staging/document-level mention. `id` stays an ML mention ID (e.g. mention_001).",
   "properties": {
     "id": {
       "description": "ML mention ID, e.g. mention_001",

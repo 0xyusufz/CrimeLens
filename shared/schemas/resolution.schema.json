@@ -14,10 +14,10 @@
     }
   },
   "additionalProperties": false,
-  "description": "ML grouping proposal. canonical_entity_id is not the backend UUID.",
+  "description": "ML proposal only. Backend decides canonicalization.\n\nExact phone / exact bank account / agreed strong identifiers may auto-link.\nName-only fuzzy similarity must never auto-merge.",
   "properties": {
     "canonical_entity_id": {
-      "description": "ML grouping identifier only. Backend mints the database UUID.",
+      "description": "ML proposal/grouping key only. Backend mints the canonical PostgreSQL UUID.",
       "minLength": 1,
       "title": "Canonical Entity Id",
       "type": "string"

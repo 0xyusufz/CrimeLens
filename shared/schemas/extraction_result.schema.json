@@ -2,7 +2,7 @@
   "$defs": {
     "EntityMention": {
       "additionalProperties": false,
-      "description": "Document-level mention. `id` is an ML mention ID, not a canonical DB UUID.",
+      "description": "Staging/document-level mention. `id` stays an ML mention ID (e.g. mention_001).",
       "properties": {
         "id": {
           "description": "ML mention ID, e.g. mention_001",
@@ -49,15 +49,16 @@
     },
     "Relationship": {
       "additionalProperties": false,
-      "description": "Extracted edge. Status must be stored as-is; never upgrade INFERRED/PREDICTED to CONFIRMED.",
+      "description": "Extracted source occurrence. Status is stored as-is; never coerce INFERRED/PREDICTED to CONFIRMED.\n\nKeep this contract compact. amount/currency/transaction_time come from structured\ntransaction records; call_time/duration come from structured CDR records.",
       "properties": {
         "id": {
+          "description": "ML relationship ID for this extracted occurrence",
           "minLength": 1,
           "title": "Id",
           "type": "string"
         },
         "source_entity_id": {
-          "description": "Mention ID of the source",
+          "description": "ML mention ID of the source occurrence, not a canonical UUID",
           "minLength": 1,
           "title": "Source Entity Id",
           "type": "string"
@@ -66,7 +67,7 @@
           "$ref": "#/$defs/RelationshipType"
         },
         "target_entity_id": {
-          "description": "Mention ID of the target",
+          "description": "ML mention ID of the target occurrence, not a canonical UUID",
           "minLength": 1,
           "title": "Target Entity Id",
           "type": "string"

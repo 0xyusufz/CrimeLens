@@ -1,13 +1,5 @@
 {
   "$defs": {
-    "PatternStatus": {
-      "description": "Lifecycle of a detected pattern. Distinct from severity.",
-      "enum": [
-        "DETECTED"
-      ],
-      "title": "PatternStatus",
-      "type": "string"
-    },
     "PatternType": {
       "enum": [
         "CIRCULAR_TRANSACTION",
@@ -15,6 +7,15 @@
         "LOCATION_TIME_OVERLAP"
       ],
       "title": "PatternType",
+      "type": "string"
+    },
+    "RelationshipStatus": {
+      "enum": [
+        "CONFIRMED",
+        "INFERRED",
+        "PREDICTED"
+      ],
+      "title": "RelationshipStatus",
       "type": "string"
     },
     "Severity": {
@@ -28,7 +29,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Detected pattern. severity \u2260 status.",
+  "description": "Pattern JSON from Person B. Not a dedicated Pattern table.\n\nBackend persists validated pattern results as intelligence/lead outputs\n(case insights). severity \u2260 status. Status is never coerced.",
   "properties": {
     "id": {
       "minLength": 1,
@@ -42,11 +43,10 @@
       "$ref": "#/$defs/Severity"
     },
     "status": {
-      "$ref": "#/$defs/PatternStatus",
-      "default": "DETECTED"
+      "$ref": "#/$defs/RelationshipStatus"
     },
     "entities": {
-      "description": "Proposed/canonical entity ids",
+      "description": "ML grouping keys in this JSON; backend maps to canonical UUIDs before graph write",
       "items": {
         "type": "string"
       },
@@ -72,6 +72,7 @@
     "id",
     "type",
     "severity",
+    "status",
     "entities",
     "explanation",
     "evidence_ids"
