@@ -7,6 +7,7 @@ import { apiClient } from "../../../lib/apiClient";
 import AuthLayout from "../../../components/Layout";
 import CaseGraphView from "../../../components/CaseGraphView";
 import InvestigationPathView from "../../../components/InvestigationPathView";
+import CaseInsightsView from "../../../components/CaseInsightsView";
 
 export default function CaseDetailsPage() {
   const { caseId } = useParams();
@@ -362,6 +363,16 @@ export default function CaseDetailsPage() {
                 </svg>
                 <span>Investigation Path</span>
               </button>
+
+              <button
+                onClick={() => setActiveTab("insights")}
+                className={`workspace-tab-btn ${activeTab === "insights" ? "tab-btn-active" : ""}`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+                <span>Intelligence</span>
+              </button>
             </div>
 
             {/* TAB 1: NETWORK GRAPH INVESTIGATION */}
@@ -375,6 +386,13 @@ export default function CaseDetailsPage() {
             {activeTab === "path" && (
               <section className="graph-workspace-section">
                 <InvestigationPathView caseId={caseId} />
+              </section>
+            )}
+
+            {/* TAB 4: INTELLIGENCE / INSIGHTS */}
+            {activeTab === "insights" && (
+              <section className="graph-workspace-section">
+                <CaseInsightsView caseId={caseId} />
               </section>
             )}
 
