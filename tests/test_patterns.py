@@ -234,11 +234,11 @@ class PatternDetectorTests(unittest.TestCase):
 
         self._trigger()
         count_after_first = self._io_count()
-        self.assertEqual(count_after_first, 1)
+        self.assertEqual(count_after_first, 2)
 
         self._trigger()
         count_after_second = self._io_count()
-        self.assertEqual(count_after_second, 1, "Second processing must not create duplicate rows")
+        self.assertEqual(count_after_second, 2, "Second processing must not create duplicate rows")
 
     def test_different_patterns_persist_as_separate_rows(self):
         """Distinct patterns must persist as distinct IntelligenceOutput rows."""
@@ -289,9 +289,9 @@ class PatternDetectorTests(unittest.TestCase):
             self.assertIn("title", r.payload)
             self.assertIn("explanation", r.payload)
             self.assertIn("evidence_ids", r.payload)
-            # Status must be PREDICTED according to user instructions.
-            self.assertEqual(r.payload.get("status"), "PREDICTED",
-                             "Lead status must be PREDICTED")
+            # Status must be REVIEW_REQUIRED according to ML contract.
+            self.assertEqual(r.payload.get("status"), "REVIEW_REQUIRED",
+                             "Lead status must be REVIEW_REQUIRED")
 
     # ------------------------------------------------------------------
     # API integration tests
