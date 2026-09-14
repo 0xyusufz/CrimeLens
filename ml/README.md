@@ -122,9 +122,10 @@ All ML outputs are validated against the immutable frozen schemas in `shared.sch
    ```
 3. **No Database UUIDs / Case IDs**: Staging IDs (`mention_xxx`, `rel_xxx`) and proposal IDs (`canonical_xxx`) are preserved. Zero PostgreSQL UUIDs or `case_id`s are minted in `ml/`.
 
-## AI & Multimodal Foundation & Pipeline Integration (Phases 1–7)
+## AI & Multimodal Foundation & Pipeline Integration (Phases 1–8)
 
 See [`ml/AI_FOUNDATION.md`](file:///c:/Users/MDFAIZAANRAZAKHAN/Downloads/CrimeLens/ml/AI_FOUNDATION.md) for full architectural specifications.
+- **`ml/tests/test_failure_handling.py`** (Phase 8): Comprehensive failure handling, edge case, regression, and reliability test suite verifying provider failure isolation (503, 500, timeouts, rate limits, non-retryable 401s), malformed payload resilience, 10 required end-to-end operational scenarios, document boundaries (empty, minimal, multi-page, large text, mixed input), multi-threaded state safety, and secret sanitization.
 - **`ml/validation/safety_firewall.py`** (Phase 7): Authoritative `SafetyFirewall` enforcing layered candidate validation, source grounding, status/confidence bounds, entity ID safety (staging IDs only, no database UUID minting), and structured rejection reason taxonomy (`ValidationRejectionReason`).
 - **`ml/ai/response_parser.py`** (Phase 7): Safe `AIResponseParser` parsing untrusted model outputs, stripping chain-of-thought blocks (`<thought>`, `<reasoning>`, `thought`, `reasoning_content`), and extracting clean candidate payloads.
 - **`ml/ai/pipeline_integration.py`** (Phase 6 & 7): `AIPipelineCoordinator` and `AITraceabilityMetrics` integrating AI document understanding, candidate extraction, and relationship reasoning directly into `process_document(...)` with strict failure isolation, deterministic fallbacks, structured facts protection, and safety firewall enforcement.
@@ -142,8 +143,11 @@ See [`ml/AI_FOUNDATION.md`](file:///c:/Users/MDFAIZAANRAZAKHAN/Downloads/CrimeLe
 ## Running Tests
 
 ```bash
-# Run full ML test suite (520 passed, 1 skipped)
+# Run full ML test suite (545 passed, 1 skipped)
 python -m pytest ml/tests/
+
+# Run Phase 8 Testing & Failure Handling suite (25 tests)
+python -m unittest ml/tests/test_failure_handling.py
 
 # Run Phase 7 Safety Firewall & Contract Compatibility suite (36 tests)
 python -m unittest ml/tests/test_safety_firewall.py
@@ -168,10 +172,4 @@ python -m unittest ml/tests/test_ai_foundation.py
 
 # Run shared schema contract validation (Person A contract test)
 python -m unittest tests/test_ml_contract.py
-```
-
-
-
-
-
 

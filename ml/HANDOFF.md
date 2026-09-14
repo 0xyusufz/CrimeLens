@@ -3,7 +3,7 @@
 **Phase 13 — Final Person B Handoff**  
 **Status: READY FOR INTEGRATION**  
 **Last verified:** 2026-09-14  
-**Test result:** 371 passed, 1 skipped (OCR env), 0 failed
+**Test result:** 545 passed, 1 skipped (OCR env), 0 failed
 
 ---
 
@@ -385,7 +385,7 @@ No changes to ml/ are required.
 
 ---
 
-## 16. AI FOUNDATION, PIPELINE INTEGRATION & VALIDATION FIREWALL (PHASES 1–7)
+## 16. AI FOUNDATION, PIPELINE INTEGRATION, VALIDATION FIREWALL & FAILURE HANDLING (PHASES 1–8)
 
 - **Phase 1**: Model-agnostic AI provider foundation (`ml/ai/providers/`, `ml/ai/client/`, `ml/ai/types.py`, `ml/ai/errors.py`). Isolated client with bounded retries, bounded timeouts, and automated credential redaction.
 - **Phase 2**: Multimodal document understanding (`ml/ai/router.py`, `ml/ai/document_understanding.py`). Format-agnostic representation preserving pagination (`DocumentPage`), sections (`DocumentSection`), and tables (`DocumentTable`).
@@ -404,6 +404,14 @@ No changes to ml/ are required.
   - **Chain-of-Thought Firewall**: Internal model thoughts and reasoning blocks are stripped by `AIResponseParser` and never persisted or exposed.
   - **Prompt Injection Defense**: Document instructions are treated strictly as passive data, never system commands.
   - **Output Schema & Serialization**: Guarantees final `ExtractionResult` conforms to frozen Pydantic contracts and is cleanly JSON-serializable.
+- **Phase 8**: Testing & Failure Handling (`ml/tests/test_failure_handling.py`):
+  - **Provider Failure Isolation**: Comprehensive coverage of 503, 500, timeouts, and rate limits with verified fallback to deterministic extraction. Verified non-retryable 401 authentication errors that fail immediately without wasting retry cycles.
+  - **Malformed Payload Resilience**: Corrupt JSON strings, non-dict payloads, unexpected nested types, and reasoning block extraction resilience.
+  - **10 Required Operational Scenarios**: Full coverage of all 10 scenarios mandated in Section 61 (deterministic normal, valid AI, malformed AI, provider timeout, hallucinated evidence, duplicate relationship reconciliation, conflicting transaction value, prompt injection, multi-page document provenance, AI disabled parity).
+  - **Document Boundary Edge Cases**: Empty string documents (`text=""`) produce valid empty `ExtractionResult` without crashing; minimal single-sentence text, large multi-paragraph text, and mixed inputs (text + transactions + CDRs) processed safely.
+  - **Thread-Safe & Concurrency Safety**: Verified concurrent multi-threaded calls to `process_document()` produce completely isolated, uncorrupted results with zero shared mutable state.
+  - **Deterministic Reproducibility**: Identical inputs with mock yield identical results.
+  - **Security & Secret Sanitization**: Zero API keys or secrets leak into output models, metrics, or error logs.
 - **Failure Safety**: If the external AI provider is disabled, times out, rate limits, or errors, CrimeLens ML gracefully falls back to deterministic extraction and rules.
 - **Strict Boundary**: Zero database queries, zero Neo4j mutations, zero UUID generation. All relationships and mentions remain in ML staging format (`mention_xxx`, `rel_xxx`) for Person A backend persistence.
 
@@ -417,7 +425,8 @@ No changes to ml/ are required.
 - [x] Schema validated: all 6 model types pass model_validate
 - [x] JSON serialization verified: json.dumps + re-validation round-trip
 - [x] Synthetic smoke test passed: 15/15 end-to-end tests pass
-- [x] Full ML tests passed: 520/521 (1 OCR env skip, 0 failures)
+- [x] Full ML tests passed: 545/546 (1 OCR env skip, 0 failures)
+- [x] Phase 8 failure handling suite passed: 25/25 tests in test_failure_handling.py
 - [x] Phase 7 safety firewall suite passed: 36/36 tests in test_safety_firewall.py
 - [x] Phase 6 integration suite passed: 18/18 tests in test_pipeline_integration.py
 - [x] Backend contract tests passed: 13/13 in tests/test_ml_contract.py
