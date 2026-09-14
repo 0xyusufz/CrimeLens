@@ -11,6 +11,11 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [errorState, setErrorState] = useState(null);
 
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({ title: "", description: "" });
+  const [createSubmitting, setCreateSubmitting] = useState(false);
+  const [createError, setCreateError] = useState(null);
+
   const fetchCases = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) {
       setRefreshing(true);
@@ -64,6 +69,43 @@ export default function Dashboard() {
     }
   };
 
+  const handleCreateCase = async (e) => {
+    e.preventDefault();
+    if (!createForm.title.trim()) {
+      setCreateError("Title is required.");
+      return;
+    }
+
+    setCreateSubmitting(true);
+    setCreateError(null);
+
+    try {
+      await apiClient("/api/cases", {
+        method: "POST",
+        body: {
+          title: createForm.title.trim(),
+          description: createForm.description.trim() || null,
+        },
+      });
+      // Success: close modal, reset form, refresh list
+      setIsCreateModalOpen(false);
+      setCreateForm({ title: "", description: "" });
+      fetchCases(true);
+    } catch (err) {
+      if (err?.status === 401) {
+        setCreateError("Session expired. Please log in again.");
+      } else if (err?.status === 403) {
+        setCreateError("You lack authorized clearance to create cases.");
+      } else if (err?.status === 422) {
+        setCreateError("Validation error: " + (err.message || "Invalid input."));
+      } else {
+        setCreateError(err.message || "Failed to create case.");
+      }
+    } finally {
+      setCreateSubmitting(false);
+    }
+  };
+
   return (
     <AuthLayout>
       <div className="dashboard-container">
@@ -84,6 +126,16 @@ export default function Dashboard() {
           </div>
 
           <div className="dashboard-actions">
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="action-btn create-btn"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span>New Case</span>
+            </button>
             <button
               onClick={() => fetchCases(true)}
               className="action-btn refresh-btn"
@@ -246,6 +298,78 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* CREATE CASE MODAL */}
+      {isCreateModalOpen && (
+        <div className="modal-overlay" onClick={(e) => {
+          if (e.target === e.currentTarget && !createSubmitting) setIsCreateModalOpen(false);
+        }}>
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Create New Case</h2>
+              <button
+                onClick={() => setIsCreateModalOpen(false)}
+                className="modal-close-btn"
+                disabled={createSubmitting}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleCreateCase} className="modal-form">
+              {createError && (
+                <div className="modal-error-banner">{createError}</div>
+              )}
+
+              <div className="form-group">
+                <label htmlFor="case-title">Case Title <span className="required-star">*</span></label>
+                <input
+                  id="case-title"
+                  type="text"
+                  value={createForm.title}
+                  onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+                  placeholder="e.g. Operation Silk Road"
+                  disabled={createSubmitting}
+                  maxLength={255}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="case-desc">Description</label>
+                <textarea
+                  id="case-desc"
+                  value={createForm.description}
+                  onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                  placeholder="Summary of the investigation..."
+                  disabled={createSubmitting}
+                  rows={4}
+                />
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="modal-cancel-btn"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  disabled={createSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="modal-submit-btn"
+                  disabled={createSubmitting || !createForm.title.trim()}
+                >
+                  {createSubmitting ? "Creating..." : "Create Case"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <style>{`
         .dashboard-container {
           max-width: 1280px;
@@ -320,6 +444,19 @@ export default function Dashboard() {
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
+        }
+
+        .create-btn {
+          background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+          border: 1px solid rgba(56, 189, 248, 0.35);
+          color: #ffffff;
+          box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3);
+        }
+
+        .create-btn:hover:not(:disabled) {
+          background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+          box-shadow: 0 4px 18px rgba(14, 165, 233, 0.5);
+          transform: translateY(-1px);
         }
 
         .refresh-btn {
@@ -681,6 +818,181 @@ export default function Dashboard() {
 
         .arrow-icon {
           transition: transform 0.15s ease;
+        }
+
+        /* MODAL CSS */
+        .modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(4, 9, 20, 0.85);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 1rem;
+        }
+
+        .modal-content {
+          background: #0f172a;
+          border: 1px solid rgba(56, 189, 248, 0.2);
+          border-radius: 12px;
+          width: 100%;
+          max-width: 500px;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+          overflow: hidden;
+          animation: modalSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 1.25rem 1.5rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .modal-header h2 {
+          margin: 0;
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #f1f5f9;
+        }
+
+        .modal-close-btn {
+          background: transparent;
+          border: none;
+          color: #94a3b8;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0.25rem;
+          border-radius: 6px;
+          transition: all 0.2s ease;
+        }
+
+        .modal-close-btn:hover:not(:disabled) {
+          background: rgba(255, 255, 255, 0.1);
+          color: #f1f5f9;
+        }
+
+        .modal-form {
+          padding: 1.5rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+        }
+
+        .modal-error-banner {
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          color: #f87171;
+          padding: 0.75rem 1rem;
+          border-radius: 6px;
+          font-size: 0.85rem;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .form-group label {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: #cbd5e1;
+        }
+
+        .required-star {
+          color: #f87171;
+        }
+
+        .form-group input,
+        .form-group textarea {
+          background: rgba(11, 16, 27, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          border-radius: 6px;
+          padding: 0.75rem 1rem;
+          color: #f1f5f9;
+          font-size: 0.95rem;
+          transition: all 0.2s ease;
+          font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+          outline: none;
+          border-color: #38bdf8;
+          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+
+        .form-group input:disabled,
+        .form-group textarea:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .form-group textarea {
+          resize: vertical;
+          min-height: 100px;
+        }
+
+        .modal-footer {
+          display: flex;
+          justify-content: flex-end;
+          gap: 0.75rem;
+          margin-top: 0.5rem;
+        }
+
+        .modal-cancel-btn {
+          padding: 0.6rem 1.1rem;
+          background: transparent;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 6px;
+          color: #cbd5e1;
+          font-size: 0.85rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .modal-cancel-btn:hover:not(:disabled) {
+          background: rgba(255, 255, 255, 0.05);
+          color: #f1f5f9;
+        }
+
+        .modal-submit-btn {
+          padding: 0.6rem 1.25rem;
+          background: #0ea5e9;
+          border: 1px solid #0284c7;
+          border-radius: 6px;
+          color: #ffffff;
+          font-size: 0.85rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .modal-submit-btn:hover:not(:disabled) {
+          background: #38bdf8;
+        }
+
+        .modal-submit-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         @media (max-width: 768px) {

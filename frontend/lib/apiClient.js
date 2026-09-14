@@ -30,7 +30,8 @@ export async function apiClient(endpoint, { method = "GET", body, headers = {}, 
   }
 
   if (body) {
-    config.body = isFormData ? body : JSON.stringify(body);
+    // If body is already a string (pre-serialized), pass it through directly.
+    config.body = isFormData ? body : (typeof body === "string" ? body : JSON.stringify(body));
   }
 
   let response;
@@ -67,6 +68,19 @@ export async function apiClient(endpoint, { method = "GET", body, headers = {}, 
     return data;
   }
 
-  const errorMessage = data?.detail || data?.message || "An error occurred during the request.";
+  // FastAPI/Pydantic 422 errors return detail as an array of {loc, msg, type} objects.
+  // Flatten to a human-readable string; fall back to plain string or generic message.
+  const rawDetail = data?.detail;
+  let errorMessage;
+  if (Array.isArray(rawDetail)) {
+    errorMessage = rawDetail
+      .map((e) => {
+        const field = Array.isArray(e.loc) ? e.loc.filter((l) => l !== "body").join(" → ") : "";
+        return field ? `${field}: ${e.msg}` : e.msg;
+      })
+      .join("; ");
+  } else {
+    errorMessage = rawDetail || data?.message || "An error occurred during the request.";
+  }
   throw new ApiError(errorMessage, response.status, data);
 }
