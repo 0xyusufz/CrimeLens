@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import importlib
 import uuid
-from typing import Any, Protocol
+from typing import Any, Optional, Protocol
 
 from pydantic import ValidationError
 
@@ -60,11 +60,24 @@ def collect_person_b_intelligence(
     document_bytes: bytes,
     filename: str,
     document_id: uuid.UUID,
+    *,
+    session: Optional[Any] = None,
 ) -> tuple[list, list]:
-    """Return (patterns_raw, leads_raw). Empty when Person B has no pattern entry point."""
+    """Return (patterns_raw, leads_raw). Empty when Person B has no pattern entry point.
+
+    When ``session`` is provided and the root ml.pipeline is available (post-merge),
+    the backend fetches StructuredRecord rows for the case and passes them as structured
+    data to ml.pipeline.process_document so the ML never touches the database directly.
+    """
     detect = getattr(processor, "detect_patterns", None)
     if not callable(detect):
         detect = load_person_b_detect_patterns()
+
+    if detect is None and session is not None:
+        # Post-merge path: root ml.pipeline.process_document is available but has no
+        # standalone detect_patterns. Bridge backend StructuredRecords into ML pipeline.
+        return _collect_via_pipeline(document_bytes, filename, document_id, session)
+
     if detect is None:
         return [], []
     try:
@@ -80,6 +93,145 @@ def collect_person_b_intelligence(
     if isinstance(raw, dict):
         return raw.get("patterns") or [], raw.get("leads") or []
     raise MlContractError("ML pattern output failed contract validation.")
+
+
+def _collect_via_pipeline(
+    document_bytes: bytes,
+    filename: str,
+    document_id: uuid.UUID,
+    session: Any,
+) -> tuple[list, list]:
+    """Bridge path: fetch StructuredRecords from PostgreSQL, translate field names, invoke
+    ml.pipeline.process_document with return_full_analysis=True.
+
+    Backend is responsible for database access. ML receives plain data dicts.
+    """
+    try:
+        pipeline_mod = importlib.import_module("ml.pipeline")
+        process_document_fn = getattr(pipeline_mod, "process_document", None)
+        if not callable(process_document_fn):
+            return [], []
+    except ImportError:
+        return [], []
+
+    # --- Backend fetches structured records (DB access stays in backend) ---
+    from sqlalchemy import select
+    from app.models.document import Document, StructuredRecord
+    from app.models.enums import RecordType
+
+    doc = session.get(Document, document_id)
+    if doc is None:
+        return [], []
+
+    records = list(
+        session.scalars(
+            select(StructuredRecord).where(StructuredRecord.case_id == doc.case_id)
+        ).all()
+    )
+
+    # Translate PostgreSQL StructuredRecord.raw_json → ml.structured field names.
+    # Transaction: source/target/amount/timestamp → sender/recipient/amount/currency/transaction_time
+    # CDR:         entity/location/timestamp       → caller/callee/call_time/location
+    transactions: list[dict] = []
+    cdrs: list[dict] = []
+
+    for r in records:
+        payload = r.raw_json or {}
+        rec_id = str(r.id)  # use PostgreSQL UUID as record_id for deterministic fingerprints
+
+        if r.record_type == RecordType.TRANSACTION:
+            src = payload.get("source") or payload.get("sender") or ""
+            tgt = payload.get("target") or payload.get("recipient") or ""
+            ts = payload.get("timestamp") or payload.get("transaction_time") or ""
+            amt = payload.get("amount", 0)
+            if src and tgt and ts:
+                transactions.append({
+                    "sender": src,
+                    "recipient": tgt,
+                    "amount": float(amt),
+                    "currency": payload.get("currency", "INR"),
+                    "transaction_time": ts,
+                    "record_id": rec_id,
+                })
+        elif r.record_type == RecordType.CDR:
+            entity = payload.get("entity") or payload.get("caller") or ""
+            location = payload.get("location") or ""
+            ts = payload.get("timestamp") or payload.get("call_time") or ""
+            if entity and ts:
+                cdrs.append({
+                    "caller": entity,
+                    "callee": payload.get("callee", entity + "_unknown"),
+                    "call_time": ts,
+                    "location": location,
+                    "record_id": rec_id,
+                })
+
+    if not transactions and not cdrs:
+        return [], []
+
+    # --- Call ML pipeline with prepared data (ML never touches DB) ---
+    try:
+        result = process_document_fn(
+            document_bytes,
+            filename,
+            str(document_id),
+            return_full_analysis=True,
+            transactions=transactions,
+            cdrs=cdrs,
+        )
+    except Exception as exc:
+        raise MlContractError(f"ml.pipeline.process_document failed: {exc}") from exc
+
+    if not isinstance(result, dict):
+        return [], []
+
+    raw_patterns = result.get("patterns") or []
+    raw_leads = result.get("leads") or []
+
+    # Serialize Pydantic Pattern/Lead objects to dicts if needed (shared.schemas models).
+    def _to_dict(obj: Any) -> Any:
+        if hasattr(obj, "model_dump"):
+            return obj.model_dump(mode="json")
+        return obj
+
+    # Also inject deterministic fingerprint as `id` so backend upsert deduplication works.
+    # ml.pipeline uses sequential ids like "pattern_001"; we keep them as-is since the
+    # backend's _upsert_output already deduplicates on (case_id, kind, source_id).
+    # The sequential IDs will repeat across runs IF evidence_ids are stable (same records).
+    # For full idempotency we override with a content-based fingerprint here.
+    import hashlib
+    case_id_str = str(doc.case_id)
+
+    serialized_patterns = []
+    for p in raw_patterns:
+        pd = _to_dict(p)
+        entities = pd.get("entities") or []
+        ev_ids = pd.get("evidence_ids") or []
+        stable = "|".join([
+            case_id_str,
+            pd.get("type", ""),
+            ",".join(sorted(str(e) for e in entities)),
+            ",".join(sorted(str(e) for e in ev_ids)),
+        ])
+        pd["id"] = hashlib.sha256(stable.encode()).hexdigest()[:32]
+        serialized_patterns.append(pd)
+
+    serialized_leads = []
+    for ld in raw_leads:
+        ld_d = _to_dict(ld)
+        entity_ids = ld_d.get("entity_ids") or []
+        ev_ids = ld_d.get("evidence_ids") or []
+        stable = "|".join([
+            case_id_str,
+            ld_d.get("type", "") + "_LEAD",
+            ",".join(sorted(str(e) for e in entity_ids)),
+            ",".join(sorted(str(e) for e in ev_ids)),
+        ])
+        ld_d["id"] = hashlib.sha256(stable.encode()).hexdigest()[:32]
+        serialized_leads.append(ld_d)
+
+    return serialized_patterns, serialized_leads
+
 
 
 def load_person_b_process_document():

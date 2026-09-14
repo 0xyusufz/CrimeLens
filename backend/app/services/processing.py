@@ -259,7 +259,8 @@ def process_uploaded_document(
         )
         try:
             raw_patterns, raw_leads = collect_person_b_intelligence(
-                processor, data, document.filename, document.id
+                processor, data, document.filename, document.id,
+                session=session,
             )
             persist_patterns(
                 session,

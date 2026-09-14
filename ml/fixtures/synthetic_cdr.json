@@ -1,0 +1,92 @@
+{
+  "description": "Synthetic CDR records — Phase 12 evaluation. No real phone numbers or PII.",
+  "positive_overlap": [
+    {
+      "caller": "+910000000001",
+      "callee": "+910000000099",
+      "call_time": "2026-09-10T10:00:00",
+      "duration": 180,
+      "location": "Synthetic Market, Block A",
+      "record_id": "CDR001"
+    },
+    {
+      "caller": "+910000000002",
+      "callee": "+910000000098",
+      "call_time": "2026-09-10T11:30:00",
+      "duration": 90,
+      "location": "Synthetic Market, Block A",
+      "record_id": "CDR002"
+    }
+  ],
+  "boundary_overlap_exactly_2_hours": [
+    {
+      "caller": "+910000000001",
+      "callee": "+910000000097",
+      "call_time": "2026-09-11T10:00:00",
+      "duration": 60,
+      "location": "Synthetic Station, Block B",
+      "record_id": "CDR003"
+    },
+    {
+      "caller": "+910000000003",
+      "callee": "+910000000096",
+      "call_time": "2026-09-11T12:00:00",
+      "duration": 60,
+      "location": "Synthetic Station, Block B",
+      "record_id": "CDR004"
+    }
+  ],
+  "negative_overlap_outside_2_hours": [
+    {
+      "caller": "+910000000001",
+      "callee": "+910000000095",
+      "call_time": "2026-09-12T10:00:00",
+      "duration": 120,
+      "location": "Synthetic Market, Block A",
+      "record_id": "CDR005"
+    },
+    {
+      "caller": "+910000000004",
+      "callee": "+910000000094",
+      "call_time": "2026-09-12T12:01:00",
+      "duration": 120,
+      "location": "Synthetic Market, Block A",
+      "record_id": "CDR006"
+    }
+  ],
+  "negative_different_location": [
+    {
+      "caller": "+910000000001",
+      "callee": "+910000000093",
+      "call_time": "2026-09-13T10:00:00",
+      "duration": 90,
+      "location": "Synthetic Market, Block A",
+      "record_id": "CDR007"
+    },
+    {
+      "caller": "+910000000005",
+      "callee": "+910000000092",
+      "call_time": "2026-09-13T10:30:00",
+      "duration": 90,
+      "location": "Synthetic Station, Block B",
+      "record_id": "CDR008"
+    }
+  ],
+  "negative_missing_location": [
+    {
+      "caller": "+910000000001",
+      "callee": "+910000000091",
+      "call_time": "2026-09-14T10:00:00",
+      "duration": 90,
+      "record_id": "CDR009"
+    },
+    {
+      "caller": "+910000000006",
+      "callee": "+910000000090",
+      "call_time": "2026-09-14T10:30:00",
+      "duration": 90,
+      "location": "Synthetic Market, Block A",
+      "record_id": "CDR010"
+    }
+  ]
+}

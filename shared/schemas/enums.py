@@ -67,4 +67,3 @@ class LeadStatus(str, Enum):
     """Investigative workflow status. Distinct from priority."""
 
     REVIEW_REQUIRED = "REVIEW_REQUIRED"
-    PREDICTED = "PREDICTED"
