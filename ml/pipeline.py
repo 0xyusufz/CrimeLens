@@ -161,15 +161,56 @@ def process_document(
     # Flow OCR or loaded text through text normalizer (Phase 2)
     clean_text = normalize_text(raw_text)
 
-    # 3. Entity Mention Extraction (Phase 4)
+    # Initialize AI Pipeline Coordinator if AI is enabled
+    use_ai = bool(
+        cfg.ai_enabled
+        or kwargs.get("use_ai", False)
+        or kwargs.get("use_ai_extraction", False)
+        or kwargs.get("use_ai_reasoning", False)
+    )
+    coordinator = None
+    doc_understanding = None
+    if use_ai:
+        try:
+            from ml.ai.pipeline_integration import AIPipelineCoordinator
+
+            coordinator = AIPipelineCoordinator(
+                client=kwargs.get("ai_client"),
+                config=cfg,
+            )
+            input_content = raw_text if isinstance(raw_text, (str, bytes)) else clean_text
+            fname = kwargs.get("filename") or (str(args[1]) if len(args) == 3 else f"{doc_id_str}.txt")
+            doc_understanding = coordinator.understand_document(
+                input_content,
+                filename=fname,
+                document_id=doc_id_str,
+            )
+        except Exception:
+            # Failure containment: AI failure must never break deterministic pipeline
+            coordinator = None
+            doc_understanding = None
+
+    # 3. Entity Mention Extraction (Phase 4 & Phase 3/6 AI Candidate Reconciliation)
     entities: list[EntityMention] = []
     if clean_text:
+        # Base deterministic extraction (regex + NER)
         entities = extract_entities(
             clean_text,
             document_id=doc_id_str,
             min_confidence=cfg.min_entity_confidence,
             ner_runner=ner_runner,
         )
+
+        # AI-Assisted Candidate Extraction & Reconciliation (Phase 3 / Phase 6)
+        if coordinator is not None and doc_understanding is not None:
+            try:
+                entities = coordinator.reconcile_entities(
+                    doc_understanding,
+                    entities,
+                    min_confidence=cfg.min_entity_confidence,
+                )
+            except Exception:
+                pass
 
     # 4. Structured Records Ingestion (Phase 7)
     structured_records = kwargs.get("structured_records") or []
@@ -276,7 +317,7 @@ def process_document(
             existing_entities_by_name[ce_name.lower()] = m
             mention_counter += 1
 
-    # 5. Relationship Extraction (Phase 5)
+    # 5. Relationship Extraction (Phase 5 Deterministic & Phase 4 AI Contextual Reasoning)
     relationships: list[Relationship] = extract_relationships(
         clean_text,
         entities=entities,
@@ -284,6 +325,21 @@ def process_document(
         structured_records=all_structured if all_structured else None,
         min_confidence=cfg.min_relationship_confidence,
     )
+
+    # Phase 4 & Phase 6: AI Contextual Relationship Reasoning & Reconciliation
+    if coordinator is not None and doc_understanding is not None and len(entities) >= 2:
+        try:
+            relationships = coordinator.reconcile_relationships(
+                doc_understanding,
+                entities=entities,
+                deterministic_relationships=relationships,
+                structured_records=all_structured,
+                document_id=doc_id_str,
+                min_confidence=cfg.min_relationship_confidence,
+            )
+        except Exception:
+            # Failure containment: AI failure must never break deterministic pipeline
+            pass
 
     # 6. Entity Resolution Proposals (Phase 6)
     resolution_proposals: list[ResolutionProposal] = []
@@ -353,7 +409,7 @@ def process_document(
     )
 
     if should_return_analysis:
-        return {
+        analysis_dict: dict[str, Any] = {
             "document_id": doc_id_str,
             "extraction_result": extraction_result,
             "entities": entities,
@@ -363,6 +419,20 @@ def process_document(
             "leads": leads,
             "structured_records": all_structured,
         }
+        if coordinator is not None:
+            analysis_dict["ai_traceability"] = coordinator.metrics.to_dict()
+        if kwargs.get("include_understanding") or kwargs.get("understand_document"):
+            if doc_understanding is not None:
+                analysis_dict["document_understanding"] = doc_understanding
+            else:
+                from ml.ai.document_understanding import DocumentUnderstandingEngine
+                engine = DocumentUnderstandingEngine(config=cfg)
+                analysis_dict["document_understanding"] = engine.understand(
+                    clean_text,
+                    document_id=doc_id_str,
+                )
+        return analysis_dict
 
     return extraction_result
+
 

@@ -1,9 +1,9 @@
-﻿# ML HANDOFF — CrimeLens Intelligence Pipeline
+# ML HANDOFF — CrimeLens Intelligence Pipeline
 
 **Phase 13 — Final Person B Handoff**  
 **Status: READY FOR INTEGRATION**  
 **Last verified:** 2026-09-14  
-**Test result:** 371 passed, 1 skipped (OCR env), 0 failed
+**Test result:** 555 passed, 1 skipped (OCR env), 0 failed
 
 ---
 
@@ -385,15 +385,86 @@ No changes to ml/ are required.
 
 ---
 
+## 16. AI FOUNDATION, PIPELINE INTEGRATION, VALIDATION FIREWALL & FAILURE HANDLING (PHASES 1–8)
+
+- **Phase 1**: Model-agnostic AI provider foundation (`ml/ai/providers/`, `ml/ai/client/`, `ml/ai/types.py`, `ml/ai/errors.py`). Isolated client with bounded retries, bounded timeouts, and automated credential redaction.
+- **Phase 2**: Multimodal document understanding (`ml/ai/router.py`, `ml/ai/document_understanding.py`). Format-agnostic representation preserving pagination (`DocumentPage`), sections (`DocumentSection`), and tables (`DocumentTable`).
+- **Phase 3**: AI-assisted entity and information extraction (`ml/ai/extraction.py`). Candidates grounded in source text, validated against 7 frozen entity categories, and reconciled via `EntityReconciler`.
+- **Phase 4**: AI context and relationship reasoning (`ml/ai/reasoning.py`). Contextual multi-entity reasoning with evidence validation, direction preservation, rejection of unsupported relationships, and reconciliation via `RelationshipReconciler`.
+- **Phase 5**: AI evidence and provenance (`ml/ai/evidence.py`). Evidence grounding engine verifying snippets and page bounds, rejecting semantic alterations, and tracking multimodal provenance chains without chain-of-thought storage.
+- **Phase 6**: Existing ML + AI Pipeline Integration (`ml/ai/pipeline_integration.py`, `ml/pipeline.py`). Single coordinated orchestration (`AIPipelineCoordinator`) integrating multimodal understanding, entity candidate reconciliation, relationship reasoning, and provenance attachment into `process_document(...)`.
+- **Phase 7**: Validation, Safety & Contract Compatibility (`ml/validation/safety_firewall.py`, `ml/ai/response_parser.py`):
+  - **Validation Firewall**: `SafetyFirewall` validates every AI candidate before reconciliation; enforces frozen entity taxonomy (7 types) and relationship taxonomy (8 types); rejects invalid statuses, invalid confidences, and fabricated page/snippet references.
+  - **AI Trust Model**: AI output is ALWAYS untrusted input. The validation layer is authoritative over AI output.
+  - **Evidence Grounding**: Candidate mentions and relationships must be grounded in source text; tolerates legitimate OCR whitespace/spacing; rejects fabricated snippets and out-of-bounds pages.
+  - **Entity ID Safety**: AI is strictly forbidden from minting canonical database UUIDs; enforces staging IDs (`mention_xxx`).
+  - **Merge Safety**: Rejects name-only auto-merging; respects resolver's strong identifier policy.
+  - **Structured Facts Authority**: Structured CDR and transaction fields (amounts, currencies, durations, timestamps) are immutable and cannot be altered by AI conjecture.
+  - **Anti-Criminality & Anti-Guilt Firewall**: Rejects direct assertions of guilt, criminality, or predictive policing scores.
+  - **Chain-of-Thought Firewall**: Internal model thoughts and reasoning blocks are stripped by `AIResponseParser` and never persisted or exposed.
+  - **Prompt Injection Defense**: Document instructions are treated strictly as passive data, never system commands.
+  - **Output Schema & Serialization**: Guarantees final `ExtractionResult` conforms to frozen Pydantic contracts and is cleanly JSON-serializable.
+- **Phase 8**: Testing & Failure Handling (`ml/tests/test_failure_handling.py`):
+  - **Provider Failure Isolation**: Comprehensive coverage of 503, 500, timeouts, and rate limits with verified fallback to deterministic extraction. Verified non-retryable 401 authentication errors that fail immediately without wasting retry cycles.
+  - **Malformed Payload Resilience**: Corrupt JSON strings, non-dict payloads, unexpected nested types, and reasoning block extraction resilience.
+  - **10 Required Operational Scenarios**: Full coverage of all 10 scenarios mandated in Section 61 (deterministic normal, valid AI, malformed AI, provider timeout, hallucinated evidence, duplicate relationship reconciliation, conflicting transaction value, prompt injection, multi-page document provenance, AI disabled parity).
+  - **Document Boundary Edge Cases**: Empty string documents (`text=""`) produce valid empty `ExtractionResult` without crashing; minimal single-sentence text, large multi-paragraph text, and mixed inputs (text + transactions + CDRs) processed safely.
+  - **Thread-Safe & Concurrency Safety**: Verified concurrent multi-threaded calls to `process_document()` produce completely isolated, uncorrupted results with zero shared mutable state.
+  - **Deterministic Reproducibility**: Identical inputs with mock yield identical results.
+  - **Security & Secret Sanitization**: Zero API keys or secrets leak into output models, metrics, or error logs.
+- **Phase 9**: Final ML Handoff & Integration Verification (`ml/process.py`, `ml/extract.py`, `ml/tests/test_final_integration_verification.py`):
+  - **Adapter Candidate Re-exports**: Added `ml/process.py` and `ml/extract.py` aliases alongside `ml/pipeline.py` ensuring all 3 candidate discovery tuples `("ml.process", "process_document")`, `("ml.pipeline", "process_document")`, and `("ml.extract", "process_document")` resolve immediately.
+  - **Integration Verification Suite**: Verified 3 calling conventions (A: bytes+filename+id, B: id+text, C: full bundle), complete synthetic investigation flow, zero DB connection safety, and cold-start clean imports without API keys.
+  - **Merge-Readiness Answers**: All 12 critical integration questions verified with empirical test evidence (see below).
+- **Failure Safety**: If the external AI provider is disabled, times out, rate limits, or errors, CrimeLens ML gracefully falls back to deterministic extraction and rules.
+- **Strict Boundary**: Zero database queries, zero Neo4j mutations, zero UUID generation. All relationships and mentions remain in ML staging format (`mention_xxx`, `rel_xxx`) for Person A backend persistence.
+
+---
+
+## 17. MERGE-READINESS VERIFICATION ANSWERS (12 CRITICAL QUESTIONS)
+
+1. **Can Person A's existing backend discover `ml.pipeline.process_document` without changing backend code?**
+   - **YES.** Verified by `test_discovery_all_three_candidate_modules`. All three candidate discovery tuples `("ml.process", "process_document")`, `("ml.pipeline", "process_document")`, and `("ml.extract", "process_document")` as well as `from ml import process_document` are importable and callable.
+2. **Does `process_document` return the expected structured contract?**
+   - **YES.** Verified by `test_calling_convention_a_bytes_filename_doc_id` and contract tests in `tests/test_ml_contract.py`. Returns schema-valid `ExtractionResult` Pydantic models or full analysis bundles with lossless JSON round-trip serialization.
+3. **Can the pipeline operate without an AI API key?**
+   - **YES.** Verified by `test_clean_import_without_api_keys` and `test_ai_disabled_deterministic_independence`. With `ai_enabled=False` (the default), the entire deterministic extraction, pattern detection, and lead generation pipeline runs 100% offline with zero external network or credential requirements.
+4. **What happens when AI provider fails?**
+   - **Graceful Deterministic Fallback.** Verified by `TestProviderFailureIsolation` (503 unavailable, 500 execution error, timeouts, malformed JSON). AI failure is caught and contained; deterministic extraction and rules continue, producing valid `ExtractionResult` with `ai_fallback_occurred=True` recorded in traceability metrics.
+5. **Can hallucinated evidence enter final intelligence?**
+   - **NO.** Verified by `test_scenario_5_document_hallucinated_evidence_rejected` in `test_failure_handling.py`. `EvidenceGroundingEngine` and `SafetyFirewall` enforce strict substring/token overlap against source documents. Fabricated snippets and out-of-bounds page numbers are rejected.
+6. **Can AI invent unsupported relationships?**
+   - **NO.** Verified by `test_reject_unsupported_relationship_types` in `test_safety_firewall.py`. Relationships are restricted to the 8 frozen taxonomy types (`CALLED`, `SENT_MONEY_TO`, `OWNS_VEHICLE`, `USED_VEHICLE`, `WORKS_FOR`, `LOCATED_AT`, `ASSOCIATED_WITH`, `PART_OF_EVENT`) with verified entity type pairs.
+7. **Can AI name matching automatically merge people?**
+   - **NO.** Verified by `test_unsafe_entity_merge_prevention` in `test_safety_firewall.py` and `ml/resolution/resolver.py`. Name-only fuzzy matching produces low-confidence review proposals (0.60) and never automatically merges entities. Only exact strong identifiers (phone, bank account, vehicle) can propose high-confidence links.
+8. **Can AI mutate structured transaction/CDR facts?**
+   - **NO.** Verified by `test_scenario_7_conflicting_transaction_value_rejected` and `verify_structured_integrity` in `pipeline_integration.py`. Structured amounts, currencies, timestamps, and caller/callee IDs are authoritative and immutable.
+9. **Can unvalidated AI relationships trigger suspicious patterns?**
+   - **NO.** Verified by `test_unvalidated_ai_relationships_cannot_create_patterns` in `test_safety_firewall.py`. Candidate AI relationships must pass through the `SafetyFirewall`, grounding engine, and `RelationshipReconciler` before reaching pattern detection.
+10. **Are PostgreSQL/Neo4j completely outside ML responsibility?**
+    - **YES.** Verified by `test_zero_database_access_in_ml`. Zero database drivers, SQLAlchemy engines, psycopg2 connections, or Neo4j driver calls exist anywhere in `ml/`. ML produces structured JSON; backend owns persistence.
+11. **Were backend/frontend/shared-schema/evidence-ledger files untouched?**
+    - **YES.** Verified by `git status`. Person B work is strictly contained inside `ml/`. Zero modifications have been made outside `ml/`.
+12. **Does the complete ML test suite pass?**
+    - **YES.** 555 passed, 1 skipped (Tesseract binary env skip), 0 failed in `ml/tests/`. All 13 root backend contract tests pass.
+
+---
+
 ## HANDOFF CHECKLIST
 
 - [x] ML entry point identified: ml.pipeline.process_document
-- [x] Input contract documented: 3 calling conventions
+- [x] ML candidate aliases created: ml.process and ml.extract
+- [x] Input contract documented: 3 calling conventions (A, B, C)
 - [x] Output contract documented: ExtractionResult + full dict
 - [x] Schema validated: all 6 model types pass model_validate
 - [x] JSON serialization verified: json.dumps + re-validation round-trip
 - [x] Synthetic smoke test passed: 15/15 end-to-end tests pass
-- [x] Regression tests passed: 371/372 (1 OCR env skip)
+- [x] Full ML tests passed: 555/556 (1 OCR env skip, 0 failures)
+- [x] Phase 9 integration verification suite passed: 10/10 tests in test_final_integration_verification.py
+- [x] Phase 8 failure handling suite passed: 25/25 tests in test_failure_handling.py
+- [x] Phase 7 safety firewall suite passed: 36/36 tests in test_safety_firewall.py
+- [x] Phase 6 integration suite passed: 18/18 tests in test_pipeline_integration.py
+- [x] Backend contract tests passed: 13/13 in tests/test_ml_contract.py
 - [x] Pattern output verified: CIRCULAR / RAPID / OVERLAP confirmed
 - [x] Lead output verified: REVIEW_REQUIRED, no severity, no criminal score
 - [x] Evidence traceability verified: evidence_ids map to source record_id values

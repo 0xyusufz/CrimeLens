@@ -1,0 +1,24 @@
+{
+  "fixture_id": "SYNTHETIC_LARGE_DOC_001",
+  "description": "Multi-page synthetic investigation file for stress, edge-case, and provenance testing. Zero PII.",
+  "page_count": 4,
+  "pages": [
+    {
+      "page_number": 1,
+      "text": "CASE FILE NO. 882/2024 - SPECIAL INVESTIGATION UNIT. Dated 15-Jan-2024. Subject: Financial irregular transactions. Initial field reports identify operative Vikram Malhotra residing in South Extension. Vikram Malhotra was observed meeting Associate Amit Verma at Central Plaza."
+    },
+    {
+      "page_number": 2,
+      "text": "SURVEILLANCE AND LOGISTICS SECTION. Operative Vikram Malhotra utilized mobile number 9876543210 to arrange logistics. Vehicle registration DL01AB1234 registered under Vikram Malhotra was parked outside Alpha Synthetic Corp Ltd during the transaction window."
+    },
+    {
+      "page_number": 3,
+      "text": "BANKING AND TRANSFER RECORDS. Operative Amit Verma holds primary account 987654321098 at National Commercial Branch. Cross-verification indicates funds were wired to secondary account 112233445566 maintained by Suresh Khanna."
+    },
+    {
+      "page_number": 4,
+      "text": "TELECOMMUNICATION INTELLIGENCE. CDR records confirm outgoing calls from 9876543210 to receiver 9123456780 on 14-Jan-2024 at 18:30:00 duration 180 seconds. Intercept log ends. Signed by Inspector S. Ray."
+    }
+  ],
+  "full_text": "CASE FILE NO. 882/2024 - SPECIAL INVESTIGATION UNIT. Dated 15-Jan-2024. Subject: Financial irregular transactions. Initial field reports identify operative Vikram Malhotra residing in South Extension. Vikram Malhotra was observed meeting Associate Amit Verma at Central Plaza. SURVEILLANCE AND LOGISTICS SECTION. Operative Vikram Malhotra utilized mobile number 9876543210 to arrange logistics. Vehicle registration DL01AB1234 registered under Vikram Malhotra was parked outside Alpha Synthetic Corp Ltd during the transaction window. BANKING AND TRANSFER RECORDS. Operative Amit Verma holds primary account 987654321098 at National Commercial Branch. Cross-verification indicates funds were wired to secondary account 112233445566 maintained by Suresh Khanna. TELECOMMUNICATION INTELLIGENCE. CDR records confirm outgoing calls from 9876543210 to receiver 9123456780 on 14-Jan-2024 at 18:30:00 duration 180 seconds. Intercept log ends. Signed by Inspector S. Ray."
+}

@@ -7,6 +7,7 @@ Validates:
 - Lead
 """
 
+import json
 from typing import Any
 
 from shared.schemas.models import (
@@ -17,6 +18,24 @@ from shared.schemas.models import (
     Relationship,
     ResolutionProposal,
 )
+
+
+def validate_json_serializability(data: Any) -> str:
+    """Validate that data can be cleanly serialized to standard JSON without errors.
+
+    Raises:
+        ValueError: If data cannot be serialized to JSON.
+    """
+    try:
+        if hasattr(data, "model_dump"):
+            dumped = data.model_dump(mode="json")
+        elif hasattr(data, "to_dict"):
+            dumped = data.to_dict()
+        else:
+            dumped = data
+        return json.dumps(dumped, ensure_ascii=False)
+    except Exception as exc:
+        raise ValueError(f"Object failed JSON serializability: {exc}") from exc
 
 
 def validate_entity_mention(data: dict[str, Any] | EntityMention) -> EntityMention:
@@ -34,10 +53,10 @@ def validate_relationship(data: dict[str, Any] | Relationship) -> Relationship:
 
 
 def validate_extraction_result(data: dict[str, Any] | ExtractionResult) -> ExtractionResult:
-    """Validate an extraction result envelope against the shared Pydantic contract."""
-    if isinstance(data, ExtractionResult):
-        return data
-    return ExtractionResult.model_validate(data)
+    """Validate an extraction result envelope against the shared Pydantic contract and verify JSON serializability."""
+    res = data if isinstance(data, ExtractionResult) else ExtractionResult.model_validate(data)
+    validate_json_serializability(res)
+    return res
 
 
 def validate_resolution_proposal(

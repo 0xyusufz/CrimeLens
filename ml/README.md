@@ -122,17 +122,59 @@ All ML outputs are validated against the immutable frozen schemas in `shared.sch
    ```
 3. **No Database UUIDs / Case IDs**: Staging IDs (`mention_xxx`, `rel_xxx`) and proposal IDs (`canonical_xxx`) are preserved. Zero PostgreSQL UUIDs or `case_id`s are minted in `ml/`.
 
+## AI & Multimodal Foundation & Pipeline Integration (Phases 1–9)
+
+See [`ml/AI_FOUNDATION.md`](file:///c:/Users/MDFAIZAANRAZAKHAN/Downloads/CrimeLens/ml/AI_FOUNDATION.md) for full architectural specifications.
+- **`ml/tests/test_final_integration_verification.py`** (Phase 9): Final integration verification suite verifying adapter discovery across candidate tuples (`ml.process`, `ml.pipeline`, `ml.extract`), 3 calling conventions, real end-to-end synthetic investigation orchestration, cold-start zero-credential import, and strict isolation from databases.
+- **`ml/tests/test_failure_handling.py`** (Phase 8): Comprehensive failure handling, edge case, regression, and reliability test suite verifying provider failure isolation (503, 500, timeouts, rate limits, non-retryable 401s), malformed payload resilience, 10 required end-to-end operational scenarios, document boundaries (empty, minimal, multi-page, large text, mixed input), multi-threaded state safety, and secret sanitization.
+- **`ml/validation/safety_firewall.py`** (Phase 7): Authoritative `SafetyFirewall` enforcing layered candidate validation, source grounding, status/confidence bounds, entity ID safety (staging IDs only, no database UUID minting), and structured rejection reason taxonomy (`ValidationRejectionReason`).
+- **`ml/ai/response_parser.py`** (Phase 7): Safe `AIResponseParser` parsing untrusted model outputs, stripping chain-of-thought blocks (`<thought>`, `<reasoning>`, `thought`, `reasoning_content`), and extracting clean candidate payloads.
+- **`ml/ai/pipeline_integration.py`** (Phase 6 & 7): `AIPipelineCoordinator` and `AITraceabilityMetrics` integrating AI document understanding, candidate extraction, and relationship reasoning directly into `process_document(...)` with strict failure isolation, deterministic fallbacks, structured facts protection, and safety firewall enforcement.
+- **`ml/ai/evidence.py`** (Phase 5): `EvidenceGroundingEngine` validating and grounding candidate snippets against actual document text/pages, and `ProvenanceTracker` preserving verifiable multi-modal provenance chains without chain-of-thought storage.
+- **`ml/ai/reasoning.py`** (Phase 4): `AIRelationshipReasoner` proposing contextual candidate relationships across multi-entity, cross-sentence, and cross-page context, validated by strict schema and evidence grounding, and `RelationshipReconciler` unifying deterministic edges with AI proposals.
+- **`ml/ai/extraction.py`** (Phase 3): `AIEntityExtractor` proposing candidate mentions from document understanding context, guarded by hallucination defense and 7-entity taxonomy check, and `EntityReconciler` unifying deterministic mentions with AI candidates.
+- **`ml/ai/router.py`** (Phase 2): `DocumentRouter` classifying inputs across modalities (`TEXT`, `IMAGE`, `PDF`, `STRUCTURED`).
+- **`ml/ai/document_understanding.py`** (Phase 2): Format-agnostic `DocumentUnderstandingEngine` preserving pagination (`DocumentPage`), sections (`DocumentSection`), and tables (`DocumentTable`).
+- **`ml/ai/types.py`** (Phase 1): Typed `MultimodalInput` (TEXT, IMAGE, PDF, STRUCTURED) and normalized `ModelResponse`.
+- **`ml/ai/providers/base.py`** (Phase 1): Vendor-neutral `ReasoningModelProvider` abstract contract.
+- **`ml/ai/providers/mock.py`** (Phase 1): Deterministic offline `MockReasoningProvider` with error simulations.
+- **`ml/ai/client/client.py`** (Phase 1): Isolated `AIClient` enforcing bounded timeouts, bounded retries, context sanitization, and error tracking.
+- **`ml/ai/errors.py`** (Phase 1): Normalized `AIError` hierarchy with automated credential/secret redaction.
+
 ## Running Tests
 
 ```bash
-# Run full ML test suite (Phases 1–11: 238 tests)
-.\backend\.venv\Scripts\python -m unittest discover -s ml/tests
+# Run full ML test suite (555 passed, 1 skipped)
+python -m pytest ml/tests/
 
-# Run Phase 11 Schema & Contract Validation suite (72 tests)
-.\backend\.venv\Scripts\python -m unittest ml/tests/test_contract_validation.py
+# Run Phase 9 Final Integration Verification suite (10 tests)
+python -m unittest ml/tests/test_final_integration_verification.py
+
+# Run Phase 8 Testing & Failure Handling suite (25 tests)
+python -m unittest ml/tests/test_failure_handling.py
+
+# Run Phase 7 Safety Firewall & Contract Compatibility suite (36 tests)
+python -m unittest ml/tests/test_safety_firewall.py
+
+# Run Phase 6 Pipeline Integration suite (18 tests)
+python -m unittest ml/tests/test_pipeline_integration.py
+
+# Run Phase 5 AI Evidence & Provenance suite (14 tests)
+python -m unittest ml/tests/test_ai_evidence.py
+
+# Run Phase 4 AI Context & Relationship Reasoning suite (16 tests)
+python -m unittest ml/tests/test_ai_reasoning.py
+
+# Run Phase 3 AI-Assisted Extraction suite (15 tests)
+python -m unittest ml/tests/test_ai_extraction.py
+
+# Run Phase 2 Multimodal Document Understanding suite (22 tests)
+python -m unittest ml/tests/test_document_understanding.py
+
+# Run Phase 1 AI foundation suite (28 tests)
+python -m unittest ml/tests/test_ai_foundation.py
 
 # Run shared schema contract validation (Person A contract test)
-.\backend\.venv\Scripts\python -m unittest tests/test_ml_contract.py
+python -m unittest tests/test_ml_contract.py
 ```
-
 
