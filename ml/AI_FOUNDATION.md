@@ -189,17 +189,37 @@ Expected runtime environment variables (documented for reference, not committed 
 
 ## 6. Verification & Test Coverage
 
-Test Suite: `ml/tests/test_ai_foundation.py` (28 unit tests)
-- Provider abstraction & subclass conformance
-- Multimodal inputs (Text, Image, PDF, Structured, Bytes)
-- Invalid input rejection (empty, blank whitespace, improper types)
-- Normalized model response getters & isolation
-- Deterministic mock provider repeatability
-- Controlled failure simulations (timeout, rate limit, auth, malformed, unavailable, execution)
-- AIClient bounded retry on transient errors vs immediate abort on auth failure
-- Context sanitization & secret stripping
-- Secret redaction regex across error messages & config repr
-- Full regression compatibility with `process_document`
+- Phase 1 Test Suite: `ml/tests/test_ai_foundation.py` (28 unit tests)
+- Phase 2 Test Suite: `ml/tests/test_document_understanding.py` (22 unit tests)
+- Total ML test suite: **421 passed, 1 skipped** (Tesseract OCR skipped when binary is absent).
+- All 13 contract tests in `tests/test_ml_contract.py` pass 100%.
 
-Total ML test suite: **399 passed, 1 skipped** (Tesseract OCR skipped when binary is absent).
-All 13 contract tests in `tests/test_ml_contract.py` pass 100%.
+---
+
+## 7. Phase 2 — Multimodal Document Understanding
+
+Phase 2 builds a format-agnostic, multimodal document-understanding layer on top of Phase 1:
+
+### 7.1 Input Routing (`ml.ai.router.DocumentRouter`)
+Classifies inputs into distinct modalities:
+- `DocumentModality.TEXT`: Raw strings, `.txt`, `.md`.
+- `DocumentModality.IMAGE`: Image bytes, `.png`, `.jpg`, `.jpeg`, `.tiff`, `.bmp`. Flags `is_scanned=True, requires_ocr=True`.
+- `DocumentModality.PDF`: Native PDF (with text streams) vs. Scanned PDF (requires OCR).
+- `DocumentModality.STRUCTURED`: JSON or CSV records routed to deterministic parsers.
+
+### 7.2 Format-Agnostic Understanding Model (`ml.ai.document_understanding.DocumentUnderstanding`)
+- **Pagination**: `DocumentPage` preserves page numbers and page-level slices without collapsing text.
+- **Sections**: `DocumentSection` identifies semantic categories (`HEADING`, `METADATA`, `NARRATIVE`, `STATEMENT`, `INCIDENT_DESCRIPTION`, `FINANCIAL_RECORD`, `COMMUNICATION_RECORD`, `SEIZURE_RECORD`, `TABLE`).
+- **Tables**: `DocumentTable` extracts headers and rows from tabular data.
+- **Classification**: Infers document category (`POLICE_REPORT`, `FINANCIAL_STATEMENT`, `CALL_DETAIL_RECORD`, `WITNESS_STATEMENT`, `SEIZURE_MEMO`, `LEGAL_NOTICE`, `GENERIC_DOCUMENT`) without assuming a fixed FIR format.
+- **Safety**: Never invents missing data; never generates guilt, criminal scores, or accusations.
+
+### 7.3 Integration & Frozen Contracts
+- **HTTP Endpoints Added in Phase 2:** **NONE**
+- **Existing Backend Processing Endpoint:** `POST /api/documents/{document_id}/process`
+- **Existing ML Entry Point:** `ml.pipeline.process_document(...)`
+- **Backend Files Modified:** **NONE**
+- **Shared Schemas Modified:** **NONE**
+- **Database Modified:** **NONE**
+- **Neo4j Modified:** **NONE**
+

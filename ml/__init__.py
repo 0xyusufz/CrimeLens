@@ -3,11 +3,19 @@
 from ml.ai import (
     AIClient,
     AIError,
+    DocumentModality,
+    DocumentPage,
+    DocumentRouter,
+    DocumentSection,
+    DocumentTable,
+    DocumentUnderstanding,
+    DocumentUnderstandingEngine,
     InputType,
     MockReasoningProvider,
     ModelResponse,
     MultimodalInput,
     ReasoningModelProvider,
+    RoutedDocument,
     create_ai_client,
 )
 from ml.config import MLConfig, default_config
@@ -25,5 +33,14 @@ __all__ = [
     "ModelResponse",
     "InputType",
     "AIError",
+    "DocumentRouter",
+    "DocumentModality",
+    "RoutedDocument",
+    "DocumentUnderstanding",
+    "DocumentUnderstandingEngine",
+    "DocumentPage",
+    "DocumentSection",
+    "DocumentTable",
 ]
+
 

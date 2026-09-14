@@ -9,6 +9,13 @@ from __future__ import annotations
 from typing import Optional
 
 from ml.ai.client.client import AIClient
+from ml.ai.document_understanding import (
+    DocumentPage,
+    DocumentSection,
+    DocumentTable,
+    DocumentUnderstanding,
+    DocumentUnderstandingEngine,
+)
 from ml.ai.errors import (
     AIAuthenticationError,
     AIConfigurationError,
@@ -22,6 +29,7 @@ from ml.ai.errors import (
 )
 from ml.ai.providers.base import ReasoningModelProvider
 from ml.ai.providers.mock import MockReasoningProvider
+from ml.ai.router import DocumentModality, DocumentRouter, RoutedDocument
 from ml.ai.types import InputType, ModelResponse, MultimodalInput
 
 
@@ -47,6 +55,16 @@ __all__ = [
     "InputType",
     "MultimodalInput",
     "ModelResponse",
+    # Routing (Phase 2)
+    "DocumentModality",
+    "DocumentRouter",
+    "RoutedDocument",
+    # Document Understanding (Phase 2)
+    "DocumentPage",
+    "DocumentSection",
+    "DocumentTable",
+    "DocumentUnderstanding",
+    "DocumentUnderstandingEngine",
     # Providers
     "ReasoningModelProvider",
     "MockReasoningProvider",
@@ -64,3 +82,4 @@ __all__ = [
     "AIUnsupportedInputError",
     "AIExecutionError",
 ]
+

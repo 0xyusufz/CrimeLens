@@ -353,7 +353,7 @@ def process_document(
     )
 
     if should_return_analysis:
-        return {
+        analysis_dict: dict[str, Any] = {
             "document_id": doc_id_str,
             "extraction_result": extraction_result,
             "entities": entities,
@@ -363,6 +363,15 @@ def process_document(
             "leads": leads,
             "structured_records": all_structured,
         }
+        if kwargs.get("include_understanding") or kwargs.get("understand_document"):
+            from ml.ai.document_understanding import DocumentUnderstandingEngine
+            engine = DocumentUnderstandingEngine(config=cfg)
+            analysis_dict["document_understanding"] = engine.understand(
+                clean_text,
+                document_id=doc_id_str,
+            )
+        return analysis_dict
 
     return extraction_result
+
 

@@ -122,27 +122,33 @@ All ML outputs are validated against the immutable frozen schemas in `shared.sch
    ```
 3. **No Database UUIDs / Case IDs**: Staging IDs (`mention_xxx`, `rel_xxx`) and proposal IDs (`canonical_xxx`) are preserved. Zero PostgreSQL UUIDs or `case_id`s are minted in `ml/`.
 
-## AI & Multimodal Foundation (Phase 1)
+## AI & Multimodal Foundation (Phase 1 & Phase 2)
 
 See [`ml/AI_FOUNDATION.md`](file:///c:/Users/MDFAIZAANRAZAKHAN/Downloads/CrimeLens/ml/AI_FOUNDATION.md) for full architectural specifications.
-- **`ml/ai/types.py`**: Typed `MultimodalInput` (TEXT, IMAGE, PDF, STRUCTURED) and normalized `ModelResponse`.
-- **`ml/ai/providers/base.py`**: Vendor-neutral `ReasoningModelProvider` abstract contract.
-- **`ml/ai/providers/mock.py`**: Deterministic offline `MockReasoningProvider` with error simulations.
-- **`ml/ai/client/client.py`**: Isolated `AIClient` enforcing bounded timeouts, bounded retries, and context sanitization.
-- **`ml/ai/errors.py`**: Normalized `AIError` hierarchy with automated credential/secret redaction.
+- **`ml/ai/router.py`** (Phase 2): `DocumentRouter` classifying inputs across modalities (`TEXT`, `IMAGE`, `PDF`, `STRUCTURED`).
+- **`ml/ai/document_understanding.py`** (Phase 2): Format-agnostic `DocumentUnderstandingEngine` preserving pagination (`DocumentPage`), sections (`DocumentSection`), and tables (`DocumentTable`).
+- **`ml/ai/types.py`** (Phase 1): Typed `MultimodalInput` (TEXT, IMAGE, PDF, STRUCTURED) and normalized `ModelResponse`.
+- **`ml/ai/providers/base.py`** (Phase 1): Vendor-neutral `ReasoningModelProvider` abstract contract.
+- **`ml/ai/providers/mock.py`** (Phase 1): Deterministic offline `MockReasoningProvider` with error simulations.
+- **`ml/ai/client/client.py`** (Phase 1): Isolated `AIClient` enforcing bounded timeouts, bounded retries, and context sanitization.
+- **`ml/ai/errors.py`** (Phase 1): Normalized `AIError` hierarchy with automated credential/secret redaction.
 
 ## Running Tests
 
 ```bash
-# Run full ML test suite (399 passed, 1 skipped)
+# Run full ML test suite (421 passed, 1 skipped)
 python -m pytest ml/tests/
 
 # Run Phase 1 AI foundation suite (28 tests)
 python -m unittest ml/tests/test_ai_foundation.py
 
+# Run Phase 2 Multimodal Document Understanding suite (22 tests)
+python -m unittest ml/tests/test_document_understanding.py
+
 # Run shared schema contract validation (Person A contract test)
 python -m unittest tests/test_ml_contract.py
 ```
+
 
 
 
