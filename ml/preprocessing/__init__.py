@@ -2,6 +2,7 @@
 
 from ml.preprocessing.document_loader import DocumentSource, is_scanned_file, load_document
 from ml.preprocessing.text_normalizer import PreprocessedText, normalize_text, preprocess_text
+from ml.preprocessing.pdf_handler import process_pdf, PDFProcessingError
 
 __all__ = [
     "DocumentSource",
@@ -10,4 +11,6 @@ __all__ = [
     "load_document",
     "normalize_text",
     "preprocess_text",
+    "process_pdf",
+    "PDFProcessingError",
 ]

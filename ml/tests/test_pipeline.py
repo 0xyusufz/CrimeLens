@@ -344,14 +344,29 @@ class TestPipelineIntegration(unittest.TestCase):
 
     def test_14_no_database_access(self):
         """TEST 14: ML pipeline runs without PostgreSQL or Neo4j drivers or credentials."""
+        import subprocess
         import sys
 
-        # Verify no database connection modules are imported or required by pipeline
-        import ml.pipeline
+        # Verify no database connection modules are imported or required by pipeline.
+        # We run this in a subprocess to ensure clean sys.modules, preventing order-dependent
+        # failures when this test runs after backend tests in a combined test suite.
+        script = (
+            "import sys\n"
+            "import ml.pipeline\n"
+            "assert 'psycopg2' not in sys.modules, 'psycopg2 loaded by ML'\n"
+            "assert 'asyncpg' not in sys.modules, 'asyncpg loaded by ML'\n"
+            "assert 'neo4j' not in sys.modules, 'neo4j loaded by ML'\n"
+        )
 
-        self.assertNotIn("psycopg2", sys.modules)
-        self.assertNotIn("asyncpg", sys.modules)
-        self.assertNotIn("neo4j", sys.modules)
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True
+        )
+        self.assertEqual(
+            result.returncode, 0,
+            f"ML pipeline isolation test failed: {result.stderr}"
+        )
 
     def test_15_no_backend_dependency(self):
         """TEST 15: ML pipeline executes without running FastAPI or any HTTP server."""

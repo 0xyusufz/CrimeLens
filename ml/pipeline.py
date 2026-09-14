@@ -147,8 +147,19 @@ def process_document(
     ocr_runner = kwargs.get("ocr_engine_runner")
     ner_runner = kwargs.get("ner_runner")
 
-    # 2. Document Ingestion & Preprocessing: Plain text vs. Scanned/Image via Phase 3 OCR
+    # 2. Document Ingestion & Preprocessing: Plain text vs. Scanned/Image vs. PDF
+    is_pdf = False
     if isinstance(text, bytes):
+        if text.startswith(b"%PDF-") or (len(args) == 3 and str(args[1]).lower().endswith(".pdf")):
+            is_pdf = True
+    elif isinstance(text, str):
+        if text.lower().endswith(".pdf"):
+            is_pdf = True
+
+    if is_pdf:
+        from ml.preprocessing.pdf_handler import process_pdf
+        raw_text = process_pdf(text, lang=cfg.default_ocr_language, ocr_runner=ocr_runner)
+    elif isinstance(text, bytes):
         raw_text = extract_text_from_image(text, lang=cfg.default_ocr_language, engine_runner=ocr_runner)
     elif isinstance(text, str):
         if is_scanned_file(text):

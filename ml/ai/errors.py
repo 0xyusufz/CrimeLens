@@ -71,7 +71,15 @@ class AITimeoutError(AIError):
 
 
 class AIRateLimitError(AIError):
-    """Raised when provider rate limit / quota is exceeded."""
+    """Raised when provider rate limit is exceeded (may succeed after brief back-off)."""
+
+
+class AIQuotaExhaustedError(AIRateLimitError):
+    """Raised when the provider quota is fully exhausted (e.g. daily/monthly limit).
+
+    Subclasses AIRateLimitError so that catch-all handlers still catch it,
+    but the client treats it as non-retrying: retrying won't help until quota resets.
+    """
 
 
 class AIMalformedResponseError(AIError):

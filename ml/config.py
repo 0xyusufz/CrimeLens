@@ -4,6 +4,7 @@ Contains ML-specific settings and thresholds.
 Does NOT contain database, Neo4j, or server credentials.
 """
 
+import os as _os
 from dataclasses import dataclass
 from typing import Optional
 
@@ -49,5 +50,30 @@ class MLConfig:
         )
 
 
-default_config = MLConfig()
+# ---------------------------------------------------------------------------
+# Default config: built from environment at import time.
+# Secrets are read from env; never hard-coded here.
+# ---------------------------------------------------------------------------
+_gemini_key: Optional[str] = _os.environ.get("GEMINI_API_KEY") or None
+_provider_env: str = (_os.environ.get("AI_PROVIDER") or "").lower()
+_model_env: str = _os.environ.get("GEMINI_MODEL") or "gemini-1.5-flash"
 
+# Provider precedence:
+#   1. AI_PROVIDER env var (explicit override)
+#   2. GEMINI_API_KEY present → "gemini"
+#   3. fallback → "mock" (no key required, no network needed)
+if _provider_env:
+    _active_provider = _provider_env
+elif _gemini_key:
+    _active_provider = "gemini"
+else:
+    _active_provider = "mock"
+
+_active_model = _model_env if _active_provider == "gemini" else "mock-reasoner-v1"
+
+default_config = MLConfig(
+    ai_enabled=bool(_gemini_key),
+    ai_provider=_active_provider,
+    ai_model=_active_model,
+    ai_api_key=_gemini_key,
+)

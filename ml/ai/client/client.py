@@ -22,6 +22,7 @@ from ml.ai.errors import (
     AIExecutionError,
     AIMalformedResponseError,
     AIProviderUnavailableError,
+    AIQuotaExhaustedError,
     AIRateLimitError,
     AITimeoutError,
     AIUnsupportedInputError,
@@ -32,8 +33,16 @@ from ml.ai.types import ModelResponse, MultimodalInput
 
 logger = logging.getLogger(__name__)
 
-# Errors considered transient and eligible for bounded retry
-TRANSIENT_ERRORS = (AITimeoutError, AIRateLimitError)
+# Errors considered transient and eligible for bounded retry with backoff.
+# AIProviderUnavailableError covers 503/network-down conditions.
+# AIRateLimitError covers brief 429 rate-limit windows.
+# AITimeoutError covers per-request timeouts.
+# NOTE: AIQuotaExhaustedError (subclass of AIRateLimitError) is explicitly
+#       excluded below — retrying a quota-exhausted endpoint is wasteful.
+TRANSIENT_ERRORS = (AITimeoutError, AIRateLimitError, AIProviderUnavailableError)
+
+# Base retry delay in seconds; each attempt doubles (exponential backoff).
+_BASE_BACKOFF_SECONDS: float = 0.5
 
 
 class AIClient:
@@ -125,6 +134,18 @@ class AIClient:
                 logger.error("AI provider authentication failure: %s", exc.sanitized_message)
                 raise
 
+            except AIQuotaExhaustedError as exc:
+                # Never retry quota exhaustion — quota won't reset in seconds.
+                # Fall out of the retry loop immediately.
+                self.last_error = exc
+                logger.warning(
+                    "AI quota exhausted on attempt %d/%d: %s; not retrying",
+                    attempts,
+                    total_attempts,
+                    exc.sanitized_message,
+                )
+                raise
+
             except AIUnsupportedInputError as exc:
                 # Never retry invalid input errors
                 self.last_error = exc
@@ -141,13 +162,17 @@ class AIClient:
                 last_error = exc
                 self.last_error = exc
                 logger.warning(
-                    "AI transient error on attempt %d/%d: %s",
+                    "AI provider error on attempt %d/%d: %s",
                     attempts,
                     total_attempts,
                     exc.sanitized_message,
                 )
                 if attempts >= total_attempts:
                     raise exc
+                # Exponential backoff: 0.5s, 1.0s, 2.0s … capped at 4 s.
+                backoff = min(_BASE_BACKOFF_SECONDS * (2 ** (attempts - 1)), 4.0)
+                logger.info("Retrying in %.1fs (attempt %d/%d)", backoff, attempts + 1, total_attempts)
+                time.sleep(backoff)
 
             except AIError as exc:
                 last_error = exc
