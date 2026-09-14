@@ -58,6 +58,7 @@ class AIClient:
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
         self.max_input_bytes = max_input_bytes
+        self.last_error: Optional[AIError] = None
 
     def analyze(
         self,
@@ -115,25 +116,30 @@ class AIClient:
                 if not isinstance(response.structured_payload, dict):
                     raise AIMalformedResponseError("Model response structured_payload must be a dictionary")
 
+                self.last_error = None
                 return response
 
             except AIAuthenticationError as exc:
                 # Never retry authentication failures
+                self.last_error = exc
                 logger.error("AI provider authentication failure: %s", exc.sanitized_message)
                 raise
 
             except AIUnsupportedInputError as exc:
                 # Never retry invalid input errors
+                self.last_error = exc
                 logger.error("AI provider unsupported input: %s", exc.sanitized_message)
                 raise
 
             except AIConfigurationError as exc:
                 # Never retry configuration errors
+                self.last_error = exc
                 logger.error("AI provider configuration failure: %s", exc.sanitized_message)
                 raise
 
             except TRANSIENT_ERRORS as exc:
                 last_error = exc
+                self.last_error = exc
                 logger.warning(
                     "AI transient error on attempt %d/%d: %s",
                     attempts,
@@ -145,6 +151,7 @@ class AIClient:
 
             except AIError as exc:
                 last_error = exc
+                self.last_error = exc
                 logger.error("AI provider error on attempt %d/%d: %s", attempts, total_attempts, exc.sanitized_message)
                 if attempts >= total_attempts:
                     raise exc
@@ -156,13 +163,17 @@ class AIClient:
                     f"Unexpected error during provider execution: {sanitized_msg}"
                 )
                 last_error = normalized
+                self.last_error = normalized
                 logger.error("Unhandled error on attempt %d/%d: %s", attempts, total_attempts, sanitized_msg)
                 if attempts >= total_attempts:
                     raise normalized
 
         if last_error:
+            self.last_error = last_error
             raise last_error
-        raise AIExecutionError("Model analysis failed with an unknown error")
+        err = AIExecutionError("Model analysis failed with an unknown error")
+        self.last_error = err
+        raise err
 
     def _sanitize_context(self, context: Optional[dict[str, Any]]) -> dict[str, Any]:
         """Strip dangerous fields from context before sending to provider."""

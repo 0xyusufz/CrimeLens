@@ -161,7 +161,36 @@ def process_document(
     # Flow OCR or loaded text through text normalizer (Phase 2)
     clean_text = normalize_text(raw_text)
 
-    # 3. Entity Mention Extraction (Phase 4 & Phase 3 AI Candidate Reconciliation)
+    # Initialize AI Pipeline Coordinator if AI is enabled
+    use_ai = bool(
+        cfg.ai_enabled
+        or kwargs.get("use_ai", False)
+        or kwargs.get("use_ai_extraction", False)
+        or kwargs.get("use_ai_reasoning", False)
+    )
+    coordinator = None
+    doc_understanding = None
+    if use_ai:
+        try:
+            from ml.ai.pipeline_integration import AIPipelineCoordinator
+
+            coordinator = AIPipelineCoordinator(
+                client=kwargs.get("ai_client"),
+                config=cfg,
+            )
+            input_content = raw_text if isinstance(raw_text, (str, bytes)) else clean_text
+            fname = kwargs.get("filename") or (str(args[1]) if len(args) == 3 else f"{doc_id_str}.txt")
+            doc_understanding = coordinator.understand_document(
+                input_content,
+                filename=fname,
+                document_id=doc_id_str,
+            )
+        except Exception:
+            # Failure containment: AI failure must never break deterministic pipeline
+            coordinator = None
+            doc_understanding = None
+
+    # 3. Entity Mention Extraction (Phase 4 & Phase 3/6 AI Candidate Reconciliation)
     entities: list[EntityMention] = []
     if clean_text:
         # Base deterministic extraction (regex + NER)
@@ -172,40 +201,15 @@ def process_document(
             ner_runner=ner_runner,
         )
 
-        # AI-Assisted Candidate Extraction & Reconciliation (Phase 3)
-        # Enabled if MLConfig.ai_enabled is True or explicitly passed via kwargs
-        use_ai = cfg.ai_enabled or kwargs.get("use_ai_extraction", False)
-        if use_ai:
+        # AI-Assisted Candidate Extraction & Reconciliation (Phase 3 / Phase 6)
+        if coordinator is not None and doc_understanding is not None:
             try:
-                from ml.ai.client.client import AIClient
-                from ml.ai.document_understanding import DocumentUnderstandingEngine
-                from ml.ai.extraction import AIEntityExtractor, EntityReconciler
-                from ml.ai.providers.mock import MockReasoningProvider
-
-                ai_client = kwargs.get("ai_client")
-                if ai_client is None:
-                    # Use mock or configured provider
-                    ai_client = AIClient(MockReasoningProvider(), timeout_seconds=cfg.ai_timeout_seconds)
-
-                doc_engine = DocumentUnderstandingEngine(client=ai_client, config=cfg)
-                doc_understanding = doc_engine.understand(
-                    raw_text if isinstance(raw_text, (str, bytes)) else clean_text,
-                    filename=kwargs.get("filename") or f"{doc_id_str}.txt",
-                    document_id=doc_id_str,
+                entities = coordinator.reconcile_entities(
+                    doc_understanding,
+                    entities,
+                    min_confidence=cfg.min_entity_confidence,
                 )
-
-                extractor = AIEntityExtractor(client=ai_client, config=cfg)
-                ai_candidates = extractor.extract_candidates(doc_understanding)
-
-                if ai_candidates:
-                    reconciler = EntityReconciler()
-                    entities = reconciler.reconcile(
-                        entities,
-                        ai_candidates,
-                        min_confidence=cfg.min_entity_confidence,
-                    )
             except Exception:
-                # Failure containment: AI failure must never break deterministic pipeline
                 pass
 
     # 4. Structured Records Ingestion (Phase 7)
@@ -322,41 +326,17 @@ def process_document(
         min_confidence=cfg.min_relationship_confidence,
     )
 
-    # Phase 4: AI Contextual Relationship Reasoning & Reconciliation
-    if (cfg.ai_enabled or kwargs.get("use_ai_reasoning", False) or kwargs.get("use_ai_extraction", False)) and len(entities) >= 2:
+    # Phase 4 & Phase 6: AI Contextual Relationship Reasoning & Reconciliation
+    if coordinator is not None and doc_understanding is not None and len(entities) >= 2:
         try:
-            from ml.ai.client.client import AIClient
-            from ml.ai.document_understanding import DocumentUnderstandingEngine
-            from ml.ai.providers.mock import MockReasoningProvider
-            from ml.ai.reasoning import AIRelationshipReasoner, RelationshipReconciler
-
-            ai_client = kwargs.get("ai_client")
-            if ai_client is None:
-                ai_client = AIClient(MockReasoningProvider(), timeout_seconds=cfg.ai_timeout_seconds)
-
-            doc_engine = DocumentUnderstandingEngine(client=ai_client, config=cfg)
-            doc_understanding = doc_engine.understand(
-                raw_text if isinstance(raw_text, (str, bytes)) else clean_text,
-                filename=kwargs.get("filename") or f"{doc_id_str}.txt",
-                document_id=doc_id_str,
-            )
-
-            reasoner = AIRelationshipReasoner(client=ai_client, config=cfg)
-            ai_candidates = reasoner.reason_relationships(
+            relationships = coordinator.reconcile_relationships(
                 doc_understanding,
                 entities=entities,
-                existing_relationships=relationships,
+                deterministic_relationships=relationships,
                 structured_records=all_structured,
+                document_id=doc_id_str,
+                min_confidence=cfg.min_relationship_confidence,
             )
-
-            if ai_candidates:
-                reconciler = RelationshipReconciler()
-                relationships = reconciler.reconcile(
-                    relationships,
-                    ai_candidates,
-                    document_id=doc_id_str,
-                    min_confidence=cfg.min_relationship_confidence,
-                )
         except Exception:
             # Failure containment: AI failure must never break deterministic pipeline
             pass
@@ -439,13 +419,18 @@ def process_document(
             "leads": leads,
             "structured_records": all_structured,
         }
+        if coordinator is not None:
+            analysis_dict["ai_traceability"] = coordinator.metrics.to_dict()
         if kwargs.get("include_understanding") or kwargs.get("understand_document"):
-            from ml.ai.document_understanding import DocumentUnderstandingEngine
-            engine = DocumentUnderstandingEngine(config=cfg)
-            analysis_dict["document_understanding"] = engine.understand(
-                clean_text,
-                document_id=doc_id_str,
-            )
+            if doc_understanding is not None:
+                analysis_dict["document_understanding"] = doc_understanding
+            else:
+                from ml.ai.document_understanding import DocumentUnderstandingEngine
+                engine = DocumentUnderstandingEngine(config=cfg)
+                analysis_dict["document_understanding"] = engine.understand(
+                    clean_text,
+                    document_id=doc_id_str,
+                )
         return analysis_dict
 
     return extraction_result

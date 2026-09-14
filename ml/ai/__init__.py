@@ -40,6 +40,7 @@ from ml.ai.extraction import (
     AIEntityExtractor,
     EntityReconciler,
 )
+from ml.ai.pipeline_integration import AIPipelineCoordinator, AITraceabilityMetrics
 from ml.ai.providers.base import ReasoningModelProvider
 from ml.ai.providers.mock import MockReasoningProvider
 from ml.ai.reasoning import (
@@ -98,6 +99,9 @@ __all__ = [
     "EvidenceReference",
     "EvidenceGroundingEngine",
     "ProvenanceTracker",
+    # Pipeline Integration (Phase 6)
+    "AIPipelineCoordinator",
+    "AITraceabilityMetrics",
     # Providers
     "ReasoningModelProvider",
     "MockReasoningProvider",
