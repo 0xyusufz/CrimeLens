@@ -161,15 +161,52 @@ def process_document(
     # Flow OCR or loaded text through text normalizer (Phase 2)
     clean_text = normalize_text(raw_text)
 
-    # 3. Entity Mention Extraction (Phase 4)
+    # 3. Entity Mention Extraction (Phase 4 & Phase 3 AI Candidate Reconciliation)
     entities: list[EntityMention] = []
     if clean_text:
+        # Base deterministic extraction (regex + NER)
         entities = extract_entities(
             clean_text,
             document_id=doc_id_str,
             min_confidence=cfg.min_entity_confidence,
             ner_runner=ner_runner,
         )
+
+        # AI-Assisted Candidate Extraction & Reconciliation (Phase 3)
+        # Enabled if MLConfig.ai_enabled is True or explicitly passed via kwargs
+        use_ai = cfg.ai_enabled or kwargs.get("use_ai_extraction", False)
+        if use_ai:
+            try:
+                from ml.ai.client.client import AIClient
+                from ml.ai.document_understanding import DocumentUnderstandingEngine
+                from ml.ai.extraction import AIEntityExtractor, EntityReconciler
+                from ml.ai.providers.mock import MockReasoningProvider
+
+                ai_client = kwargs.get("ai_client")
+                if ai_client is None:
+                    # Use mock or configured provider
+                    ai_client = AIClient(MockReasoningProvider(), timeout_seconds=cfg.ai_timeout_seconds)
+
+                doc_engine = DocumentUnderstandingEngine(client=ai_client, config=cfg)
+                doc_understanding = doc_engine.understand(
+                    raw_text if isinstance(raw_text, (str, bytes)) else clean_text,
+                    filename=kwargs.get("filename") or f"{doc_id_str}.txt",
+                    document_id=doc_id_str,
+                )
+
+                extractor = AIEntityExtractor(client=ai_client, config=cfg)
+                ai_candidates = extractor.extract_candidates(doc_understanding)
+
+                if ai_candidates:
+                    reconciler = EntityReconciler()
+                    entities = reconciler.reconcile(
+                        entities,
+                        ai_candidates,
+                        min_confidence=cfg.min_entity_confidence,
+                    )
+            except Exception:
+                # Failure containment: AI failure must never break deterministic pipeline
+                pass
 
     # 4. Structured Records Ingestion (Phase 7)
     structured_records = kwargs.get("structured_records") or []

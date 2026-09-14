@@ -27,6 +27,11 @@ from ml.ai.errors import (
     AITimeoutError,
     AIUnsupportedInputError,
 )
+from ml.ai.extraction import (
+    AIEntityCandidate,
+    AIEntityExtractor,
+    EntityReconciler,
+)
 from ml.ai.providers.base import ReasoningModelProvider
 from ml.ai.providers.mock import MockReasoningProvider
 from ml.ai.router import DocumentModality, DocumentRouter, RoutedDocument
@@ -65,6 +70,10 @@ __all__ = [
     "DocumentTable",
     "DocumentUnderstanding",
     "DocumentUnderstandingEngine",
+    # Extraction (Phase 3)
+    "AIEntityCandidate",
+    "AIEntityExtractor",
+    "EntityReconciler",
     # Providers
     "ReasoningModelProvider",
     "MockReasoningProvider",

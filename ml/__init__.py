@@ -2,6 +2,8 @@
 
 from ml.ai import (
     AIClient,
+    AIEntityCandidate,
+    AIEntityExtractor,
     AIError,
     DocumentModality,
     DocumentPage,
@@ -10,6 +12,7 @@ from ml.ai import (
     DocumentTable,
     DocumentUnderstanding,
     DocumentUnderstandingEngine,
+    EntityReconciler,
     InputType,
     MockReasoningProvider,
     ModelResponse,
@@ -41,6 +44,9 @@ __all__ = [
     "DocumentPage",
     "DocumentSection",
     "DocumentTable",
+    "AIEntityCandidate",
+    "AIEntityExtractor",
+    "EntityReconciler",
 ]
 
 

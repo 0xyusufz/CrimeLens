@@ -191,7 +191,8 @@ Expected runtime environment variables (documented for reference, not committed 
 
 - Phase 1 Test Suite: `ml/tests/test_ai_foundation.py` (28 unit tests)
 - Phase 2 Test Suite: `ml/tests/test_document_understanding.py` (22 unit tests)
-- Total ML test suite: **421 passed, 1 skipped** (Tesseract OCR skipped when binary is absent).
+- Phase 3 Test Suite: `ml/tests/test_ai_extraction.py` (15 unit tests)
+- Total ML test suite: **436 passed, 1 skipped** (Tesseract OCR skipped when binary is absent).
 - All 13 contract tests in `tests/test_ml_contract.py` pass 100%.
 
 ---
@@ -222,4 +223,77 @@ Classifies inputs into distinct modalities:
 - **Shared Schemas Modified:** **NONE**
 - **Database Modified:** **NONE**
 - **Neo4j Modified:** **NONE**
+
+---
+
+## 8. Phase 3 — AI-Assisted Entity & Information Extraction
+
+Phase 3 introduces AI-assisted candidate entity and information extraction on top of Phase 1 (AI provider foundation) and Phase 2 (Multimodal Document Understanding):
+
+### 8.1 Architecture & Untrusted Candidate Principle
+AI output is strictly treated as **UNTRUSTED CANDIDATE INTELLIGENCE**. It is never directly persisted or promoted to final intelligence without going through deterministic validation, normalization, and reconciliation.
+
+```
+Document Understanding (Phase 2)
+              │
+              ├──────────────────────────────────┐
+              ▼                                  ▼
+Deterministic Extraction               AI Candidate Extractor
+(Regex & Rule NER)                     (`AIEntityExtractor`)
+              │                                  │
+              │                                  ▼
+              │                        Hallucination Defense
+              │                        - Source Grounding Check
+              │                        - 7-Entity Taxonomy Enforced
+              │                        - Bounded Confidence (0 <= c <= 1)
+              │                        - Evidence Snippet & Page Preservation
+              │                                  │
+              └────────────────┬─────────────────┘
+                               ▼
+                    Candidate Reconciliation
+                     (`EntityReconciler`)
+                               │
+                               ▼
+                     Canonical Normalization
+                               │
+                               ▼
+                   Staging EntityMention List
+                  (mention_001, mention_002, ...)
+                               │
+                               ▼
+             Subsequent Pipeline Stages (Validation)
+```
+
+### 8.2 Supported Entity Taxonomy
+Restricted exclusively to CrimeLens's 7 frozen entity categories (`shared/schemas/enums.py`):
+- `PERSON`
+- `ORGANIZATION`
+- `PHONE`
+- `BANK_ACCOUNT`
+- `VEHICLE`
+- `LOCATION`
+- `EVENT`
+
+Unsupported types (e.g. `CRIMINAL`, `SUSPECT`, `GANG_MEMBER`, `THREAT_LEVEL`, `RISK_SCORE`) are strictly rejected.
+
+### 8.3 Hallucination Defense & Source Grounding
+- **Grounding Verification**: Candidates proposed by AI must have direct token or normalized presence in the underlying document context. Ungrounded entities are dropped.
+- **Evidence Snippets**: Real text snippets surrounding the mention are captured directly from the document. No fake evidence is synthesized.
+- **Page Context**: Page numbers are preserved or mapped to the respective `DocumentPage`.
+
+### 8.4 Deterministic + AI Reconciliation (`EntityReconciler`)
+- **Consensus Reinforcement**: When both deterministic rules and AI identify the same entity, the mention is deduplicated and confidence is reinforced.
+- **Non-Destructive Overwrites**: Distinct entities found by deterministic extraction are never overwritten by AI candidates.
+- **Contextual Discovery**: Valid contextual mentions discovered by AI that deterministic rules missed are incorporated as schema-compliant `EntityMention` objects.
+- **Safe ID Generation**: Sequential staging IDs (`mention_001`, `mention_002`, ...) are assigned. Zero database UUIDs or case IDs are minted.
+
+### 8.5 Frozen Backend Contracts (Phase 3)
+- **HTTP Endpoints Added:** **NONE** (Zero new endpoints)
+- **Existing Backend Endpoint:** `POST /api/documents/{document_id}/process` (UNCHANGED)
+- **Existing ML Entry Point:** `ml.pipeline.process_document(...)` (COMPATIBLE)
+- **Backend Modifications:** **NONE**
+- **Shared Schemas Modifications:** **NONE**
+- **Database Modifications:** **NONE**
+- **Neo4j Modifications:** **NONE**
+
 
