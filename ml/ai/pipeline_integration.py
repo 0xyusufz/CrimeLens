@@ -44,6 +44,7 @@ from ml.ai.reasoning import (
 )
 from ml.config import MLConfig, default_config
 from ml.structured import CDRRecord, TransactionRecord
+from ml.validation.safety_firewall import SafetyFirewall, ValidationRejectionReason
 from shared.schemas.enums import EntityType, RelationshipStatus, RelationshipType
 from shared.schemas.models import EntityMention, Relationship
 
@@ -52,7 +53,7 @@ logger = logging.getLogger("ml.ai.pipeline_integration")
 
 @dataclass
 class AITraceabilityMetrics:
-    """Internal observability and execution metrics for Phase 6 pipeline integration."""
+    """Internal observability and execution metrics for Phase 6 & Phase 7 pipeline integration."""
 
     ai_enabled: bool = False
     ai_attempted: bool = False
@@ -70,6 +71,7 @@ class AITraceabilityMetrics:
     ai_relationship_candidates_rejected: int = 0
     relationships_merged_count: int = 0
     reconciled_relationships_count: int = 0
+    rejection_reasons: dict[str, int] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert metrics to clean serializable dictionary."""
@@ -93,6 +95,7 @@ class AIPipelineCoordinator:
         self.metrics = AITraceabilityMetrics(ai_enabled=self.config.ai_enabled)
         self.evidence_engine = EvidenceGroundingEngine(normalize_ocr=True)
         self.provenance_tracker = ProvenanceTracker()
+        self.safety_firewall = SafetyFirewall(evidence_engine=self.evidence_engine)
         self._doc_understanding: Optional[DocumentUnderstanding] = None
 
     def _ensure_client(self) -> AIClient:
@@ -197,7 +200,7 @@ class AIPipelineCoordinator:
         try:
             client = self._ensure_client()
             extractor = AIEntityExtractor(client=client, config=self.config)
-            ai_candidates = extractor.extract_candidates(doc_understanding)
+            ai_candidates = extractor.get_raw_candidates(doc_understanding)
             self.metrics.ai_entity_candidates_proposed = len(ai_candidates)
 
             if getattr(client, "last_error", None) is not None:
@@ -208,10 +211,39 @@ class AIPipelineCoordinator:
                 self.metrics.reconciled_entities_count = len(deterministic_entities)
                 return deterministic_entities
 
+            # Phase 7: Enforce validation firewall on every entity candidate
+            verified_candidates: list[AIEntityCandidate] = []
+            for cand in ai_candidates:
+                val_res = self.safety_firewall.validate_entity_candidate(
+                    cand,
+                    doc_understanding=doc_understanding,
+                    document_id=doc_understanding.document_id,
+                )
+                if val_res.accepted and val_res.sanitized_candidate:
+                    sc = val_res.sanitized_candidate
+                    verified_candidates.append(
+                        AIEntityCandidate(
+                            type=sc["type"],
+                            name=sc["name"],
+                            confidence=sc["confidence"],
+                            page_number=sc["page_number"],
+                            extraction_method="ai",
+                        )
+                    )
+                else:
+                    r_name = val_res.reason.value if val_res.reason else "UNKNOWN_REJECTION"
+                    self.metrics.rejection_reasons[r_name] = self.metrics.rejection_reasons.get(r_name, 0) + 1
+
+            if not verified_candidates:
+                self.metrics.ai_entity_candidates_accepted = 0
+                self.metrics.ai_entity_candidates_rejected = len(ai_candidates)
+                self.metrics.reconciled_entities_count = len(deterministic_entities)
+                return deterministic_entities
+
             reconciler = EntityReconciler()
             reconciled = reconciler.reconcile(
                 deterministic_entities,
-                ai_candidates,
+                verified_candidates,
                 min_confidence=conf_threshold,
             )
 
@@ -221,16 +253,13 @@ class AIPipelineCoordinator:
             reconciled_keys = {(e.type, reconciler._normalize_candidate_name(e.type, e.name)) for e in reconciled}
 
             accepted_count = 0
-            rejected_count = 0
-            for cand in ai_candidates:
+            for cand in verified_candidates:
                 cand_key = (cand.type, reconciler._normalize_candidate_name(cand.type, cand.name))
                 if cand_key in reconciled_keys:
                     accepted_count += 1
-                else:
-                    rejected_count += 1
 
             self.metrics.ai_entity_candidates_accepted = accepted_count
-            self.metrics.ai_entity_candidates_rejected = rejected_count
+            self.metrics.ai_entity_candidates_rejected = len(ai_candidates) - accepted_count
             self.metrics.reconciled_entities_count = len(reconciled)
             return reconciled
 
@@ -270,7 +299,7 @@ class AIPipelineCoordinator:
         try:
             client = self._ensure_client()
             reasoner = AIRelationshipReasoner(client=client, config=self.config)
-            ai_candidates = reasoner.reason_relationships(
+            ai_candidates = reasoner.get_raw_candidates(
                 doc_understanding,
                 entities=entities,
                 existing_relationships=deterministic_relationships,
@@ -286,34 +315,40 @@ class AIPipelineCoordinator:
                 self.metrics.reconciled_relationships_count = len(deterministic_relationships)
                 return deterministic_relationships
 
-            # Ground and filter candidates against Phase 5 evidence rules
+            # Phase 7: Enforce validation firewall on every relationship candidate
             verified_candidates: list[AIRelationshipCandidate] = []
             for cand in ai_candidates:
-                v_state, grounded_snip, verified_page = self.evidence_engine.verify_and_ground_snippet(
-                    cand.evidence_snippet,
-                    doc_understanding,
-                    claimed_page=cand.page_number,
+                val_res = self.safety_firewall.validate_relationship_candidate(
+                    cand,
+                    known_entities=entities,
+                    doc_understanding=doc_understanding,
+                    document_id=document_id,
                 )
-                if v_state in (VerificationState.INVALID, VerificationState.UNVERIFIED) or not grounded_snip:
-                    # Ungrounded, fabricated snippet or invalid page number
-                    continue
-
-                # Valid, grounded candidate
-                verified_cand = AIRelationshipCandidate(
-                    source_entity_ref=cand.source_entity_ref,
-                    target_entity_ref=cand.target_entity_ref,
-                    relationship_type=cand.relationship_type,
-                    confidence=cand.confidence,
-                    status=cand.status,
-                    evidence_snippet=grounded_snip,
-                    page_number=verified_page,
-                    reasoning_summary=cand.reasoning_summary,
-                    metadata=cand.metadata,
-                )
-                verified_candidates.append(verified_cand)
+                if val_res.accepted and val_res.sanitized_candidate:
+                    sc = val_res.sanitized_candidate
+                    verified_candidates.append(
+                        AIRelationshipCandidate(
+                            source_entity_ref=sc["source_entity_ref"],
+                            target_entity_ref=sc["target_entity_ref"],
+                            relationship_type=sc["relationship_type"],
+                            confidence=sc["confidence"],
+                            status=sc["status"],
+                            evidence_snippet=sc["evidence_snippet"],
+                            page_number=sc["page_number"],
+                            reasoning_summary=sc["reasoning_summary"],
+                            metadata=getattr(cand, "metadata", {}) if hasattr(cand, "metadata") else {},
+                        )
+                    )
+                else:
+                    r_name = val_res.reason.value if val_res.reason else "UNKNOWN_REJECTION"
+                    self.metrics.rejection_reasons[r_name] = self.metrics.rejection_reasons.get(r_name, 0) + 1
 
             self.metrics.ai_relationship_candidates_accepted = len(verified_candidates)
             self.metrics.ai_relationship_candidates_rejected = len(ai_candidates) - len(verified_candidates)
+
+            if not verified_candidates:
+                self.metrics.reconciled_relationships_count = len(deterministic_relationships)
+                return deterministic_relationships
 
             # Reconcile verified AI candidates with deterministic relationships
             reconciler = RelationshipReconciler()
@@ -348,17 +383,9 @@ class AIPipelineCoordinator:
         current_cdrs: list[CDRRecord],
     ) -> bool:
         """Verify that structured transaction and CDR fields were never mutated by AI reasoning."""
-        if len(original_transactions) != len(current_transactions):
-            return False
-        if len(original_cdrs) != len(current_cdrs):
-            return False
-
-        for orig, curr in zip(original_transactions, current_transactions):
-            if orig.amount != curr.amount or orig.currency != curr.currency or orig.transaction_time != curr.transaction_time:
-                return False
-
-        for orig, curr in zip(original_cdrs, current_cdrs):
-            if orig.call_time != curr.call_time or orig.duration != curr.duration:
-                return False
-
-        return True
+        return self.safety_firewall.verify_structured_immutability(
+            original_transactions,
+            original_cdrs,
+            current_transactions,
+            current_cdrs,
+        )

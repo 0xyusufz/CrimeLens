@@ -116,6 +116,45 @@ class AIRelationshipReasoner:
         self.client = client
         self.config = config or default_config
 
+    def get_raw_candidates(
+        self,
+        doc_understanding: DocumentUnderstanding,
+        entities: list[EntityMention],
+        *,
+        existing_relationships: Optional[list[Relationship]] = None,
+        structured_records: Optional[list[Any]] = None,
+        context: Optional[dict[str, Any]] = None,
+    ) -> list[dict[str, Any]]:
+        """Fetch raw unvalidated relationship candidate dictionaries directly from provider response."""
+        if not self.config.ai_enabled or self.client is None or not self.client.provider.is_available or len(entities) < 2:
+            return []
+
+        reasoning_context = self._build_reasoning_context(
+            doc_understanding=doc_understanding,
+            entities=entities,
+            existing_relationships=existing_relationships or [],
+            structured_records=structured_records or [],
+            extra_context=context or {},
+        )
+
+        m_input = MultimodalInput.from_text(
+            doc_understanding.full_text or "Empty document",
+            filename=doc_understanding.filename,
+            metadata=reasoning_context,
+        )
+
+        try:
+            response = self.client.analyze(m_input, context=reasoning_context)
+        except AIError:
+            return []
+
+        from ml.ai.response_parser import AIResponseParser
+
+        parsed_candidates = AIResponseParser.extract_candidates(
+            response.raw_content or response.structured_payload
+        )
+        return parsed_candidates.get("relationships") or response.get_candidate_relationships()
+
     def reason_relationships(
         self,
         doc_understanding: DocumentUnderstanding,
@@ -137,34 +176,13 @@ class AIRelationshipReasoner:
         Returns:
             list[AIRelationshipCandidate]: Validated, evidence-grounded candidate relationships.
         """
-        if not self.config.ai_enabled or self.client is None or not self.client.provider.is_available:
-            return []
-
-        if len(entities) < 2:
-            return []
-
-        # Construct controlled, structured reasoning context
-        reasoning_context = self._build_reasoning_context(
-            doc_understanding=doc_understanding,
-            entities=entities,
-            existing_relationships=existing_relationships or [],
-            structured_records=structured_records or [],
-            extra_context=context or {},
+        raw_candidates = self.get_raw_candidates(
+            doc_understanding,
+            entities,
+            existing_relationships=existing_relationships,
+            structured_records=structured_records,
+            context=context,
         )
-
-        m_input = MultimodalInput.from_text(
-            doc_understanding.full_text or "Empty document",
-            filename=doc_understanding.filename,
-            metadata=reasoning_context,
-        )
-
-        try:
-            response = self.client.analyze(m_input, context=reasoning_context)
-        except AIError:
-            # Controlled fallback: return empty candidates, letting deterministic pipeline proceed
-            return []
-
-        raw_candidates = response.get_candidate_relationships()
         return self._parse_and_validate_candidates(raw_candidates, entities, doc_understanding)
 
     def _build_reasoning_context(

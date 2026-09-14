@@ -48,6 +48,7 @@ from ml.ai.reasoning import (
     AIRelationshipReasoner,
     RelationshipReconciler,
 )
+from ml.ai.response_parser import AIResponseParser
 from ml.ai.router import DocumentModality, DocumentRouter, RoutedDocument
 from ml.ai.types import InputType, ModelResponse, MultimodalInput
 
@@ -84,6 +85,8 @@ __all__ = [
     "DocumentTable",
     "DocumentUnderstanding",
     "DocumentUnderstandingEngine",
+    # Response Parsing & Safety (Phase 7)
+    "AIResponseParser",
     # Extraction (Phase 3)
     "AIEntityCandidate",
     "AIEntityExtractor",

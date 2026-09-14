@@ -122,10 +122,12 @@ All ML outputs are validated against the immutable frozen schemas in `shared.sch
    ```
 3. **No Database UUIDs / Case IDs**: Staging IDs (`mention_xxx`, `rel_xxx`) and proposal IDs (`canonical_xxx`) are preserved. Zero PostgreSQL UUIDs or `case_id`s are minted in `ml/`.
 
-## AI & Multimodal Foundation & Pipeline Integration (Phases 1–6)
+## AI & Multimodal Foundation & Pipeline Integration (Phases 1–7)
 
 See [`ml/AI_FOUNDATION.md`](file:///c:/Users/MDFAIZAANRAZAKHAN/Downloads/CrimeLens/ml/AI_FOUNDATION.md) for full architectural specifications.
-- **`ml/ai/pipeline_integration.py`** (Phase 6): `AIPipelineCoordinator` and `AITraceabilityMetrics` integrating AI document understanding, candidate extraction, and relationship reasoning directly into `process_document(...)` with strict failure isolation, deterministic fallbacks, and structured facts protection.
+- **`ml/validation/safety_firewall.py`** (Phase 7): Authoritative `SafetyFirewall` enforcing layered candidate validation, source grounding, status/confidence bounds, entity ID safety (staging IDs only, no database UUID minting), and structured rejection reason taxonomy (`ValidationRejectionReason`).
+- **`ml/ai/response_parser.py`** (Phase 7): Safe `AIResponseParser` parsing untrusted model outputs, stripping chain-of-thought blocks (`<thought>`, `<reasoning>`, `thought`, `reasoning_content`), and extracting clean candidate payloads.
+- **`ml/ai/pipeline_integration.py`** (Phase 6 & 7): `AIPipelineCoordinator` and `AITraceabilityMetrics` integrating AI document understanding, candidate extraction, and relationship reasoning directly into `process_document(...)` with strict failure isolation, deterministic fallbacks, structured facts protection, and safety firewall enforcement.
 - **`ml/ai/evidence.py`** (Phase 5): `EvidenceGroundingEngine` validating and grounding candidate snippets against actual document text/pages, and `ProvenanceTracker` preserving verifiable multi-modal provenance chains without chain-of-thought storage.
 - **`ml/ai/reasoning.py`** (Phase 4): `AIRelationshipReasoner` proposing contextual candidate relationships across multi-entity, cross-sentence, and cross-page context, validated by strict schema and evidence grounding, and `RelationshipReconciler` unifying deterministic edges with AI proposals.
 - **`ml/ai/extraction.py`** (Phase 3): `AIEntityExtractor` proposing candidate mentions from document understanding context, guarded by hallucination defense and 7-entity taxonomy check, and `EntityReconciler` unifying deterministic mentions with AI candidates.
@@ -140,8 +142,11 @@ See [`ml/AI_FOUNDATION.md`](file:///c:/Users/MDFAIZAANRAZAKHAN/Downloads/CrimeLe
 ## Running Tests
 
 ```bash
-# Run full ML test suite (484 passed, 1 skipped)
+# Run full ML test suite (520 passed, 1 skipped)
 python -m pytest ml/tests/
+
+# Run Phase 7 Safety Firewall & Contract Compatibility suite (36 tests)
+python -m unittest ml/tests/test_safety_firewall.py
 
 # Run Phase 6 Pipeline Integration suite (18 tests)
 python -m unittest ml/tests/test_pipeline_integration.py

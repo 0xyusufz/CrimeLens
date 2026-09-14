@@ -64,25 +64,16 @@ class AIEntityExtractor:
         self.client = client
         self.config = config or default_config
 
-    def extract_candidates(
+    def get_raw_candidates(
         self,
         doc_understanding: DocumentUnderstanding,
         *,
         context: Optional[dict[str, Any]] = None,
-    ) -> list[AIEntityCandidate]:
-        """Propose candidate entity mentions from document understanding context.
-
-        Args:
-            doc_understanding: Phase 2 DocumentUnderstanding object.
-            context: Optional contextual parameters.
-
-        Returns:
-            list[AIEntityCandidate]: Verified candidate entity mentions.
-        """
+    ) -> list[dict[str, Any]]:
+        """Fetch raw unvalidated candidate dictionaries directly from provider response."""
         if not self.config.ai_enabled or self.client is None or not self.client.provider.is_available:
             return []
 
-        # Prepare multimodal input and context for provider
         meta = {
             **(context or {}),
             "document_id": doc_understanding.document_id,
@@ -101,10 +92,31 @@ class AIEntityExtractor:
         try:
             response = self.client.analyze(m_input, context=meta)
         except AIError:
-            # Controlled fallback: return empty candidate list, allowing deterministic pipeline to proceed
             return []
 
-        raw_candidates = response.get_candidate_entities()
+        from ml.ai.response_parser import AIResponseParser
+
+        parsed_candidates = AIResponseParser.extract_candidates(
+            response.raw_content or response.structured_payload
+        )
+        return parsed_candidates.get("entities") or response.get_candidate_entities()
+
+    def extract_candidates(
+        self,
+        doc_understanding: DocumentUnderstanding,
+        *,
+        context: Optional[dict[str, Any]] = None,
+    ) -> list[AIEntityCandidate]:
+        """Propose candidate entity mentions from document understanding context.
+
+        Args:
+            doc_understanding: Phase 2 DocumentUnderstanding object.
+            context: Optional contextual parameters.
+
+        Returns:
+            list[AIEntityCandidate]: Verified candidate entity mentions.
+        """
+        raw_candidates = self.get_raw_candidates(doc_understanding, context=context)
         return self._parse_and_validate_candidates(raw_candidates, doc_understanding)
 
     def _parse_and_validate_candidates(

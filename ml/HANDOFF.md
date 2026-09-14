@@ -385,7 +385,7 @@ No changes to ml/ are required.
 
 ---
 
-## 16. AI FOUNDATION & PIPELINE INTEGRATION (PHASES 1, 2, 3, 4, 5 & 6)
+## 16. AI FOUNDATION, PIPELINE INTEGRATION & VALIDATION FIREWALL (PHASES 1–7)
 
 - **Phase 1**: Model-agnostic AI provider foundation (`ml/ai/providers/`, `ml/ai/client/`, `ml/ai/types.py`, `ml/ai/errors.py`). Isolated client with bounded retries, bounded timeouts, and automated credential redaction.
 - **Phase 2**: Multimodal document understanding (`ml/ai/router.py`, `ml/ai/document_understanding.py`). Format-agnostic representation preserving pagination (`DocumentPage`), sections (`DocumentSection`), and tables (`DocumentTable`).
@@ -393,8 +393,18 @@ No changes to ml/ are required.
 - **Phase 4**: AI context and relationship reasoning (`ml/ai/reasoning.py`). Contextual multi-entity reasoning with evidence validation, direction preservation, rejection of unsupported relationships, and reconciliation via `RelationshipReconciler`.
 - **Phase 5**: AI evidence and provenance (`ml/ai/evidence.py`). Evidence grounding engine verifying snippets and page bounds, rejecting semantic alterations, and tracking multimodal provenance chains without chain-of-thought storage.
 - **Phase 6**: Existing ML + AI Pipeline Integration (`ml/ai/pipeline_integration.py`, `ml/pipeline.py`). Single coordinated orchestration (`AIPipelineCoordinator`) integrating multimodal understanding, entity candidate reconciliation, relationship reasoning, and provenance attachment into `process_document(...)`.
+- **Phase 7**: Validation, Safety & Contract Compatibility (`ml/validation/safety_firewall.py`, `ml/ai/response_parser.py`):
+  - **Validation Firewall**: `SafetyFirewall` validates every AI candidate before reconciliation; enforces frozen entity taxonomy (7 types) and relationship taxonomy (8 types); rejects invalid statuses, invalid confidences, and fabricated page/snippet references.
+  - **AI Trust Model**: AI output is ALWAYS untrusted input. The validation layer is authoritative over AI output.
+  - **Evidence Grounding**: Candidate mentions and relationships must be grounded in source text; tolerates legitimate OCR whitespace/spacing; rejects fabricated snippets and out-of-bounds pages.
+  - **Entity ID Safety**: AI is strictly forbidden from minting canonical database UUIDs; enforces staging IDs (`mention_xxx`).
+  - **Merge Safety**: Rejects name-only auto-merging; respects resolver's strong identifier policy.
+  - **Structured Facts Authority**: Structured CDR and transaction fields (amounts, currencies, durations, timestamps) are immutable and cannot be altered by AI conjecture.
+  - **Anti-Criminality & Anti-Guilt Firewall**: Rejects direct assertions of guilt, criminality, or predictive policing scores.
+  - **Chain-of-Thought Firewall**: Internal model thoughts and reasoning blocks are stripped by `AIResponseParser` and never persisted or exposed.
+  - **Prompt Injection Defense**: Document instructions are treated strictly as passive data, never system commands.
+  - **Output Schema & Serialization**: Guarantees final `ExtractionResult` conforms to frozen Pydantic contracts and is cleanly JSON-serializable.
 - **Failure Safety**: If the external AI provider is disabled, times out, rate limits, or errors, CrimeLens ML gracefully falls back to deterministic extraction and rules.
-- **Structured Facts Authority**: Structured CDR and transaction fields (amounts, currencies, durations, timestamps) are immutable and cannot be altered by AI conjecture.
 - **Strict Boundary**: Zero database queries, zero Neo4j mutations, zero UUID generation. All relationships and mentions remain in ML staging format (`mention_xxx`, `rel_xxx`) for Person A backend persistence.
 
 ---
@@ -407,8 +417,10 @@ No changes to ml/ are required.
 - [x] Schema validated: all 6 model types pass model_validate
 - [x] JSON serialization verified: json.dumps + re-validation round-trip
 - [x] Synthetic smoke test passed: 15/15 end-to-end tests pass
-- [x] Regression tests passed: 484/485 (1 OCR env skip, 0 failures)
+- [x] Full ML tests passed: 520/521 (1 OCR env skip, 0 failures)
+- [x] Phase 7 safety firewall suite passed: 36/36 tests in test_safety_firewall.py
 - [x] Phase 6 integration suite passed: 18/18 tests in test_pipeline_integration.py
+- [x] Backend contract tests passed: 13/13 in tests/test_ml_contract.py
 - [x] Pattern output verified: CIRCULAR / RAPID / OVERLAP confirmed
 - [x] Lead output verified: REVIEW_REQUIRED, no severity, no criminal score
 - [x] Evidence traceability verified: evidence_ids map to source record_id values
