@@ -1,0 +1,44 @@
+{
+  "case_id": "SYNTHETIC_CASE_001",
+  "description": "Synthetic investigation case — Phase 12 evaluation. No real PII.",
+  "entities": {
+    "PERSON_A": "PERSON",
+    "PERSON_B": "PERSON",
+    "PERSON_C": "PERSON",
+    "PHONE_A": "+910000000001",
+    "PHONE_B": "+910000000002",
+    "BANK_A": "SYNTH0000001",
+    "BANK_B": "SYNTH0000002",
+    "BANK_C": "SYNTH0000003",
+    "ORG_ALPHA": "Alpha Synthetic Corp Ltd",
+    "LOCATION_ALPHA": "Synthetic Market, Block A",
+    "LOCATION_BETA": "Synthetic Station, Block B"
+  },
+  "documents": [
+    {
+      "doc_id": "synth_doc_001",
+      "description": "Clean multi-entity document",
+      "text": "PERSON_A contacted PERSON_B using PHONE_A. PERSON_B works for Alpha Synthetic Corp Ltd. The meeting occurred at Synthetic Market, Block A."
+    },
+    {
+      "doc_id": "synth_doc_002",
+      "description": "Noisy document with extra whitespace and mixed case",
+      "text": "  person_a   CONTACTED   person_b  .   phone_a was used.  ORG: Alpha Synthetic Corp Ltd.   Location: Synthetic Market, Block A.  "
+    },
+    {
+      "doc_id": "synth_doc_003",
+      "description": "Multiple entities including phone and bank account",
+      "text": "PERSON_A called PERSON_B from +910000000001. PERSON_C transferred money to BANK_A (account SYNTH0000001). ORG: Alpha Synthetic Corp Ltd."
+    },
+    {
+      "doc_id": "synth_doc_004",
+      "description": "Minimal/empty document — boundary case",
+      "text": ""
+    },
+    {
+      "doc_id": "synth_doc_005",
+      "description": "Irrelevant noise text — false-positive check",
+      "text": "This is a routine internal memo. No suspicious activity was reported. The office is closed on Sundays."
+    }
+  ]
+}
