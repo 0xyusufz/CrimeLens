@@ -1,0 +1,171 @@
+{
+  "description": "Synthetic transaction records — Phase 12 evaluation. No real PII or real account numbers.",
+  "positive_circular": [
+    {
+      "sender": "BANK_A",
+      "recipient": "BANK_B",
+      "amount": 100000.0,
+      "currency": "INR",
+      "transaction_time": "2026-01-01T10:00:00",
+      "record_id": "T001"
+    },
+    {
+      "sender": "BANK_B",
+      "recipient": "BANK_C",
+      "amount": 95000.0,
+      "currency": "INR",
+      "transaction_time": "2026-01-10T12:00:00",
+      "record_id": "T002"
+    },
+    {
+      "sender": "BANK_C",
+      "recipient": "BANK_A",
+      "amount": 90000.0,
+      "currency": "INR",
+      "transaction_time": "2026-01-20T14:00:00",
+      "record_id": "T003"
+    }
+  ],
+  "boundary_circular_exactly_30_days": [
+    {
+      "sender": "BANK_A",
+      "recipient": "BANK_B",
+      "amount": 50000.0,
+      "currency": "INR",
+      "transaction_time": "2026-02-01T10:00:00",
+      "record_id": "T004"
+    },
+    {
+      "sender": "BANK_B",
+      "recipient": "BANK_C",
+      "amount": 48000.0,
+      "currency": "INR",
+      "transaction_time": "2026-02-15T10:00:00",
+      "record_id": "T005"
+    },
+    {
+      "sender": "BANK_C",
+      "recipient": "BANK_A",
+      "amount": 46000.0,
+      "currency": "INR",
+      "transaction_time": "2026-03-03T10:00:00",
+      "record_id": "T006"
+    }
+  ],
+  "negative_circular_outside_30_days": [
+    {
+      "sender": "BANK_A",
+      "recipient": "BANK_B",
+      "amount": 50000.0,
+      "currency": "INR",
+      "transaction_time": "2026-03-01T10:00:00",
+      "record_id": "T007"
+    },
+    {
+      "sender": "BANK_B",
+      "recipient": "BANK_C",
+      "amount": 48000.0,
+      "currency": "INR",
+      "transaction_time": "2026-03-15T10:00:00",
+      "record_id": "T008"
+    },
+    {
+      "sender": "BANK_C",
+      "recipient": "BANK_A",
+      "amount": 46000.0,
+      "currency": "INR",
+      "transaction_time": "2026-04-05T10:00:00",
+      "record_id": "T009"
+    }
+  ],
+  "positive_rapid": [
+    {
+      "sender": "BANK_A",
+      "recipient": "BANK_B",
+      "amount": 200000.0,
+      "currency": "INR",
+      "transaction_time": "2026-05-01T08:00:00",
+      "record_id": "T010"
+    },
+    {
+      "sender": "BANK_B",
+      "recipient": "BANK_C",
+      "amount": 195000.0,
+      "currency": "INR",
+      "transaction_time": "2026-05-02T08:00:00",
+      "record_id": "T011"
+    }
+  ],
+  "boundary_rapid_exactly_48_hours": [
+    {
+      "sender": "BANK_A",
+      "recipient": "BANK_B",
+      "amount": 100000.0,
+      "currency": "INR",
+      "transaction_time": "2026-06-01T10:00:00",
+      "record_id": "T012"
+    },
+    {
+      "sender": "BANK_B",
+      "recipient": "BANK_C",
+      "amount": 98000.0,
+      "currency": "INR",
+      "transaction_time": "2026-06-03T10:00:00",
+      "record_id": "T013"
+    }
+  ],
+  "negative_rapid_outside_48_hours": [
+    {
+      "sender": "BANK_A",
+      "recipient": "BANK_B",
+      "amount": 100000.0,
+      "currency": "INR",
+      "transaction_time": "2026-07-01T10:00:00",
+      "record_id": "T014"
+    },
+    {
+      "sender": "BANK_B",
+      "recipient": "BANK_C",
+      "amount": 98000.0,
+      "currency": "INR",
+      "transaction_time": "2026-07-04T10:01:00",
+      "record_id": "T015"
+    }
+  ],
+  "false_positive_disconnected": [
+    {
+      "sender": "BANK_A",
+      "recipient": "BANK_B",
+      "amount": 30000.0,
+      "currency": "INR",
+      "transaction_time": "2026-08-01T10:00:00",
+      "record_id": "T016"
+    },
+    {
+      "sender": "BANK_C",
+      "recipient": "BANK_A",
+      "amount": 28000.0,
+      "currency": "INR",
+      "transaction_time": "2026-08-02T10:00:00",
+      "record_id": "T017"
+    }
+  ],
+  "false_positive_back_and_forth": [
+    {
+      "sender": "BANK_A",
+      "recipient": "BANK_B",
+      "amount": 50000.0,
+      "currency": "INR",
+      "transaction_time": "2026-09-01T10:00:00",
+      "record_id": "T018"
+    },
+    {
+      "sender": "BANK_B",
+      "recipient": "BANK_A",
+      "amount": 45000.0,
+      "currency": "INR",
+      "transaction_time": "2026-09-02T10:00:00",
+      "record_id": "T019"
+    }
+  ]
+}
