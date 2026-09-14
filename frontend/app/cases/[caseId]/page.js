@@ -31,6 +31,13 @@ export default function CaseDetailsPage() {
   const [uploadSuccess, setUploadSuccess] = useState(null);
   const [uploadError, setUploadError] = useState(null);
 
+  // Process document states — keyed by document ID
+  // processStates[id] = { status: 'idle'|'processing'|'success'|'error', message: string|null }
+  const [processStates, setProcessStates] = useState({});
+
+  // Bump this key to force graph/insights child components to re-fetch
+  const [graphRefreshKey, setGraphRefreshKey] = useState(0);
+
   // Fetch case details
   const fetchCaseDetails = useCallback(async () => {
     if (!caseId) return;
@@ -128,6 +135,46 @@ export default function CaseDetailsPage() {
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFileSelect(e.dataTransfer.files[0]);
+    }
+  };
+
+  // Process a single document
+  const handleProcessDocument = async (docId) => {
+    setProcessStates((prev) => ({
+      ...prev,
+      [docId]: { status: "processing", message: null },
+    }));
+
+    try {
+      await apiClient(`/api/documents/${docId}/process`, { method: "POST" });
+      setProcessStates((prev) => ({
+        ...prev,
+        [docId]: { status: "success", message: null },
+      }));
+      // Trigger graph and intelligence panels to re-fetch
+      setGraphRefreshKey((k) => k + 1);
+    } catch (err) {
+      let msg;
+      if (err?.status === 401) {
+        msg = "Session expired. Please log in again.";
+      } else if (err?.status === 403) {
+        msg = "You do not have permission to process this document.";
+      } else if (err?.status === 404) {
+        msg = "Document not found. It may have been removed.";
+      } else if (err?.status === 422) {
+        // Includes CSV schema errors and ML contract failures
+        msg = err.message || "Processing failed: document format could not be validated.";
+      } else if (err?.status >= 500) {
+        msg = "A server error occurred during processing. Please try again.";
+      } else if (err?.message?.includes("Network")) {
+        msg = "Network error — please ensure the backend is running.";
+      } else {
+        msg = err.message || "Processing failed. Please try again.";
+      }
+      setProcessStates((prev) => ({
+        ...prev,
+        [docId]: { status: "error", message: msg },
+      }));
     }
   };
 
@@ -378,7 +425,7 @@ export default function CaseDetailsPage() {
             {/* TAB 1: NETWORK GRAPH INVESTIGATION */}
             {activeTab === "graph" && (
               <section className="graph-workspace-section">
-                <CaseGraphView caseId={caseId} />
+                <CaseGraphView key={graphRefreshKey} caseId={caseId} />
               </section>
             )}
 
@@ -392,7 +439,7 @@ export default function CaseDetailsPage() {
             {/* TAB 4: INTELLIGENCE / INSIGHTS */}
             {activeTab === "insights" && (
               <section className="graph-workspace-section">
-                <CaseInsightsView caseId={caseId} />
+                <CaseInsightsView key={graphRefreshKey} caseId={caseId} />
               </section>
             )}
 
@@ -584,8 +631,12 @@ export default function CaseDetailsPage() {
                 ) : (
                   <div className="documents-table-container">
                     <div className="docs-list">
-                      {documents.map((doc) => {
+                        {documents.map((doc) => {
                         const fileType = getFileType(doc.filename);
+                        const procState = processStates[doc.id] || { status: "idle", message: null };
+                        const isProcessing = procState.status === "processing";
+                        const isSuccess = procState.status === "success";
+                        const isError = procState.status === "error";
                         return (
                           <article key={doc.id} className="doc-item-card">
                             <div className="doc-primary-info">
@@ -606,15 +657,54 @@ export default function CaseDetailsPage() {
                                     Uploaded: {formatDate(doc.uploaded_at)}
                                   </span>
                                 </div>
+                                {/* Per-doc error message */}
+                                {isError && (
+                                  <p className="doc-process-error">{procState.message}</p>
+                                )}
                               </div>
                             </div>
 
-                            {/* SHA-256 HASH VERIFICATION PILL */}
-                            <div className="doc-hash-wrapper" title={`Cryptographic SHA-256 Hash: ${doc.sha256_hash}`}>
-                              <span className="hash-label">SHA-256</span>
-                              <span className="hash-value font-mono">
-                                {doc.sha256_hash ? `${doc.sha256_hash.slice(0, 10)}...${doc.sha256_hash.slice(-8)}` : "Verified"}
-                              </span>
+                            {/* ACTIONS: Process button + SHA-256 badge */}
+                            <div className="doc-actions-group">
+                              {/* PROCESS DOCUMENT BUTTON */}
+                              {isSuccess ? (
+                                <div className="doc-process-success" title="ML pipeline ran — graph and intelligence updated">
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                  <span>Processed</span>
+                                </div>
+                              ) : (
+                                <button
+                                  id={`process-btn-${doc.id}`}
+                                  className={`doc-process-btn${isProcessing ? " doc-process-btn--loading" : ""}${isError ? " doc-process-btn--error" : ""}`}
+                                  onClick={() => handleProcessDocument(doc.id)}
+                                  disabled={isProcessing}
+                                  title={isError ? "Retry processing" : "Run ML pipeline on this document"}
+                                >
+                                  {isProcessing ? (
+                                    <>
+                                      <span className="mini-spinner" />
+                                      <span>Processing...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <polygon points="5 3 19 12 5 21 5 3" />
+                                      </svg>
+                                      <span>{isError ? "Retry" : "Process"}</span>
+                                    </>
+                                  )}
+                                </button>
+                              )}
+
+                              {/* SHA-256 HASH VERIFICATION PILL */}
+                              <div className="doc-hash-wrapper" title={`Cryptographic SHA-256 Hash: ${doc.sha256_hash}`}>
+                                <span className="hash-label">SHA-256</span>
+                                <span className="hash-value font-mono">
+                                  {doc.sha256_hash ? `${doc.sha256_hash.slice(0, 10)}...${doc.sha256_hash.slice(-8)}` : "Verified"}
+                                </span>
+                              </div>
                             </div>
                           </article>
                         );
@@ -1389,6 +1479,77 @@ export default function CaseDetailsPage() {
           font-size: 0.72rem;
         }
 
+        /* PROCESS DOCUMENT BUTTON */
+        .doc-actions-group {
+          display: flex;
+          align-items: center;
+          gap: 0.65rem;
+          flex-shrink: 0;
+        }
+
+        .doc-process-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.35rem 0.8rem;
+          border-radius: 6px;
+          background: rgba(14, 165, 233, 0.1);
+          border: 1px solid rgba(56, 189, 248, 0.25);
+          color: #38bdf8;
+          font-size: 0.75rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+
+        .doc-process-btn:hover:not(:disabled) {
+          background: rgba(14, 165, 233, 0.2);
+          border-color: rgba(56, 189, 248, 0.5);
+          box-shadow: 0 0 10px rgba(14, 165, 233, 0.2);
+          transform: translateY(-1px);
+        }
+
+        .doc-process-btn:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .doc-process-btn--error {
+          background: rgba(239, 68, 68, 0.1);
+          border-color: rgba(239, 68, 68, 0.3);
+          color: #f87171;
+        }
+
+        .doc-process-btn--error:hover:not(:disabled) {
+          background: rgba(239, 68, 68, 0.2);
+          border-color: rgba(239, 68, 68, 0.5);
+          box-shadow: 0 0 10px rgba(239, 68, 68, 0.15);
+        }
+
+        .doc-process-success {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.35rem 0.8rem;
+          border-radius: 6px;
+          background: rgba(16, 185, 129, 0.1);
+          border: 1px solid rgba(16, 185, 129, 0.3);
+          color: #34d399;
+          font-size: 0.75rem;
+          font-weight: 600;
+          white-space: nowrap;
+        }
+
+        .doc-process-error {
+          font-size: 0.72rem;
+          color: #f87171;
+          margin-top: 0.25rem;
+          max-width: 340px;
+          line-height: 1.4;
+        }
+
         @media (max-width: 768px) {
           .case-header-card {
             padding: 1.25rem;
@@ -1400,9 +1561,12 @@ export default function CaseDetailsPage() {
             flex-direction: column;
             align-items: flex-start;
           }
-          .doc-hash-wrapper {
+          .doc-actions-group {
             width: 100%;
             justify-content: space-between;
+          }
+          .doc-hash-wrapper {
+            flex: 1;
           }
         }
       `}</style>

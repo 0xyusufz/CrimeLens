@@ -27,6 +27,7 @@ from app.services.documents import (
     list_documents_for_case,
     read_upload_bytes,
 )
+from app.services.csv_ingest import CsvParseError
 from app.services.processing import GraphProjectionError, process_uploaded_document
 
 router = APIRouter()
@@ -150,6 +151,15 @@ def process_document(
 
     try:
         result = process_uploaded_document(db, document.id, processor)
+    except CsvParseError as exc:
+        try:
+            _failed("csv_parse_error")
+        except AuditWriteError:
+            raise _database_error() from None
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc) or "CSV parsing failed.",
+        ) from None
     except StoredFileMissingError:
         try:
             _failed("stored_file_missing")

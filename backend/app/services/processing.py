@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -18,6 +19,7 @@ from app.models.entity import Entity, EntityCaseLink, EntityMention
 from app.models.enums import EntityType, RelationshipStatus, RelationshipType
 from app.models.relationship import RelationshipStaging
 from app.schemas.processing import DocumentProcessResult
+from app.services.csv_ingest import CsvParseError, parse_csv_bytes, upsert_structured_records
 from app.services.documents import get_document, read_stored_document_bytes
 from app.services.insights import (
     IntelligenceContractError,
@@ -236,6 +238,10 @@ def persist_extraction(
     return staged, entity_ids
 
 
+def _is_csv(filename: str) -> bool:
+    return Path(filename).suffix.lower() == ".csv"
+
+
 def process_uploaded_document(
     session: Session,
     document_id: uuid.UUID,
@@ -244,6 +250,26 @@ def process_uploaded_document(
 ) -> DocumentProcessResult:
     document = get_document(session, document_id)
     data = read_stored_document_bytes(document.id)
+
+    # ── CSV ingestion: parse bytes → StructuredRecord rows BEFORE ML call ────
+    # CsvParseError propagates up; the router maps it to HTTP 422.
+    # TXT and PDF documents bypass this block entirely.
+    if _is_csv(document.filename):
+        record_type, payloads = parse_csv_bytes(data)
+        # Persist rows now so collect_person_b_intelligence picks them up below.
+        try:
+            upsert_structured_records(
+                session,
+                document_id=document.id,
+                case_id=document.case_id,
+                record_type=record_type,
+                payloads=payloads,
+            )
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+
     envelope = run_document_processor(
         processor,
         data,
