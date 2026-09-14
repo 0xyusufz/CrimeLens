@@ -1,4 +1,4 @@
-﻿# ML HANDOFF — CrimeLens Intelligence Pipeline
+# ML HANDOFF — CrimeLens Intelligence Pipeline
 
 **Phase 13 — Final Person B Handoff**  
 **Status: READY FOR INTEGRATION**  
@@ -385,6 +385,18 @@ No changes to ml/ are required.
 
 ---
 
+## 16. AI FOUNDATION (PHASES 1, 2, 3, 4 & 5)
+
+- **Phase 1**: Model-agnostic AI provider foundation (`ml/ai/providers/`, `ml/ai/client/`, `ml/ai/types.py`, `ml/ai/errors.py`). Isolated client with bounded retries, bounded timeouts, and automated credential redaction.
+- **Phase 2**: Multimodal document understanding (`ml/ai/router.py`, `ml/ai/document_understanding.py`). Format-agnostic representation preserving pagination (`DocumentPage`), sections (`DocumentSection`), and tables (`DocumentTable`).
+- **Phase 3**: AI-assisted entity and information extraction (`ml/ai/extraction.py`). Candidates grounded in source text, validated against 7 frozen entity categories, and reconciled via `EntityReconciler`.
+- **Phase 4**: AI context and relationship reasoning (`ml/ai/reasoning.py`). Contextual multi-entity reasoning with evidence validation, direction preservation, rejection of unsupported relationships, and reconciliation via `RelationshipReconciler`.
+- **Phase 5**: AI evidence and provenance (`ml/ai/evidence.py`). Evidence grounding engine verifying snippets and page bounds, rejecting semantic alterations, and tracking multimodal provenance chains without chain-of-thought storage.
+- **Failure Safety**: If the external AI provider is disabled, times out, rate limits, or errors, CrimeLens ML gracefully falls back to deterministic extraction and rules.
+- **Strict Boundary**: Zero database queries, zero Neo4j mutations, zero UUID generation. All relationships and mentions remain in ML staging format (`mention_xxx`, `rel_xxx`) for Person A backend persistence.
+
+---
+
 ## HANDOFF CHECKLIST
 
 - [x] ML entry point identified: ml.pipeline.process_document
@@ -393,7 +405,7 @@ No changes to ml/ are required.
 - [x] Schema validated: all 6 model types pass model_validate
 - [x] JSON serialization verified: json.dumps + re-validation round-trip
 - [x] Synthetic smoke test passed: 15/15 end-to-end tests pass
-- [x] Regression tests passed: 371/372 (1 OCR env skip)
+- [x] Regression tests passed: 466/467 (1 OCR env skip)
 - [x] Pattern output verified: CIRCULAR / RAPID / OVERLAP confirmed
 - [x] Lead output verified: REVIEW_REQUIRED, no severity, no criminal score
 - [x] Evidence traceability verified: evidence_ids map to source record_id values

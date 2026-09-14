@@ -192,7 +192,9 @@ Expected runtime environment variables (documented for reference, not committed 
 - Phase 1 Test Suite: `ml/tests/test_ai_foundation.py` (28 unit tests)
 - Phase 2 Test Suite: `ml/tests/test_document_understanding.py` (22 unit tests)
 - Phase 3 Test Suite: `ml/tests/test_ai_extraction.py` (15 unit tests)
-- Total ML test suite: **436 passed, 1 skipped** (Tesseract OCR skipped when binary is absent).
+- Phase 4 Test Suite: `ml/tests/test_ai_reasoning.py` (16 unit tests)
+- Phase 5 Test Suite: `ml/tests/test_ai_evidence.py` (14 unit tests)
+- Total ML test suite: **466 passed, 1 skipped** (Tesseract OCR skipped when binary is absent).
 - All 13 contract tests in `tests/test_ml_contract.py` pass 100%.
 
 ---
@@ -295,5 +297,131 @@ Unsupported types (e.g. `CRIMINAL`, `SUSPECT`, `GANG_MEMBER`, `THREAT_LEVEL`, `R
 - **Shared Schemas Modifications:** **NONE**
 - **Database Modifications:** **NONE**
 - **Neo4j Modifications:** **NONE**
+
+---
+
+## 9. Phase 4 — AI Context & Relationship Reasoning
+
+Phase 4 adds contextual relationship reasoning on top of multimodal document understanding (Phase 2), extracted entity mentions (Phase 3), deterministic relationship extraction, and structured records:
+
+### 9.1 Conceptual Pipeline & Boundary
+AI reasoning proposes candidate relationships across already-extracted entities based on multi-sentence, cross-page, and tabular context. It never bypasses deterministic validation or mints database IDs.
+
+```
+Document Understanding (Phase 2) + Extracted Entities (Phase 3)
+                              │
+               ┌──────────────┴──────────────┐
+               ▼                             ▼
+Deterministic Rule Extraction       AI Contextual Reasoner
+ (Intra-sentence triggers)          (`AIRelationshipReasoner`)
+               │                             │
+               │                             ▼
+               │                    Firewall & Validation
+               │                    - 8 Frozen Relationship Types
+               │                    - Entity Reference Verification
+               │                    - Directionality Preservation
+               │                    - Real Evidence Grounding Check
+               │                    - Page Boundary Verification
+               │                             │
+               └──────────────┬──────────────┘
+                              ▼
+                 Relationship Reconciler
+                (`RelationshipReconciler`)
+                              │
+                              ▼
+                   Unified Relationship List
+                   (rel_001, rel_002, ...)
+                              │
+                              ▼
+               Resolution, Patterns, Leads, Validation
+```
+
+### 9.2 Frozen Relationship Vocabulary
+Only the 8 frozen relationship types in `shared/schemas/enums.py` are accepted:
+- `CALLED`
+- `SENT_MONEY_TO`
+- `OWNS_VEHICLE`
+- `USED_VEHICLE`
+- `WORKS_FOR`
+- `LOCATED_AT`
+- `ASSOCIATED_WITH`
+- `PART_OF_EVENT`
+
+Unsupported types (e.g. `FRIEND_OF`, `KNOWS`, `LIKELY_GUILTY`, `CRIMINAL_ASSOCIATE`) are strictly rejected.
+
+### 9.3 Safety, Status & Evidence Grounding
+- **Allowed Statuses**: Only `CONFIRMED`, `INFERRED`, `PREDICTED`. `AI_DETECTED` is disallowed.
+- **Evidence Verification**: Every candidate requires an evidence snippet grounded in the source text. Snippets that do not match the text or fabricate page numbers are dropped.
+- **No Self-Relationships**: Disallows self-referential edges (`mention_001 -> mention_001`).
+- **Directionality**: Preserves directional relationships (e.g. sender -> recipient; caller -> callee).
+- **Anti-Hallucination & Anti-Guilt**: No criminal risk scores, guilt assessments, or predictive policing outputs.
+
+### 9.4 Reconciliation Rules (`RelationshipReconciler`)
+- **Deterministic Supremacy**: Deterministic relationships are authoritative and never overwritten by AI proposals.
+- **Consensus Reinforcement**: When deterministic and AI extract the same edge, evidence is preserved and confidence is reinforced without duplicate edge creation.
+- **Discovery**: Valid contextual edges discovered across sections or pages are safely appended with staging IDs (`rel_001`, `rel_002`, ...).
+
+### 9.5 Frozen Backend Contracts (Phase 4)
+- **HTTP Endpoints Added:** **NONE**
+- **Existing Backend Endpoint:** `POST /api/documents/{document_id}/process` (UNCHANGED)
+- **Existing ML Entry Point:** `ml.pipeline.process_document(...)` (COMPATIBLE)
+- **Backend Modifications:** **NONE**
+- **Shared Schemas Modifications:** **NONE**
+- **Database Modifications:** **NONE**
+- **Neo4j Modifications:** **NONE**
+
+---
+
+## 10. Phase 5 — AI Evidence & Provenance
+
+Phase 5 establishes strict evidence verification and structured provenance tracking for all candidate extractions and relationships:
+
+### 10.1 Grounding Principle: NO EVIDENCE -> NO ACCEPTED INTELLIGENCE
+The model itself is untrusted; the source document context is the sole authority. Every proposed extraction or relationship candidate must be grounded against actual source context before acceptance.
+
+```
+Document Understanding Context (Phase 2)
+                 │
+                 ▼
+       AI Proposal (Phase 3 / 4)
+                 │
+                 ▼
+    Evidence Grounding Engine (`EvidenceGroundingEngine`)
+    - Exact and Normalized Snippet Verification (Handles OCR / CRLF harmlessly)
+    - Page Boundary Verification (Rejects out-of-range pages)
+    - Rejection of Semantic Alterations (e.g. "saw" -> "met")
+                 │
+                 ▼
+     Provenance Tracker (`ProvenanceTracker`)
+     - Source Type Classification (TEXT, OCR, PDF, TABLE, CDR, TRANSACTION)
+     - Derivation Classification (DIRECT, CONTEXTUAL, STRUCTURED)
+     - Evidence Deduplication & Enrichment
+                 │
+                 ▼
+     Reconciliation & Output Validation
+     - Unified Relationship with Provenance (p.X: snippet)
+     - Zero database UUIDs or case IDs minted
+```
+
+### 10.2 Supported Provenance Modalities
+- `ProvenanceSourceType`: `TEXT`, `OCR`, `IMAGE`, `PDF`, `TABLE`, `STRUCTURED_CDR`, `STRUCTURED_TRANSACTION`.
+- `DerivationType`: `DIRECT` (explicit in single sentence/record), `CONTEXTUAL` (multi-sentence / cross-page inference), `STRUCTURED` (from validated transactions or CDRs).
+- `VerificationState`: `VERIFIED` (grounded in source), `PARTIAL` (approximate / normalized token overlap), `UNVERIFIED` (missing in context), `INVALID` (fabricated snippet or page).
+
+### 10.3 Immutable Separation
+- **Person A Evidence Ledger**: Person A owns backend persistence, hashing, and audit storage. Phase 5 ML produces validated evidence references and never writes to PostgreSQL or Neo4j.
+- **No Hidden Chain-of-Thought**: Retains concise evidence citations and high-level summaries without recording private model reasoning traces.
+
+### 10.4 Frozen Backend Contracts (Phase 5)
+- **HTTP Endpoints Added:** **NONE**
+- **Existing Backend Endpoint:** `POST /api/documents/{document_id}/process` (UNCHANGED)
+- **Existing ML Entry Point:** `ml.pipeline.process_document(...)` (COMPATIBLE)
+- **Backend Modifications:** **NONE**
+- **Shared Schemas Modifications:** **NONE**
+- **Database Modifications:** **NONE**
+- **Evidence Ledger Modifications:** **NONE**
+- **Neo4j Modifications:** **NONE**
+
+
 
 

@@ -27,6 +27,14 @@ from ml.ai.errors import (
     AITimeoutError,
     AIUnsupportedInputError,
 )
+from ml.ai.evidence import (
+    DerivationType,
+    EvidenceGroundingEngine,
+    EvidenceReference,
+    ProvenanceSourceType,
+    ProvenanceTracker,
+    VerificationState,
+)
 from ml.ai.extraction import (
     AIEntityCandidate,
     AIEntityExtractor,
@@ -34,6 +42,11 @@ from ml.ai.extraction import (
 )
 from ml.ai.providers.base import ReasoningModelProvider
 from ml.ai.providers.mock import MockReasoningProvider
+from ml.ai.reasoning import (
+    AIRelationshipCandidate,
+    AIRelationshipReasoner,
+    RelationshipReconciler,
+)
 from ml.ai.router import DocumentModality, DocumentRouter, RoutedDocument
 from ml.ai.types import InputType, ModelResponse, MultimodalInput
 
@@ -74,6 +87,17 @@ __all__ = [
     "AIEntityCandidate",
     "AIEntityExtractor",
     "EntityReconciler",
+    # Reasoning (Phase 4)
+    "AIRelationshipCandidate",
+    "AIRelationshipReasoner",
+    "RelationshipReconciler",
+    # Evidence & Provenance (Phase 5)
+    "ProvenanceSourceType",
+    "DerivationType",
+    "VerificationState",
+    "EvidenceReference",
+    "EvidenceGroundingEngine",
+    "ProvenanceTracker",
     # Providers
     "ReasoningModelProvider",
     "MockReasoningProvider",

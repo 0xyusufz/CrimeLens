@@ -122,9 +122,11 @@ All ML outputs are validated against the immutable frozen schemas in `shared.sch
    ```
 3. **No Database UUIDs / Case IDs**: Staging IDs (`mention_xxx`, `rel_xxx`) and proposal IDs (`canonical_xxx`) are preserved. Zero PostgreSQL UUIDs or `case_id`s are minted in `ml/`.
 
-## AI & Multimodal Foundation (Phases 1, 2 & 3)
+## AI & Multimodal Foundation (Phases 1, 2, 3, 4 & 5)
 
 See [`ml/AI_FOUNDATION.md`](file:///c:/Users/MDFAIZAANRAZAKHAN/Downloads/CrimeLens/ml/AI_FOUNDATION.md) for full architectural specifications.
+- **`ml/ai/evidence.py`** (Phase 5): `EvidenceGroundingEngine` validating and grounding candidate snippets against actual document text/pages, and `ProvenanceTracker` preserving verifiable multi-modal provenance chains without chain-of-thought storage.
+- **`ml/ai/reasoning.py`** (Phase 4): `AIRelationshipReasoner` proposing contextual candidate relationships across multi-entity, cross-sentence, and cross-page context, validated by strict schema and evidence grounding, and `RelationshipReconciler` unifying deterministic edges with AI proposals.
 - **`ml/ai/extraction.py`** (Phase 3): `AIEntityExtractor` proposing candidate mentions from document understanding context, guarded by hallucination defense and 7-entity taxonomy check, and `EntityReconciler` unifying deterministic mentions with AI candidates.
 - **`ml/ai/router.py`** (Phase 2): `DocumentRouter` classifying inputs across modalities (`TEXT`, `IMAGE`, `PDF`, `STRUCTURED`).
 - **`ml/ai/document_understanding.py`** (Phase 2): Format-agnostic `DocumentUnderstandingEngine` preserving pagination (`DocumentPage`), sections (`DocumentSection`), and tables (`DocumentTable`).
@@ -137,7 +139,7 @@ See [`ml/AI_FOUNDATION.md`](file:///c:/Users/MDFAIZAANRAZAKHAN/Downloads/CrimeLe
 ## Running Tests
 
 ```bash
-# Run full ML test suite (436 passed, 1 skipped)
+# Run full ML test suite (466 passed, 1 skipped)
 python -m pytest ml/tests/
 
 # Run Phase 1 AI foundation suite (28 tests)
@@ -149,9 +151,16 @@ python -m unittest ml/tests/test_document_understanding.py
 # Run Phase 3 AI-Assisted Extraction suite (15 tests)
 python -m unittest ml/tests/test_ai_extraction.py
 
+# Run Phase 4 AI Context & Relationship Reasoning suite (16 tests)
+python -m unittest ml/tests/test_ai_reasoning.py
+
+# Run Phase 5 AI Evidence & Provenance suite (14 tests)
+python -m unittest ml/tests/test_ai_evidence.py
+
 # Run shared schema contract validation (Person A contract test)
 python -m unittest tests/test_ml_contract.py
 ```
+
 
 
 

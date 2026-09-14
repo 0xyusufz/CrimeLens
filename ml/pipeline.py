@@ -313,7 +313,7 @@ def process_document(
             existing_entities_by_name[ce_name.lower()] = m
             mention_counter += 1
 
-    # 5. Relationship Extraction (Phase 5)
+    # 5. Relationship Extraction (Phase 5 Deterministic & Phase 4 AI Contextual Reasoning)
     relationships: list[Relationship] = extract_relationships(
         clean_text,
         entities=entities,
@@ -321,6 +321,45 @@ def process_document(
         structured_records=all_structured if all_structured else None,
         min_confidence=cfg.min_relationship_confidence,
     )
+
+    # Phase 4: AI Contextual Relationship Reasoning & Reconciliation
+    if (cfg.ai_enabled or kwargs.get("use_ai_reasoning", False) or kwargs.get("use_ai_extraction", False)) and len(entities) >= 2:
+        try:
+            from ml.ai.client.client import AIClient
+            from ml.ai.document_understanding import DocumentUnderstandingEngine
+            from ml.ai.providers.mock import MockReasoningProvider
+            from ml.ai.reasoning import AIRelationshipReasoner, RelationshipReconciler
+
+            ai_client = kwargs.get("ai_client")
+            if ai_client is None:
+                ai_client = AIClient(MockReasoningProvider(), timeout_seconds=cfg.ai_timeout_seconds)
+
+            doc_engine = DocumentUnderstandingEngine(client=ai_client, config=cfg)
+            doc_understanding = doc_engine.understand(
+                raw_text if isinstance(raw_text, (str, bytes)) else clean_text,
+                filename=kwargs.get("filename") or f"{doc_id_str}.txt",
+                document_id=doc_id_str,
+            )
+
+            reasoner = AIRelationshipReasoner(client=ai_client, config=cfg)
+            ai_candidates = reasoner.reason_relationships(
+                doc_understanding,
+                entities=entities,
+                existing_relationships=relationships,
+                structured_records=all_structured,
+            )
+
+            if ai_candidates:
+                reconciler = RelationshipReconciler()
+                relationships = reconciler.reconcile(
+                    relationships,
+                    ai_candidates,
+                    document_id=doc_id_str,
+                    min_confidence=cfg.min_relationship_confidence,
+                )
+        except Exception:
+            # Failure containment: AI failure must never break deterministic pipeline
+            pass
 
     # 6. Entity Resolution Proposals (Phase 6)
     resolution_proposals: list[ResolutionProposal] = []
