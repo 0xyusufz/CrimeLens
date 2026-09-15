@@ -59,6 +59,7 @@ def create_ai_client(
     timeout_seconds: float = 30.0,
     max_retries: int = 2,
     max_input_bytes: int = 25_000_000,
+    max_input_chars: int = 100_000,
 ) -> AIClient:
     """Factory to instantiate an AIClient with a specified or default mock provider."""
     active_provider = provider or MockReasoningProvider()
@@ -67,6 +68,7 @@ def create_ai_client(
         timeout_seconds=timeout_seconds,
         max_retries=max_retries,
         max_input_bytes=max_input_bytes,
+        max_input_chars=max_input_chars,
     )
 
 

@@ -118,6 +118,9 @@ class AIPipelineCoordinator:
                     if provider_name == "gemini":
                         from ml.ai.providers.gemini import GeminiReasoningProvider
                         provider = GeminiReasoningProvider(api_key=self.config.ai_api_key, model_name=self.config.ai_model)
+                    elif provider_name == "groq":
+                        from ml.ai.providers.groq import GroqReasoningProvider
+                        provider = GroqReasoningProvider(api_key=self.config.ai_api_key, model_name=self.config.ai_model)
                     elif provider_name == "openai":
                         from ml.ai.providers.openai import OpenAIReasoningProvider
                         provider = OpenAIReasoningProvider(api_key=self.config.ai_api_key, model_name=self.config.ai_model)
@@ -136,6 +139,7 @@ class AIPipelineCoordinator:
             timeout_seconds=self.config.ai_timeout_seconds,
             max_retries=self.config.ai_max_retries,
             max_input_bytes=self.config.ai_max_input_bytes,
+            max_input_chars=self.config.ai_max_input_chars,
         )
         return self.client
 

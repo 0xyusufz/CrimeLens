@@ -30,6 +30,7 @@ class MLConfig:
     ai_timeout_seconds: float = 30.0
     ai_max_retries: int = 2
     ai_max_input_bytes: int = 25_000_000
+    ai_max_input_chars: int = 100_000
 
     def __repr__(self) -> str:
         masked_key = "***REDACTED***" if self.ai_api_key else None
@@ -46,7 +47,8 @@ class MLConfig:
             f"ai_api_key={masked_key!r}, "
             f"ai_timeout_seconds={self.ai_timeout_seconds}, "
             f"ai_max_retries={self.ai_max_retries}, "
-            f"ai_max_input_bytes={self.ai_max_input_bytes})"
+            f"ai_max_input_bytes={self.ai_max_input_bytes}, "
+            f"ai_max_input_chars={self.ai_max_input_chars})"
         )
 
 
@@ -55,25 +57,51 @@ class MLConfig:
 # Secrets are read from env; never hard-coded here.
 # ---------------------------------------------------------------------------
 _gemini_key: Optional[str] = _os.environ.get("GEMINI_API_KEY") or None
+_groq_key: Optional[str] = _os.environ.get("GROQ_API_KEY") or None
 _provider_env: str = (_os.environ.get("AI_PROVIDER") or "").lower()
-_model_env: str = _os.environ.get("GEMINI_MODEL") or "gemini-1.5-flash"
+_model_env: str = _os.environ.get("GEMINI_MODEL") or _os.environ.get("GROQ_MODEL") or ""
 
 # Provider precedence:
 #   1. AI_PROVIDER env var (explicit override)
 #   2. GEMINI_API_KEY present → "gemini"
-#   3. fallback → "mock" (no key required, no network needed)
+#   3. GROQ_API_KEY present → "groq"
+#   4. fallback → "mock" (no key required, no network needed)
 if _provider_env:
     _active_provider = _provider_env
 elif _gemini_key:
     _active_provider = "gemini"
+elif _groq_key:
+    _active_provider = "groq"
 else:
     _active_provider = "mock"
 
-_active_model = _model_env if _active_provider == "gemini" else "mock-reasoner-v1"
+# Resolve key and model for the active provider
+if _active_provider == "gemini":
+    _active_key = _gemini_key
+    _active_model = _model_env or "gemini-1.5-flash"
+elif _active_provider == "groq":
+    _active_key = _groq_key
+    _active_model = _model_env or "llama-3.3-70b-versatile"
+else:
+    _active_key = None
+    _active_model = "mock-reasoner-v1"
+
+
+def _parse_int_env(name: str, default: int) -> int:
+    """Parse a positive-int env knob; fall back to default on any invalid value."""
+    try:
+        value = int((_os.environ.get(name) or "").strip() or default)
+    except (ValueError, TypeError):
+        return default
+    return value if value > 0 else default
+
+
+_max_input_chars: int = _parse_int_env("AI_MAX_INPUT_CHARS", 100_000)
 
 default_config = MLConfig(
-    ai_enabled=bool(_gemini_key),
+    ai_enabled=bool(_active_key),
     ai_provider=_active_provider,
     ai_model=_active_model,
-    ai_api_key=_gemini_key,
+    ai_api_key=_active_key,
+    ai_max_input_chars=_max_input_chars,
 )

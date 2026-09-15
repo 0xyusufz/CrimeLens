@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 import time
+from dataclasses import replace as _dc_replace
 from typing import Any, Optional
 
 from ml.ai.errors import (
@@ -24,6 +25,7 @@ from ml.ai.errors import (
     AIProviderUnavailableError,
     AIQuotaExhaustedError,
     AIRateLimitError,
+    AIRequestTooLargeError,
     AITimeoutError,
     AIUnsupportedInputError,
     redact_secrets,
@@ -32,6 +34,20 @@ from ml.ai.providers.base import ReasoningModelProvider
 from ml.ai.types import ModelResponse, MultimodalInput
 
 logger = logging.getLogger(__name__)
+
+# Default budget for text sent to the AI overlay per request (~25k tokens).
+# Well under typical provider payload limits (prevents HTTP 413) while
+# preserving ample evidence context. The deterministic ML pipeline always
+# receives the complete, unbounded document — only the optional AI overlay
+# is bounded. Override via MLConfig.ai_max_input_chars / AI_MAX_INPUT_CHARS.
+DEFAULT_MAX_INPUT_CHARS: int = 100_000
+
+# Marker inserted where middle content was removed. Kept short so it
+# consumes minimal budget. Never contains document content.
+_TRUNCATION_MARKER_TEMPLATE = (
+    "\n\n[... AI input truncated: showing first {head} and last {tail} "
+    "of {total} chars; deterministic ML processed the complete document ...]\n\n"
+)
 
 # Errors considered transient and eligible for bounded retry with backoff.
 # AIProviderUnavailableError covers 503/network-down conditions.
@@ -55,6 +71,7 @@ class AIClient:
         timeout_seconds: float = 30.0,
         max_retries: int = 2,
         max_input_bytes: int = 25_000_000,
+        max_input_chars: int = DEFAULT_MAX_INPUT_CHARS,
     ) -> None:
         if provider is None:
             raise AIConfigurationError("A valid ReasoningModelProvider instance is required")
@@ -62,12 +79,16 @@ class AIClient:
             raise AIConfigurationError(f"timeout_seconds must be positive, got {timeout_seconds}")
         if max_retries < 0:
             raise AIConfigurationError(f"max_retries cannot be negative, got {max_retries}")
+        if max_input_chars <= 0:
+            raise AIConfigurationError(f"max_input_chars must be positive, got {max_input_chars}")
 
         self.provider = provider
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
         self.max_input_bytes = max_input_bytes
+        self.max_input_chars = max_input_chars
         self.last_error: Optional[AIError] = None
+        self.last_input_truncated: bool = False
 
     def analyze(
         self,
@@ -97,6 +118,12 @@ class AIClient:
             raise AIUnsupportedInputError(
                 f"Input payload ({input_data.byte_size} bytes) exceeds configured limit ({self.max_input_bytes} bytes)"
             )
+
+        # Bound the text sent to the AI overlay. Deterministic ML stages
+        # operate on the original unbounded input; only provider-bound
+        # text is truncated here (single choke point for all stages).
+        self.last_input_truncated = False
+        input_data = self._bound_input(input_data)
 
         if not self.provider.is_available:
             raise AIProviderUnavailableError(
@@ -140,6 +167,18 @@ class AIClient:
                 self.last_error = exc
                 logger.warning(
                     "AI quota exhausted on attempt %d/%d: %s; not retrying",
+                    attempts,
+                    total_attempts,
+                    exc.sanitized_message,
+                )
+                raise
+
+            except AIRequestTooLargeError as exc:
+                # Never retry oversized payloads — resending the identical
+                # request would fail again. Fall back to deterministic ML.
+                self.last_error = exc
+                logger.warning(
+                    "AI request too large on attempt %d/%d: %s; not retrying",
                     attempts,
                     total_attempts,
                     exc.sanitized_message,
@@ -199,6 +238,79 @@ class AIClient:
         err = AIExecutionError("Model analysis failed with an unknown error")
         self.last_error = err
         raise err
+
+    def _bound_input(self, input_data: MultimodalInput) -> MultimodalInput:
+        """Return an input bounded to max_input_chars for provider dispatch.
+
+        Preserves the head (~70%) and tail (~30%) of the effective text with
+        a truncation marker, so beginning context and closing evidence-bearing
+        content survive. Small inputs are returned unchanged.
+
+        Only the text the provider will actually send is bounded
+        (extracted_text first, then str content, else raw bytes).
+        """
+        budget = self.max_input_chars
+
+        text: Optional[str] = None
+        source = "extracted_text"
+        if input_data.extracted_text is not None:
+            text = input_data.extracted_text
+        elif isinstance(input_data.content, str):
+            text = input_data.content
+            source = "content"
+
+        if text is None:
+            # Raw bytes without extracted text (e.g. unscanned binary):
+            # bound by bytes; the provider decodes the same way.
+            data = input_data.content
+            assert isinstance(data, bytes)
+            if len(data) <= budget:
+                return input_data
+            self.last_input_truncated = True
+            logger.warning(
+                "AI input truncated: %d bytes exceeds budget %d chars; sending head only",
+                len(data),
+                budget,
+            )
+            return _dc_replace(input_data, content=data[:budget])
+
+        if len(text) <= budget:
+            return input_data
+
+        total = len(text)
+        # Reserve room for the marker, then split ~70% head / ~30% tail.
+        marker_probe = _TRUNCATION_MARKER_TEMPLATE.format(head=0, tail=0, total=total)
+        content_budget = budget - len(marker_probe)
+        if content_budget <= 0:
+            bounded = text[:budget]
+            marker = ""
+        else:
+            head_len = int(content_budget * 0.7)
+            tail_len = content_budget - head_len
+            tail_part = text[total - tail_len:] if tail_len > 0 else ""
+            marker = _TRUNCATION_MARKER_TEMPLATE.format(head=head_len, tail=tail_len, total=total)
+            bounded = text[:head_len] + marker + tail_part
+            # Guard against digit-width drift between the probe marker and
+            # the real one: shrink the HEAD side so the tail (closing
+            # evidence) is preserved exactly and the budget always holds.
+            overflow = len(bounded) - budget
+            if overflow > 0:
+                if overflow < head_len:
+                    head_len -= overflow
+                    marker = _TRUNCATION_MARKER_TEMPLATE.format(head=head_len, tail=tail_len, total=total)
+                    bounded = text[:head_len] + marker + tail_part
+                else:
+                    bounded = bounded[:budget]
+
+        self.last_input_truncated = True
+        logger.warning(
+            "AI input truncated: %d chars exceeds budget %d; sending bounded head+tail",
+            total,
+            budget,
+        )
+        if source == "extracted_text":
+            return _dc_replace(input_data, extracted_text=bounded)
+        return _dc_replace(input_data, content=bounded)
 
     def _sanitize_context(self, context: Optional[dict[str, Any]]) -> dict[str, Any]:
         """Strip dangerous fields from context before sending to provider."""

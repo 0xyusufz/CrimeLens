@@ -82,6 +82,15 @@ class AIQuotaExhaustedError(AIRateLimitError):
     """
 
 
+class AIRequestTooLargeError(AIError):
+    """Raised when the provider rejects the request as too large (HTTP 413).
+
+    Retrying an identical oversized payload is wasteful, so the client
+    treats this as non-retryable (like quota exhaustion) and the pipeline
+    falls back to deterministic ML.
+    """
+
+
 class AIMalformedResponseError(AIError):
     """Raised when model response is corrupt, unparseable, or missing required payload structure."""
 
