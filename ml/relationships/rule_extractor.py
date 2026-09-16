@@ -55,12 +55,18 @@ RELATION_PATTERNS = [
     ),
     (
         RelationshipType.WORKS_FOR,
-        re.compile(r"(?i)\b(?:works for|employed at|employed by|employee of|working (?:at|for)|works at)\b"),
+        re.compile(
+            r"(?i)\b(?:works for|employed at|employed by|employee of|working (?:at|for)|works at|"
+            r"(?:an?|the)\s+(?:[a-z]+\s+){0,2}(?:lecturer|teacher|professor|manager|doctor|employee|worker)\s+at)\b"
+        ),
         {(EntityType.PERSON, EntityType.ORGANIZATION)},
     ),
     (
         RelationshipType.LOCATED_AT,
-        re.compile(r"(?i)\b(?:is located (?:at|in)|located (?:at|in)|seen (?:at|in)|spotted (?:at|in)|residing (?:at|in)|present (?:at|in)|arrested (?:at|in)|meeting at)\b"),
+        re.compile(
+            r"(?i)\b(?:is located (?:at|in)|located (?:at|in)|seen (?:at|in)|spotted (?:at|in)|"
+            r"residing (?:at|in)|present (?:at|in)|arrested (?:at|in)|meeting at|met(?:\s+[A-Za-z.' -]+)?\s+at)\b"
+        ),
         {(EntityType.PERSON, EntityType.LOCATION), (EntityType.ORGANIZATION, EntityType.LOCATION), (EntityType.VEHICLE, EntityType.LOCATION)},
     ),
     (

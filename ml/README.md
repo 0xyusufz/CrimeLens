@@ -30,6 +30,58 @@ FastAPI Schema Validation (`backend/` - Person A)
    - Leads: use `priority` (`LOW`, `MEDIUM`, `HIGH`) and investigative workflow `status`. No severity in leads, and no person-level criminal risk/guilt scoring.
    - Exact identifier matching (phone, bank account) may propose resolution; name-only fuzzy matching must never auto-merge.
 
+## Precision-first intelligence flow
+
+The pipeline now follows an evidence-first flow rather than an ``AI → graph``
+flow:
+
+```
+ingestion/hash/type routing
+  → native text or OCR blocks (page/line/bbox/confidence)
+  → document understanding candidates (optional Gemini)
+  → deterministic candidates + entity/role classification
+  → entity resolution + optional case-memory proposals
+  → deterministic relationships + optional evidence-constrained Groq candidates
+  → graph-quality firewall
+  → accepted evidence graph / candidate-review graph
+  → deterministic patterns, leads, and SOS
+```
+
+- `ROLE`, job titles, headers, and generic nouns stay as internal candidate
+  metadata. They are never forced into a `PERSON` node because the shared
+  contract does not represent them as graph entity types.
+- Only accepted, source-grounded relationships enter `ExtractionResult` and
+  therefore the current backend graph projection path.
+- Gemini/Groq candidates remain in the optional full-analysis bundle under
+  `candidate_relationships`; they require investigator review or a future
+  approved candidate-persistence workflow.
+- Multiple source occurrences are retained and exposed as
+  `relationship_evidence_groups`, so repeated independent evidence can be
+  assessed without silently duplicating the logical edge.
+
+### Optional intelligence hooks
+
+All cloud calls are opt-in. Normal `process_document(...)` execution remains
+local/deterministic.
+
+- `enable_gemini=True` uses `GEMINI_API_KEY` and `GEMINI_MODEL` only when both
+  are configured. PDFs/images below the inline safety cap can be sent as a
+  multimodal document part; native extracted text and page metadata are always
+  included for provenance.
+- `enable_groq=True` uses `GROQ_API_KEY` only for a closed-world relationship
+  candidate prompt. It receives accepted mention IDs, evidence blocks, and the
+  fixed relationship vocabulary—never permission to invent an entity or edge.
+- `document_understanding_runner`, `relationship_reasoner`, `ocr_blocks_runner`,
+  `pdf_ocr_runner`, and `case_memory` are injectable boundaries for production
+  adapters and evaluation; they do not change the public backend endpoint.
+
+### Accuracy measurement
+
+`ml/fixtures/precision_benchmark_v1.json` and `ml/evaluation/` report entity
+and relationship precision, recall, and F1 separately. The 0.80–0.90 goal is a
+benchmark target, not an unsupported production claim. A real production score
+requires investigator-labeled representative evidence.
+
 ## Package Architecture & Future Module Responsibilities
 
 - **`ml/pipeline.py`**: Main entry interface coordinating document analysis (`process_document(...)`).

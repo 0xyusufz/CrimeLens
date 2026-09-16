@@ -1,0 +1,66 @@
+{
+  "name": "CrimeLens precision-first architecture benchmark v1",
+  "scope": "Synthetic evaluation only. It does not represent production accuracy or real investigative data.",
+  "target": {
+    "entity_f1_min": 0.8,
+    "relationship_f1_min": 0.8,
+    "macro_f1_target_range": [0.8, 0.9]
+  },
+  "cases": [
+    {
+      "id": "benchmark_call_001",
+      "text": "Priya Verma called Nikhil Rao.",
+      "expected": {
+        "entities": [
+          {"type": "PERSON", "name": "Priya Verma"},
+          {"type": "PERSON", "name": "Nikhil Rao"}
+        ],
+        "relationships": [
+          {"source": "Priya Verma", "relationship": "CALLED", "target": "Nikhil Rao"}
+        ]
+      }
+    },
+    {
+      "id": "benchmark_work_001",
+      "text": "Aman Singh works for Delta Logistics Ltd.",
+      "expected": {
+        "entities": [
+          {"type": "PERSON", "name": "Aman Singh"},
+          {"type": "ORGANIZATION", "name": "Delta Logistics Ltd"}
+        ],
+        "relationships": [
+          {"source": "Aman Singh", "relationship": "WORKS_FOR", "target": "Delta Logistics Ltd"}
+        ]
+      }
+    },
+    {
+      "id": "benchmark_role_001",
+      "text": "Rajesh Kumar, an English lecturer at XYZ College, called Amit Sharma.",
+      "expected": {
+        "entities": [
+          {"type": "PERSON", "name": "Rajesh Kumar"},
+          {"type": "PERSON", "name": "Amit Sharma"},
+          {"type": "ORGANIZATION", "name": "XYZ College"}
+        ],
+        "relationships": [
+          {"source": "Rajesh Kumar", "relationship": "WORKS_FOR", "target": "XYZ College"},
+          {"source": "Rajesh Kumar", "relationship": "CALLED", "target": "Amit Sharma"}
+        ]
+      }
+    },
+    {
+      "id": "benchmark_location_001",
+      "text": "Meera Joshi met Arjun Patel at Delhi Railway Station.",
+      "expected": {
+        "entities": [
+          {"type": "PERSON", "name": "Meera Joshi"},
+          {"type": "PERSON", "name": "Arjun Patel"},
+          {"type": "LOCATION", "name": "Delhi Railway Station"}
+        ],
+        "relationships": [
+          {"source": "Meera Joshi", "relationship": "LOCATED_AT", "target": "Delhi Railway Station"}
+        ]
+      }
+    }
+  ]
+}

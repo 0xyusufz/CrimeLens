@@ -7,6 +7,7 @@ Does NOT create relationships, resolve entities, or perform database writes.
 
 from typing import Callable, Optional
 
+from ml.extraction.candidate_classifier import CandidateDecision, classify_entity_candidates
 from ml.extraction.ner import extract_named_entities
 from ml.extraction.regex import extract_regex_entities
 from shared.schemas.enums import EntityType
@@ -18,7 +19,8 @@ def extract_entities(
     document_id: str,
     min_confidence: float = 0.5,
     ner_runner: Optional[Callable[[str], list[EntityMention]]] = None,
-) -> list[EntityMention]:
+    return_decisions: bool = False,
+) -> list[EntityMention] | tuple[list[EntityMention], list[CandidateDecision]]:
     """Extract, deduplicate, and format all entity mentions from preprocessed text.
 
     Args:
@@ -41,16 +43,22 @@ def extract_entities(
 
     all_candidates = regex_candidates + ner_candidates
 
-    # 3. Deduplicate candidates by (type, normalized_name), keeping the highest confidence
+    # 3. Candidate-first type classification.  This retains role/generic phrase
+    # decisions internally rather than coercing them into graph nodes.
+    classified_candidates, decisions = classify_entity_candidates(
+        all_candidates,
+        text=text,
+        min_confidence=min_confidence,
+    )
+
+    # 4. Deduplicate candidates by (type, normalized_name), keeping the highest confidence
     deduped: dict[tuple[EntityType, str], EntityMention] = {}
-    for cand in all_candidates:
-        if cand.confidence < min_confidence:
-            continue
+    for cand in classified_candidates:
         key = (cand.type, cand.name.lower())
         if key not in deduped or cand.confidence > deduped[key].confidence:
             deduped[key] = cand
 
-    # 4. Assign sequential document-level mention IDs (mention_001, mention_002, ...)
+    # 5. Assign sequential document-level mention IDs (mention_001, mention_002, ...)
     final_mentions: list[EntityMention] = []
     for idx, cand in enumerate(deduped.values(), start=1):
         mention_id = f"mention_{idx:03d}"
@@ -63,4 +71,6 @@ def extract_entities(
             )
         )
 
+    if return_decisions:
+        return final_mentions, decisions
     return final_mentions

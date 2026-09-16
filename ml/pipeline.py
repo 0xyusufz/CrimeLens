@@ -27,18 +27,29 @@ mints zero database UUIDs, generates zero case_ids, and performs no guilt predic
 
 from typing import Any, Optional
 
+from ml.ai.providers.groq_provider import groq_extractor
 from ml.config import MLConfig, default_config
-from ml.extraction import extract_entities
+from ml.extraction import classify_entity_candidates, extract_entities
+from ml.ingestion import DocumentKind, ingest_document
 from ml.leads import generate_leads
-from ml.ocr import extract_text_from_image
+from ml.ocr import (
+    apply_ocr_confidence_to_entities,
+    apply_ocr_confidence_to_relationships,
+    extract_tesseract_blocks,
+    extract_text_from_image,
+)
 from ml.patterns import (
     detect_circular_transactions,
     detect_location_time_overlaps,
     detect_rapid_transfers,
 )
-from ml.preprocessing import is_scanned_file, load_document, normalize_text
-from ml.relationships import extract_relationships
-from ml.resolution import propose_resolutions
+from ml.preprocessing import normalize_text
+from ml.relationships import (
+    consolidate_relationship_evidence,
+    extract_relationships,
+    generate_relationship_candidates,
+)
+from ml.resolution import detect_contradictions, propose_case_memory_links, propose_resolutions
 from ml.structured import (
     CDRRecord,
     TransactionRecord,
@@ -52,6 +63,13 @@ from ml.validation import (
     validate_lead,
     validate_pattern,
     validate_resolution_proposal,
+)
+from ml.intelligence import (
+    apply_graph_quality_firewall,
+    analyze_orphans,
+    assess_sos,
+    integrate_ai_candidates,
+    understand_document,
 )
 from shared.schemas.enums import EntityType
 from shared.schemas.models import (
@@ -99,20 +117,13 @@ def process_document(
         OCRError: If an OCR engine or image validation error occurs.
     """
     # 1. Resolve calling conventions
+    resolved_filename: str | None = None
     if len(args) == 3:
         # Backend adapter convention: (document_bytes, filename, document_id)
         doc_content, filename, doc_id = args
+        resolved_filename = str(filename)
         document_id = str(doc_id)
-        if isinstance(doc_content, bytes):
-            if not is_scanned_file(str(filename)):
-                try:
-                    text = doc_content.decode("utf-8")
-                except UnicodeDecodeError:
-                    text = doc_content.decode("latin-1")
-            else:
-                text = doc_content
-        else:
-            text = doc_content
+        text = doc_content
     elif len(args) == 2:
         first, second = args
         if first is None or first == "":
@@ -146,30 +157,147 @@ def process_document(
     cfg = config or default_config
     ocr_runner = kwargs.get("ocr_engine_runner")
     ner_runner = kwargs.get("ner_runner")
+    input_filename: str | None = resolved_filename
 
-    # 2. Document Ingestion & Preprocessing: Plain text vs. Scanned/Image via Phase 3 OCR
-    if isinstance(text, bytes):
-        raw_text = extract_text_from_image(text, lang=cfg.default_ocr_language, engine_runner=ocr_runner)
-    elif isinstance(text, str):
-        if is_scanned_file(text):
-            raw_text = extract_text_from_image(text, lang=cfg.default_ocr_language, engine_runner=ocr_runner)
+    # 2. Evidence ingestion: hash/type/native-text extraction before OCR.
+    ingested = ingest_document(doc_id_str, text, filename=input_filename)
+    input_filename = ingested.filename or input_filename
+    ocr_blocks: list[dict[str, Any]] = []
+    processing_warnings: list[str] = []
+    if ingested.needs_ocr and ingested.kind == DocumentKind.IMAGE:
+        layout_runner = kwargs.get("ocr_blocks_runner")
+        if callable(layout_runner):
+            raw_blocks = layout_runner(ingested.raw_bytes or b"", cfg.default_ocr_language)
+            ocr_blocks = [
+                item.as_dict() if hasattr(item, "as_dict") else dict(item)
+                for item in raw_blocks
+            ]
+            raw_text = "\n".join(str(block.get("text") or "") for block in ocr_blocks)
+        elif kwargs.get("use_layout_ocr", False) and ocr_runner is None:
+            ocr_blocks = [
+                block.as_dict()
+                for block in extract_tesseract_blocks(
+                    ingested.raw_bytes or b"",
+                    lang=cfg.default_ocr_language,
+                )
+            ]
+            raw_text = "\n".join(str(block.get("text") or "") for block in ocr_blocks)
         else:
-            raw_text = load_document(text)
+            raw_text = extract_text_from_image(
+                ingested.raw_bytes or b"",
+                lang=cfg.default_ocr_language,
+                engine_runner=ocr_runner,
+            )
+            ocr_blocks.append(
+                {
+                    "page": 1,
+                    "line_id": 1,
+                    "text": raw_text,
+                    "confidence": kwargs.get("ocr_confidence", 0.75),
+                    "bbox": None,
+                }
+            )
+    elif ingested.needs_ocr and ingested.kind == DocumentKind.PDF:
+        pdf_ocr_runner = kwargs.get("pdf_ocr_runner")
+        if callable(pdf_ocr_runner):
+            pdf_output = pdf_ocr_runner(ingested.raw_bytes or b"", input_filename or "document.pdf")
+            if isinstance(pdf_output, dict):
+                raw_text = str(pdf_output.get("text") or "")
+                ocr_blocks = list(pdf_output.get("blocks") or [])
+            else:
+                raw_text = str(pdf_output or "")
+        else:
+            raw_text = ""
+            processing_warnings.append("scanned_pdf_requires_pdf_ocr_runner")
     else:
-        raise TypeError("text must be a string or bytes")
+        raw_text = ingested.text
 
     # Flow OCR or loaded text through text normalizer (Phase 2)
     clean_text = normalize_text(raw_text)
 
-    # 3. Entity Mention Extraction (Phase 4)
+    # 3. Document understanding metadata is internal and additive.
+    understanding = understand_document(
+        clean_text,
+        doc_id_str,
+        filename=input_filename,
+        source_kind="ocr" if ingested.needs_ocr else "native_text",
+        ocr_confidence=kwargs.get("ocr_confidence"),
+        ocr_blocks=ocr_blocks,
+        source_pages=[
+            {
+                "page": page.page_number,
+                "text": normalize_text(page.text),
+                "confidence": page.confidence,
+            }
+            for page in ingested.pages
+            if page.text
+        ],
+    )
+    gemini_understanding: dict[str, Any] = {}
+
+    # 4. Entity Mention Extraction (Phase 4)
     entities: list[EntityMention] = []
+    ai_relationships: list[Relationship] = []
+    candidate_relationships: list[Relationship] = []
+    ai_telemetry: dict[str, int] = {}
+    entity_candidate_decisions: list[Any] = []
+
     if clean_text:
-        entities = extract_entities(
+        entities, entity_candidate_decisions = extract_entities(
             clean_text,
             document_id=doc_id_str,
             min_confidence=cfg.min_entity_confidence,
             ner_runner=ner_runner,
+            return_decisions=True,
         )
+        if ocr_blocks:
+            entities = apply_ocr_confidence_to_entities(entities, ocr_blocks)
+
+        provider = kwargs.get("document_understanding_runner") or kwargs.get("ai_candidate_runner")
+        if provider is None and kwargs.get("enable_groq", True) and groq_extractor.is_available():
+            provider = groq_extractor
+        if provider is not None:
+            try:
+                if hasattr(provider, "read"):
+                    raw_provider_output = provider.read(
+                        {
+                            "document_id": doc_id_str,
+                            "filename": input_filename,
+                            "file_kind": ingested.kind.value,
+                            "document_bytes": ingested.raw_bytes,
+                            "text": clean_text,
+                            "pages": [
+                                {"page": page.page_number, "text": page.text}
+                                for page in ingested.pages
+                            ],
+                            "ocr_blocks": ocr_blocks,
+                        }
+                    )
+                    gemini_understanding = raw_provider_output if isinstance(raw_provider_output, dict) else {}
+                else:
+                    raw_provider_output = (
+                        provider.extract(clean_text, doc_id_str)
+                        if hasattr(provider, "extract")
+                        else provider(clean_text, doc_id_str)
+                    )
+                entities, ai_relationships, ai_telemetry = integrate_ai_candidates(
+                    entities,
+                    raw_provider_output,
+                    document_id=doc_id_str,
+                    source_text=clean_text,
+                    min_confidence=cfg.min_entity_confidence,
+                    relationship_id_prefix="rel_document_ai",
+                )
+                entities, provider_decisions = classify_entity_candidates(
+                    entities,
+                    text=clean_text,
+                    min_confidence=cfg.min_entity_confidence,
+                )
+                entity_candidate_decisions.extend(provider_decisions)
+            except Exception:
+                ai_telemetry = {"provider_error": 1}
+        else:
+            ai_telemetry = {}
 
     # 4. Structured Records Ingestion (Phase 7)
     structured_records = kwargs.get("structured_records") or []
@@ -285,7 +413,70 @@ def process_document(
         min_confidence=cfg.min_relationship_confidence,
     )
 
-    # 6. Entity Resolution Proposals (Phase 6)
+    # Merge Groq-extracted network relationships into active relationships
+    relationships.extend(ai_relationships)
+    candidate_relationships.extend(ai_relationships)
+
+    # Groq is restricted to closed-world relationship reasoning over accepted
+    # mentions and evidence blocks.  It cannot add free-form entities.
+    relationship_telemetry: dict[str, int] = {}
+    relationship_reasoner = kwargs.get("relationship_reasoner")
+    if relationship_reasoner is None and kwargs.get("enable_groq", False):
+        try:
+            from ml.relationships.groq_reasoner import GroqRelationshipReasoner
+
+            candidate_reasoner = GroqRelationshipReasoner()
+            relationship_reasoner = candidate_reasoner if candidate_reasoner.is_available() else None
+        except Exception:
+            relationship_reasoner = None
+    if relationship_reasoner is not None and clean_text and entities:
+        evidence_context = [
+            {
+                "id": block.block_id,
+                "text": block.text,
+                "page": block.page_number,
+                "line_id": block.line_id,
+            }
+            for block in understanding.blocks
+        ]
+        raw_candidates, relationship_telemetry = generate_relationship_candidates(
+            relationship_reasoner,
+            entities=entities,
+            evidence_blocks=evidence_context,
+        )
+        _, reasoned_relationships, candidate_telemetry = integrate_ai_candidates(
+            entities,
+            {"relationships": raw_candidates},
+            document_id=doc_id_str,
+            source_text=clean_text,
+            min_confidence=cfg.min_relationship_confidence,
+            relationship_id_prefix="rel_groq_candidate",
+        )
+        candidate_relationships.extend(reasoned_relationships)
+        relationship_telemetry.update(
+            {f"candidate_{key}": value for key, value in candidate_telemetry.items()}
+        )
+
+    # 6. Graph quality firewall: endpoint vocabulary, provenance, grounding,
+    # duplicate consolidation, and contradiction telemetry.
+    relationships, quality_report = apply_graph_quality_firewall(
+        relationships,
+        entities,
+        source_text=clean_text,
+        structured_records=all_structured,
+        min_confidence=cfg.min_relationship_confidence,
+    )
+    if ocr_blocks:
+        relationships = apply_ocr_confidence_to_relationships(relationships, entities)
+    candidate_relationships, candidate_quality_report = apply_graph_quality_firewall(
+        candidate_relationships,
+        entities,
+        source_text=clean_text,
+        structured_records=all_structured,
+        min_confidence=cfg.min_relationship_confidence,
+    )
+
+    # 7. Entity Resolution Proposals (Phase 6)
     resolution_proposals: list[ResolutionProposal] = []
     if len(entities) >= 2:
         resolution_proposals = propose_resolutions(
@@ -295,8 +486,13 @@ def process_document(
         )
         for prop in resolution_proposals:
             validate_resolution_proposal(prop)
+    case_memory_proposals = propose_case_memory_links(
+        entities,
+        kwargs.get("case_memory"),
+    )
+    contradictions = detect_contradictions(relationships, entities)
 
-    # 7. Suspicious Pattern Detection (Phase 8)
+    # 8. Suspicious Pattern Detection (Phase 8)
     patterns: list[Pattern] = []
     if kwargs.get("patterns"):
         for p in kwargs["patterns"]:
@@ -327,7 +523,7 @@ def process_document(
     for p in patterns:
         validate_pattern(p)
 
-    # 8. Investigative Lead Generation (Phase 9)
+    # 9. Investigative Lead Generation (Phase 9)
     leads: list[Lead] = []
     if kwargs.get("leads"):
         for ld in kwargs["leads"]:
@@ -337,7 +533,7 @@ def process_document(
         for ld in leads:
             validate_lead(ld)
 
-    # 9. Envelope Construction & Validation (Phase 1 & Phase 10)
+    # 10. Envelope Construction & Validation (Phase 1 & Phase 10)
     extraction_result = ExtractionResult(
         document_id=doc_id_str,
         entities=entities,
@@ -345,7 +541,7 @@ def process_document(
     )
     validate_extraction_result(extraction_result)
 
-    # 10. Result Dispatch
+    # 11. Result Dispatch
     should_return_analysis = (
         return_full_analysis
         or kwargs.get("return_analysis", False)
@@ -362,6 +558,87 @@ def process_document(
             "patterns": patterns,
             "leads": leads,
             "structured_records": all_structured,
+            "document_understanding": {
+                "document_type": understanding.document_type,
+                "source_kind": understanding.source_kind,
+                "file_kind": ingested.kind.value,
+                "sha256": ingested.sha256,
+                "block_count": understanding.block_count,
+                "blocks": [
+                    {
+                        "id": block.block_id,
+                        "page": block.page_number,
+                        "line_id": block.line_id,
+                        "bbox": block.bbox,
+                        "confidence": block.confidence,
+                        "start_char": block.start_char,
+                        "end_char": block.end_char,
+                    }
+                    for block in understanding.blocks
+                ],
+            },
+            "quality_report": quality_report.as_dict(),
+            "candidate_quality_report": candidate_quality_report.as_dict(),
+            "candidate_relationships": candidate_relationships,
+            "orphan_analysis": [
+                {
+                    "mention_id": orphan.mention_id,
+                    "name": orphan.name,
+                    "entity_type": orphan.entity_type,
+                    "accepted_degree": orphan.accepted_degree,
+                    "candidate_degree": orphan.candidate_degree,
+                    "reason": orphan.reason,
+                }
+                for orphan in analyze_orphans(entities, relationships, candidate_relationships)
+            ],
+            "relationship_evidence_groups": [
+                {
+                    "source_entity_id": group.source_entity_id,
+                    "relationship": group.relationship,
+                    "target_entity_id": group.target_entity_id,
+                    "relationship_ids": list(group.relationship_ids),
+                    "evidence_sources": list(group.evidence_sources),
+                    "independent_source_count": group.independent_source_count,
+                    "calibrated_confidence": group.calibrated_confidence,
+                    "strongest_status": group.strongest_status,
+                }
+                for group in consolidate_relationship_evidence(relationships)
+            ],
+            "sos": assess_sos(patterns=patterns, relationships=relationships).as_dict(),
+            "ai_telemetry": ai_telemetry,
+            "gemini_document_understanding": gemini_understanding,
+            "relationship_reasoning_telemetry": relationship_telemetry,
+            "case_memory_proposals": [
+                {
+                    "mention_id": proposal.mention_id,
+                    "canonical_entity_id": proposal.canonical_entity_id,
+                    "confidence": proposal.confidence,
+                    "signals": [signal.value for signal in proposal.signals],
+                    "requires_review": proposal.requires_review,
+                }
+                for proposal in case_memory_proposals
+            ],
+            "contradictions": [
+                {
+                    "entity_id": contradiction.entity_id,
+                    "relationship": contradiction.relationship.value,
+                    "conflicting_targets": list(contradiction.conflicting_targets),
+                    "relationship_ids": list(contradiction.relationship_ids),
+                    "reason": contradiction.reason,
+                }
+                for contradiction in contradictions
+            ],
+            "entity_candidate_decisions": [
+                {
+                    "text": decision.text,
+                    "proposed_type": decision.proposed_type,
+                    "accepted": decision.accepted,
+                    "reason": decision.reason,
+                    "attached_to": decision.attached_to,
+                }
+                for decision in entity_candidate_decisions
+            ],
+            "processing_warnings": processing_warnings,
         }
 
     return extraction_result

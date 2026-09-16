@@ -6,6 +6,7 @@ from app.api.routers.cases import router as cases_router
 from app.api.routers.documents import router as documents_router
 from app.api.routers.entities import router as entities_router
 from app.api.routers.evidence import router as evidence_router
+from app.api.routers.intelligence import router as intelligence_router
 from app.api.routers.investigation import router as investigation_router
 from app.api.routers.relationships import router as relationships_router
 
@@ -22,6 +23,8 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3001",
     ],
@@ -35,6 +38,7 @@ app.include_router(cases_router, prefix="/api/cases", tags=["cases"])
 app.include_router(documents_router, prefix="/api", tags=["documents"])
 app.include_router(entities_router, prefix="/api", tags=["entities"])
 app.include_router(evidence_router, prefix="/api", tags=["evidence"])
+app.include_router(intelligence_router, prefix="/api/cases", tags=["intelligence"])
 app.include_router(investigation_router, prefix="/api/investigation", tags=["investigation"])
 app.include_router(relationships_router, prefix="/api", tags=["relationships"])
 

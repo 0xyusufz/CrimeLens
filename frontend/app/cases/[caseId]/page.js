@@ -8,6 +8,7 @@ import AuthLayout from "../../../components/Layout";
 import CaseGraphView from "../../../components/CaseGraphView";
 import InvestigationPathView from "../../../components/InvestigationPathView";
 import CaseInsightsView from "../../../components/CaseInsightsView";
+import CaseCopilotView from "../../../components/CaseCopilotView";
 
 export default function CaseDetailsPage() {
   const { caseId } = useParams();
@@ -420,6 +421,16 @@ export default function CaseDetailsPage() {
                 </svg>
                 <span>Intelligence</span>
               </button>
+
+              <button
+                onClick={() => setActiveTab("copilot")}
+                className={`workspace-tab-btn ${activeTab === "copilot" ? "tab-btn-active" : ""}`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <span>AI Copilot & Network</span>
+              </button>
             </div>
 
             {/* TAB 1: NETWORK GRAPH INVESTIGATION */}
@@ -440,6 +451,13 @@ export default function CaseDetailsPage() {
             {activeTab === "insights" && (
               <section className="graph-workspace-section">
                 <CaseInsightsView key={graphRefreshKey} caseId={caseId} />
+              </section>
+            )}
+
+            {/* TAB 5: AI COPILOT & NETWORK */}
+            {activeTab === "copilot" && (
+              <section className="graph-workspace-section">
+                <CaseCopilotView caseId={caseId} />
               </section>
             )}
 

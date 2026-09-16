@@ -49,6 +49,7 @@ NON_PERSON_TOKENS = {
 CORPORATE_WORDS = {
     "ltd", "pvt", "llc", "llp", "inc", "corp", "corporation", "logistics",
     "industries", "bank", "enterprises", "company", "technologies", "solutions",
+    "college", "university", "school", "department",
 }
 
 # ORGANIZATION patterns
@@ -57,7 +58,7 @@ ORG_LABEL_PATTERN = re.compile(
     r"([A-Za-z0-9\u0900-\u097F][A-Za-z0-9\u0900-\u097F\s.&'-]{2,50})"
 )
 ORG_SUFFIX_PATTERN = re.compile(
-    r"\b([A-Z][A-Za-z0-9&.'-]*(?:\s+(?:of|and|&|[A-Z][A-Za-z0-9&.'-]*))*\s+(?:Pvt\s+Ltd|Ltd|LLC|LLP|Inc|Corp|Corporation|Bank|Logistics|Industries|Enterprises))\b"
+    r"\b([A-Z][A-Za-z0-9&.'-]*(?:\s+(?:of|and|&|[A-Z][A-Za-z0-9&.'-]*))*\s+(?:Pvt\s+Ltd|Ltd|LLC|LLP|Inc|Corp|Corporation|Bank|Logistics|Industries|Enterprises|College|University|School|Department))\b"
 )
 ORG_UNIT_PATTERN = re.compile(
     r"\b([A-Z][A-Za-z\s]{2,30}\s+(?:Police Station|Cyber Cell|Department|Branch))\b"
@@ -67,6 +68,9 @@ ORG_UNIT_PATTERN = re.compile(
 LOC_LABEL_PATTERN = re.compile(
     r"(?i)\b(?:LOCATION|Location|Place|City|State|Address)[\s:=-]+"
     r"([A-Za-z\u0900-\u097F][A-Za-z0-9\u0900-\u097F\s,.-]{2,40})"
+)
+LOCATION_SUFFIX_PATTERN = re.compile(
+    r"\b([A-Z][A-Za-z]*(?:\s+[A-Z][A-Za-z]*){0,3}\s+(?:Railway Station|Station|Airport|Market|Road|Street|Bridge|Terminal))\b"
 )
 KNOWN_LOCATIONS = {
     "Bhubaneswar", "Cuttack", "Mumbai", "Delhi", "Bangalore", "Bengaluru",
@@ -186,6 +190,9 @@ def extract_named_entities(
         pattern = rf"\b{re.escape(loc)}\b"
         if re.search(pattern, text, re.IGNORECASE):
             add_candidate(EntityType.LOCATION, loc, 0.85)
+
+    for match in LOCATION_SUFFIX_PATTERN.finditer(text):
+        add_candidate(EntityType.LOCATION, match.group(1), 0.90)
 
     # 4. EVENT extraction
     for match in EVENT_LABEL_PATTERN.finditer(text):
