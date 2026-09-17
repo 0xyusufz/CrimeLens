@@ -51,7 +51,8 @@ def max_upload_bytes() -> int:
     import os
 
     load_env()
-    return int(os.environ.get("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+    return int(os.environ.get("MAX_UPLOAD_BYTES", str(100 * 1024 * 1024)))
+
 
 
 def jwt_secret() -> str:

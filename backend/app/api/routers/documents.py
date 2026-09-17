@@ -71,10 +71,10 @@ def upload_document(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail=str(exc) or "Unsupported file type.",
         ) from None
-    except FileTooLargeError:
+    except FileTooLargeError as exc:
         raise HTTPException(
             status_code=413,
-            detail="Upload exceeds the maximum allowed size.",
+            detail=str(exc) or "Upload exceeds the maximum allowed size (100 MB).",
         ) from None
     except SQLAlchemyError:
         db.rollback()
@@ -143,8 +143,12 @@ def upload_documents_batch(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"File {file.filename} is empty.") from None
         except UnsupportedFileTypeError as exc:
             raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=f"File {file.filename}: {str(exc)}") from None
-        except FileTooLargeError:
-            raise HTTPException(status_code=413, detail=f"File {file.filename} exceeds maximum size.") from None
+        except FileTooLargeError as exc:
+            limit_mb = round(getattr(exc, "max_bytes", 100 * 1024 * 1024) / (1024 * 1024))
+            raise HTTPException(
+                status_code=413,
+                detail=f"File '{file.filename}' exceeds maximum allowed size ({limit_mb} MB).",
+            ) from None
         except SQLAlchemyError:
             db.rollback()
             raise _database_error() from None

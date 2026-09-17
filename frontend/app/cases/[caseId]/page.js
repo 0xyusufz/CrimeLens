@@ -115,6 +115,13 @@ export default function CaseDetailsPage() {
       return;
     }
 
+    const maxBytes = 100 * 1024 * 1024;
+    const oversizedFile = newFiles.find((file) => file.size > maxBytes);
+    if (oversizedFile) {
+      setUploadError(`File "${oversizedFile.name}" exceeds the 100 MB limit (${(oversizedFile.size / (1024 * 1024)).toFixed(1)} MB).`);
+      return;
+    }
+
     setSelectedFiles((prev) => {
       const combined = [...prev, ...newFiles];
       const unique = [];
@@ -227,6 +234,9 @@ export default function CaseDetailsPage() {
           body: formData,
         });
       } catch (batchErr) {
+        if (batchErr?.status === 413) {
+          throw batchErr;
+        }
         // Fallback: sequential upload if batch endpoint encounters format mismatch
         for (const file of selectedFiles) {
           const singleFormData = new FormData();
@@ -248,11 +258,11 @@ export default function CaseDetailsPage() {
       if (err?.status === 415) {
         setUploadError("Unsupported media type. Use PDF, DOCX, CSV, TXT, or supported image files.");
       } else if (err?.status === 413) {
-        setUploadError("One or more files exceed the maximum allowed upload size.");
+        setUploadError(err?.detail || err?.message || "One or more files exceed the maximum allowed upload size (100 MB).");
       } else if (err?.status === 400) {
-        setUploadError(err.message || "Invalid upload files.");
+        setUploadError(err?.detail || err?.message || "Invalid upload files.");
       } else {
-        setUploadError(err?.message || "Failed to upload documents. Please check server connectivity and try again.");
+        setUploadError(err?.detail || err?.message || "Failed to upload documents. Please check server connectivity and try again.");
       }
     } finally {
       setUploading(false);

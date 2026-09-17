@@ -50,7 +50,8 @@ class UnsupportedFileTypeError(Exception):
 class FileTooLargeError(Exception):
     def __init__(self, max_bytes: int):
         self.max_bytes = max_bytes
-        super().__init__("Upload exceeds the maximum allowed size.")
+        limit_mb = round(max_bytes / (1024 * 1024))
+        super().__init__(f"Upload exceeds the maximum allowed size ({limit_mb} MB).")
 
 
 class StoredFileMissingError(Exception):
