@@ -234,16 +234,27 @@ class CaseGraphApiTests(unittest.TestCase):
         body = allowed.json()
         self.assertEqual(body["case_id"], str(self.case_id))
         node_ids = {node["entity_id"] for node in body["nodes"]}
+        # Default connected_only=True prunes isolated entities
         self.assertEqual(
             node_ids,
             {
                 str(self.alpha.id),
                 str(self.beta.id),
                 str(self.gamma.id),
-                str(self.isolated.id),
             },
         )
+        self.assertNotIn(str(self.isolated.id), node_ids)
         self.assertNotIn(str(self.foreign.id), node_ids)
+
+        # When connected_only=false, isolated case entities are returned
+        all_nodes_res = client.get(
+            f"/api/cases/{self.case_id}/graph",
+            headers=self.inv_a_headers,
+            params={"connected_only": "false"},
+        )
+        self.assertEqual(all_nodes_res.status_code, 200)
+        all_node_ids = {node["entity_id"] for node in all_nodes_res.json()["nodes"]}
+        self.assertIn(str(self.isolated.id), all_node_ids)
         rel_ids = {row["relationship_id"] for row in body["relationships"]}
         self.assertEqual(rel_ids, {str(self.rel_ab.id), str(self.rel_bc.id)})
         called = next(row for row in body["relationships"] if row["relationship"] == "CALLED")

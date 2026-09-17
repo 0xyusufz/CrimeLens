@@ -11,9 +11,8 @@ export default function Navbar() {
     setUser(getUser());
   }, []);
 
-  const displayName = user?.name || "Dev Investigator";
-  const displayEmail = user?.email || "dev@crimelens.local";
-  const displayRole = user?.role || "INVESTIGATOR";
+  const displayName = "Officer";
+  const displayRole = "Administrator";
 
   return (
     <header className="investigation-header">
@@ -48,26 +47,29 @@ export default function Navbar() {
         {/* USER PROFILE & LOGOUT */}
         <div className="header-actions-group">
           <div className="user-profile-card">
-            <div className="user-avatar-indicator" title="Secure Session Active">
-              <span className="live-dot" />
+            <div className="user-avatar-indicator" title="Officer Profile">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
             </div>
             <div className="user-details">
               <div className="user-name-role">
                 <span className="user-name">{displayName}</span>
                 <span className="role-badge">{displayRole}</span>
               </div>
-              <span className="user-email">{displayEmail}</span>
             </div>
           </div>
 
           <button
             onClick={logout}
             className="logout-button"
-            title="Terminate secure session"
+            title="Logout"
+            aria-label="Logout"
           >
             <svg
-              width="16"
-              height="16"
+              width="18"
+              height="18"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -80,7 +82,6 @@ export default function Navbar() {
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
-            <span>Logout</span>
           </button>
         </div>
       </div>
@@ -172,18 +173,11 @@ export default function Navbar() {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 20px;
-          height: 20px;
-          background: rgba(16, 185, 129, 0.15);
+          width: 32px;
+          height: 32px;
+          background: rgba(56, 189, 248, 0.15);
+          color: #38bdf8;
           border-radius: 50%;
-        }
-
-        .live-dot {
-          width: 7px;
-          height: 7px;
-          background-color: #10b981;
-          border-radius: 50%;
-          box-shadow: 0 0 6px #10b981;
         }
 
         .user-details {
@@ -194,53 +188,56 @@ export default function Navbar() {
 
         .user-name-role {
           display: flex;
-          align-items: center;
-          gap: 0.5rem;
+          flex-direction: column;
+          align-items: flex-start;
+          justify-content: center;
+          gap: 1px;
+          line-height: 1.15;
         }
 
         .user-name {
-          font-size: 0.82rem;
-          font-weight: 600;
-          color: #f1f5f9;
+          font-size: 0.96rem;
+          font-weight: 700;
+          color: #1e293b;
+          line-height: 1.15;
+          margin: 0;
+          padding: 0;
         }
 
         .role-badge {
-          font-size: 0.65rem;
-          font-weight: 700;
-          letter-spacing: 0.04em;
-          color: #38bdf8;
-          background: rgba(14, 165, 233, 0.12);
-          border: 1px solid rgba(56, 189, 248, 0.25);
-          border-radius: 4px;
-          padding: 0.1rem 0.35rem;
-          text-transform: uppercase;
-          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-        }
-
-        .user-email {
-          font-size: 0.72rem;
-          color: #94a3b8;
+          font-size: 0.78rem;
+          font-weight: 500;
+          letter-spacing: 0.01em;
+          color: #64748b;
+          background: transparent;
+          border: none;
+          border-radius: 0;
+          padding: 0;
+          margin: 0;
+          text-transform: capitalize;
+          font-family: inherit;
+          line-height: 1.15;
         }
 
         .logout-button {
           display: inline-flex;
           align-items: center;
-          gap: 0.45rem;
-          padding: 0.45rem 0.85rem;
-          background: rgba(239, 68, 68, 0.08);
-          border: 1px solid rgba(239, 68, 68, 0.25);
-          border-radius: 8px;
-          color: #f87171;
-          font-size: 0.8rem;
-          font-weight: 600;
+          justify-content: center;
+          width: 38px;
+          height: 38px;
+          padding: 0;
+          background: #ffffff;
+          border: 1px solid #dce7f1;
+          border-radius: 10px;
+          color: #64748b;
           cursor: pointer;
           transition: all 0.2s ease;
         }
 
         .logout-button:hover {
-          background: rgba(239, 68, 68, 0.18);
-          border-color: rgba(239, 68, 68, 0.45);
-          color: #fca5a5;
+          background: #fef2f2;
+          border-color: #fca5a5;
+          color: #ef4444;
         }
 
         .logout-button:active {

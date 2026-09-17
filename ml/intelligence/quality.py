@@ -25,7 +25,12 @@ _ALLOWED_ENDPOINTS: dict[RelationshipType, set[tuple[EntityType, EntityType]]] =
     RelationshipType.SENT_MONEY_TO: {
         (EntityType.PERSON, EntityType.PERSON),
         (EntityType.PERSON, EntityType.BANK_ACCOUNT),
+        (EntityType.PERSON, EntityType.ORGANIZATION),
         (EntityType.BANK_ACCOUNT, EntityType.BANK_ACCOUNT),
+        (EntityType.BANK_ACCOUNT, EntityType.ORGANIZATION),
+        (EntityType.ORGANIZATION, EntityType.BANK_ACCOUNT),
+        (EntityType.ORGANIZATION, EntityType.ORGANIZATION),
+        (EntityType.ORGANIZATION, EntityType.PERSON),
     },
     RelationshipType.OWNS_VEHICLE: {
         (EntityType.PERSON, EntityType.VEHICLE),
@@ -37,6 +42,8 @@ _ALLOWED_ENDPOINTS: dict[RelationshipType, set[tuple[EntityType, EntityType]]] =
         (EntityType.PERSON, EntityType.LOCATION),
         (EntityType.ORGANIZATION, EntityType.LOCATION),
         (EntityType.VEHICLE, EntityType.LOCATION),
+        (EntityType.EVENT, EntityType.LOCATION),
+        (EntityType.BANK_ACCOUNT, EntityType.LOCATION),
     },
     RelationshipType.ASSOCIATED_WITH: {
         (EntityType.PERSON, EntityType.PERSON),

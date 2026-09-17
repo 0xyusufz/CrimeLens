@@ -51,6 +51,7 @@ def get_case_graph(
     entity_id: uuid.UUID | None = None,
     limit: int = DEFAULT_GRAPH_LIMIT,
     driver=None,
+    connected_only: bool = True,
 ) -> CaseGraphResult:
     cap = bounded_graph_limit(limit)
     if entity_id is not None:
@@ -147,6 +148,9 @@ def get_case_graph(
     if entity_id is not None:
         node_ids.append(entity_id)
         node_ids.extend(endpoint_ids)
+    elif connected_only:
+        # Connected-only rule: degree >= 1. Only entities participating in relationships appear.
+        node_ids.extend(endpoint_ids)
     else:
         linked = list(
             session.scalars(
@@ -156,7 +160,9 @@ def get_case_graph(
         node_ids.extend(linked)
         node_ids.extend(endpoint_ids)
 
-    entities = _hydrate(session, node_ids)
+    # Deduplicate node IDs while preserving deterministic order
+    distinct_node_ids = list(dict.fromkeys(node_ids))
+    entities = _hydrate(session, distinct_node_ids)
     nodes = [
         CaseGraphNode(
             entity_id=entity.id,

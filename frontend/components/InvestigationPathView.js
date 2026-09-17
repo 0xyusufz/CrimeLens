@@ -81,6 +81,156 @@ function PathRelationshipArrow({ rel, onClick, isSelected }) {
   );
 }
 
+function PathNetworkVisualizer({ chain, pathResult }) {
+  if (!chain || chain.length < 2) return null;
+  const nodes = chain.filter((c) => c.kind === "node").map((c) => c.data);
+  if (nodes.length < 2) return null;
+
+  const width = Math.min(800, Math.max(480, nodes.length * 150));
+  const height = 180;
+  const padding = 70;
+
+  const points = nodes.map((n, idx) => {
+    const x = padding + (idx / (nodes.length - 1)) * (width - padding * 2);
+    const isEnd = idx === 0 || idx === nodes.length - 1;
+    const y = isEnd ? height / 2 : height / 2 + (idx % 2 === 1 ? -24 : 24);
+    return {
+      x,
+      y,
+      node: n,
+      isSource: n.entity_id === pathResult.source_entity_id,
+      isTarget: n.entity_id === pathResult.target_entity_id,
+    };
+  });
+
+  return (
+    <div className="path-network-visualizer">
+      <div className="visualizer-header">
+        <span className="visualizer-badge">3D Network Topology</span>
+        <span className="visualizer-hint">Source (Red) ➔ Intermediate Network ➔ Target (Green)</span>
+      </div>
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} className="path-network-svg" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <radialGradient id="pathRedSphere" cx="35%" cy="28%" r="65%">
+            <stop offset="0%" stopColor="#ffe4e6" />
+            <stop offset="22%" stopColor="#fca5a5" />
+            <stop offset="60%" stopColor="#ef4444" />
+            <stop offset="90%" stopColor="#b91c1c" />
+            <stop offset="100%" stopColor="#7f1d1d" />
+          </radialGradient>
+
+          <radialGradient id="pathGreenSphere" cx="35%" cy="28%" r="65%">
+            <stop offset="0%" stopColor="#dcfce7" />
+            <stop offset="22%" stopColor="#86efac" />
+            <stop offset="60%" stopColor="#22c55e" />
+            <stop offset="90%" stopColor="#15803d" />
+            <stop offset="100%" stopColor="#14532d" />
+          </radialGradient>
+
+          <radialGradient id="pathBlueSphere" cx="35%" cy="28%" r="65%">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="24%" stopColor="#d5e0eb" />
+            <stop offset="65%" stopColor="#839ab4" />
+            <stop offset="92%" stopColor="#3e546d" />
+            <stop offset="100%" stopColor="#223243" />
+          </radialGradient>
+
+          <radialGradient id="pathSphereShadow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(15, 23, 42, 0.48)" />
+            <stop offset="50%" stopColor="rgba(15, 23, 42, 0.18)" />
+            <stop offset="85%" stopColor="transparent" />
+          </radialGradient>
+        </defs>
+
+        {/* Straight Edges */}
+        {points.map((p, idx) => {
+          if (idx === points.length - 1) return null;
+          const next = points[idx + 1];
+          const isSourceEdge = idx === 0;
+          const isTargetEdge = idx === points.length - 2;
+          let strokeColor = "#1e293b";
+          if (isSourceEdge) strokeColor = "#ef4444";
+          else if (isTargetEdge) strokeColor = "#22c55e";
+
+          return (
+            <line
+              key={`line-${idx}`}
+              x1={p.x}
+              y1={p.y}
+              x2={next.x}
+              y2={next.y}
+              stroke={strokeColor}
+              strokeWidth={isSourceEdge || isTargetEdge ? 3 : 2.4}
+              strokeLinecap="round"
+            />
+          );
+        })}
+
+        {/* 3D Spheres */}
+        {points.map((p, idx) => {
+          const gradId = p.isSource ? "url(#pathRedSphere)" : p.isTarget ? "url(#pathGreenSphere)" : "url(#pathBlueSphere)";
+          const borderColor = p.isSource ? "rgba(127, 29, 29, 0.75)" : p.isTarget ? "rgba(20, 83, 45, 0.75)" : "rgba(34, 50, 67, 0.7)";
+
+          return (
+            <g key={`sphere-${idx}`} className="path-svg-node-group">
+              {/* Ground Shadow */}
+              <ellipse
+                cx={p.x - 3}
+                cy={p.y + 23}
+                rx={19}
+                ry={6.5}
+                fill="url(#pathSphereShadow)"
+              />
+
+              {/* 3D Sphere */}
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={21}
+                fill={gradId}
+                stroke={borderColor}
+                strokeWidth={1.5}
+              />
+
+              {/* Specular Highlight Glint */}
+              <ellipse
+                cx={p.x - 6}
+                cy={p.y - 7}
+                rx={4.5}
+                ry={2.8}
+                fill="rgba(255, 255, 255, 0.88)"
+                transform={`rotate(-25 ${p.x - 6} ${p.y - 7})`}
+              />
+
+              {/* Text Label Below */}
+              <text
+                x={p.x}
+                y={p.y + 37}
+                textAnchor="middle"
+                fontSize={11}
+                fontWeight={650}
+                fill="#1e293b"
+              >
+                {p.node.name?.length > 15 ? p.node.name.slice(0, 13) + "…" : p.node.name}
+              </text>
+              <text
+                x={p.x}
+                y={p.y + 49}
+                textAnchor="middle"
+                fontSize={9}
+                fontWeight={700}
+                fill={p.isSource ? "#ef4444" : p.isTarget ? "#22c55e" : "#64748b"}
+              >
+                {p.isSource ? "SOURCE" : p.isTarget ? "TARGET" : (p.node.type || "INTERMEDIATE")}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 export default function InvestigationPathView({ caseId }) {
   const [entities, setEntities] = useState([]);
   const [loadingEntities, setLoadingEntities] = useState(true);
@@ -228,6 +378,40 @@ export default function InvestigationPathView({ caseId }) {
         .path-result-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.75rem; flex-wrap:wrap; gap:0.75rem; }
         .path-result-title { font-size:0.82rem; font-weight:700; color:#38bdf8; letter-spacing:0.06em; text-transform:uppercase; margin:0; display:flex; align-items:center; gap:0.5rem; }
         .path-hop-badge { background:rgba(14,165,233,0.15); border:1px solid rgba(56,189,248,0.35); border-radius:5px; padding:0.15rem 0.5rem; font-size:0.72rem; font-weight:700; color:#38bdf8; font-family:ui-monospace,monospace; }
+        .path-network-visualizer {
+          background: #fbfdff;
+          border: 1px solid #dce7f1;
+          border-radius: 12px;
+          padding: 1rem 1.25rem 0.5rem;
+          margin-bottom: 1.5rem;
+          box-shadow: 0 4px 14px rgba(35, 72, 103, 0.04);
+        }
+        .visualizer-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.5rem;
+        }
+        .visualizer-badge {
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: #0787d1;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          background: #e7f5ff;
+          border: 1px solid #bfe8ff;
+          border-radius: 4px;
+          padding: 0.15rem 0.45rem;
+        }
+        .visualizer-hint {
+          font-size: 0.72rem;
+          color: #71829b;
+          font-weight: 500;
+        }
+        .path-network-svg {
+          display: block;
+          margin: 0 auto;
+        }
         .path-chain-container { overflow-x:auto; padding-bottom:1rem; }
         .path-chain { display:flex; align-items:center; min-width:max-content; padding:0.5rem 0; }
         .path-node-card { background:rgba(10,15,30,0.9); border:1.5px solid rgba(56,189,248,0.2); border-radius:10px; padding:0.7rem 0.9rem; min-width:130px; max-width:180px; text-align:center; flex-shrink:0; }
@@ -393,6 +577,9 @@ export default function InvestigationPathView({ caseId }) {
               </h3>
               <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Click a relationship to view evidence</span>
             </div>
+
+            {/* 3D NETWORK TOPOLOGY VISUALIZER */}
+            <PathNetworkVisualizer chain={chain} pathResult={pathResult} />
 
             <div className="path-chain-container">
               <div className="path-chain">

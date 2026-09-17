@@ -257,9 +257,16 @@ def detect_patterns(document_bytes: bytes, filename: str, document_id: str) -> d
 
 
 def process_document(document_bytes: bytes, filename: str, document_id: str) -> dict:
-    """Dummy extraction envelope — no NER/ML here."""
-    return {
-        "document_id": document_id,
-        "entities": [],
-        "relationships": [],
-    }
+    """Delegates document extraction to ml.pipeline.process_document."""
+    try:
+        from ml.pipeline import process_document as pipeline_process
+        res = pipeline_process(document_bytes, filename, document_id)
+        if hasattr(res, "model_dump"):
+            return res.model_dump(mode="json")
+        return res
+    except Exception:
+        return {
+            "document_id": document_id,
+            "entities": [],
+            "relationships": [],
+        }

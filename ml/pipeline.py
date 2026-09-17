@@ -36,6 +36,7 @@ from ml.ocr import (
     apply_ocr_confidence_to_entities,
     apply_ocr_confidence_to_relationships,
     extract_tesseract_blocks,
+    extract_text_from_pdf,
     extract_text_from_image,
 )
 from ml.patterns import (
@@ -207,8 +208,16 @@ def process_document(
             else:
                 raw_text = str(pdf_output or "")
         else:
-            raw_text = ""
-            processing_warnings.append("scanned_pdf_requires_pdf_ocr_runner")
+            try:
+                pdf_output = extract_text_from_pdf(
+                    ingested.raw_bytes or b"",
+                    lang=cfg.default_ocr_language,
+                )
+                raw_text = str(pdf_output.get("text") or "")
+                ocr_blocks = list(pdf_output.get("blocks") or [])
+            except Exception as exc:
+                raw_text = ""
+                processing_warnings.append(f"scanned_pdf_ocr_unavailable: {exc}")
     else:
         raw_text = ingested.text
 
@@ -288,13 +297,36 @@ def process_document(
                     min_confidence=cfg.min_entity_confidence,
                     relationship_id_prefix="rel_document_ai",
                 )
+                pre_classified = list(entities)
                 entities, provider_decisions = classify_entity_candidates(
                     entities,
                     text=clean_text,
                     min_confidence=cfg.min_entity_confidence,
                 )
                 entity_candidate_decisions.extend(provider_decisions)
-            except Exception:
+
+                # Remap AI relationship endpoints if an entity was deduplicated or reclassified
+                surviving_ids = {e.id for e in entities}
+                name_to_survivor: dict[str, str] = {e.name.casefold(): e.id for e in entities}
+                pre_id_to_name: dict[str, str] = {e.id: e.name.casefold() for e in pre_classified}
+
+                remapped_ai_rels: list[Relationship] = []
+                for rel in ai_relationships:
+                    s_id = rel.source_entity_id
+                    t_id = rel.target_entity_id
+                    if s_id not in surviving_ids:
+                        s_name = pre_id_to_name.get(s_id)
+                        if s_name and s_name in name_to_survivor:
+                            s_id = name_to_survivor[s_name]
+                    if t_id not in surviving_ids:
+                        t_name = pre_id_to_name.get(t_id)
+                        if t_name and t_name in name_to_survivor:
+                            t_id = name_to_survivor[t_name]
+                    if s_id in surviving_ids and t_id in surviving_ids and s_id != t_id:
+                        remapped_ai_rels.append(rel.model_copy(update={"source_entity_id": s_id, "target_entity_id": t_id}))
+                ai_relationships = remapped_ai_rels
+            except Exception as e:
+                logger.warning(f"AI candidate integration exception: {e}")
                 ai_telemetry = {"provider_error": 1}
         else:
             ai_telemetry = {}

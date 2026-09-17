@@ -95,6 +95,63 @@ def upload_document(
     return DocumentRead.model_validate(document)
 
 
+@router.post(
+    "/cases/{case_id}/documents/batch",
+    response_model=list[DocumentRead],
+    status_code=status.HTTP_201_CREATED,
+)
+def upload_documents_batch(
+    files: list[UploadFile] = File(...),
+    case: Case = Depends(require_case_access),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> list[DocumentRead]:
+    if not files:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No files provided.")
+    if len(files) > 5:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Maximum 5 files can be uploaded at once.",
+        )
+    created_docs = []
+    for file in files:
+        try:
+            data = read_upload_bytes(file.file)
+            document = create_document(
+                db,
+                case_id=case.id,
+                original_filename=file.filename,
+                content_type=file.content_type,
+                data=data,
+                uploader_id=user.id,
+            )
+            created_docs.append(document)
+            try:
+                record_audit(
+                    db,
+                    action=AuditAction.DOCUMENT_UPLOADED,
+                    result=AuditResult.SUCCESS,
+                    user_id=user.id,
+                    case_id=case.id,
+                    resource_type="document",
+                    resource_id=document.id,
+                    details={"filename": document.filename, "batch": True},
+                )
+            except AuditWriteError:
+                pass
+        except EmptyUploadError:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"File {file.filename} is empty.") from None
+        except UnsupportedFileTypeError as exc:
+            raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=f"File {file.filename}: {str(exc)}") from None
+        except FileTooLargeError:
+            raise HTTPException(status_code=413, detail=f"File {file.filename} exceeds maximum size.") from None
+        except SQLAlchemyError:
+            db.rollback()
+            raise _database_error() from None
+
+    return [DocumentRead.model_validate(doc) for doc in created_docs]
+
+
 @router.get("/cases/{case_id}/documents", response_model=list[DocumentRead])
 def list_documents(
     case: Case = Depends(require_case_access),

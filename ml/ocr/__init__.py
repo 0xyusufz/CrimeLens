@@ -14,6 +14,7 @@ from ml.ocr.tesseract import (
 )
 from ml.ocr.confidence import apply_ocr_confidence_to_entities, apply_ocr_confidence_to_relationships
 from ml.ocr.layout_blocks import OCRBlock, extract_tesseract_blocks
+from ml.ocr.pdf import extract_text_from_pdf
 
 __all__ = [
     "InvalidImageError",
@@ -26,6 +27,7 @@ __all__ = [
     "apply_ocr_confidence_to_entities",
     "apply_ocr_confidence_to_relationships",
     "extract_tesseract_blocks",
+    "extract_text_from_pdf",
     "extract_ocr_result",
     "extract_text_from_image",
     "is_ocr_available",

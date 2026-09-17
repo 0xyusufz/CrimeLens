@@ -123,7 +123,8 @@ def _extract_pdf(data: bytes) -> tuple[tuple[PageContent, ...], bool]:
         )
         for index, page in enumerate(reader.pages, start=1)
     )
-    needs_ocr = not any(page.text for page in pages)
+    total_chars = sum(len(page.text) for page in pages)
+    needs_ocr = total_chars < 50
     return pages, needs_ocr
 
 

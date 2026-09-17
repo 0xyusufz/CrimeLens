@@ -12,8 +12,21 @@ class EntityCaseRef(BaseModel):
     case_number: str
 
 
+class EntityAttributes(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    aliases: list[str] = Field(default_factory=list)
+    phone_numbers: list[str] = Field(default_factory=list)
+    locations: list[str] = Field(default_factory=list)
+    vehicles: list[str] = Field(default_factory=list)
+    organizations: list[str] = Field(default_factory=list)
+    occupations: list[str] = Field(default_factory=list)
+    evidence_snippets: list[str] = Field(default_factory=list)
+    source_documents: list[str] = Field(default_factory=list)
+
+
 class EntityRead(BaseModel):
-    """Canonical entity plus cases the current user is allowed to see."""
+    """Canonical entity plus cases the current user is allowed to see and rich attributes."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -21,6 +34,7 @@ class EntityRead(BaseModel):
     type: EntityType
     canonical_name: str
     cases: list[EntityCaseRef]
+    attributes: EntityAttributes = Field(default_factory=EntityAttributes)
 
 
 class EntityConnection(BaseModel):

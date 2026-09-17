@@ -176,6 +176,17 @@ def project_case_graph(case_id: UUID, db: Session, driver=None) -> dict[str, int
     for entity in entities.values():
         project_entity(entity, driver=driver)
 
+    # Reconcile relationships: prune any edges in Neo4j for this case that no longer exist in DB
+    active_rel_ids = [str(r.id) for r in staged]
+    with driver.session() as s:
+        s.run(
+            "MATCH ()-[r {case_id: $case_id}]->() "
+            "WHERE NOT r.relationship_id IN $active_rel_ids "
+            "DELETE r",
+            case_id=str(case_id),
+            active_rel_ids=active_rel_ids,
+        )
+
     projected = 0
     skipped = 0
     for rel in staged:

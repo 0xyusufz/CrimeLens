@@ -11,11 +11,24 @@ from app.config import max_upload_bytes, upload_dir
 from app.models.document import Document
 from app.services.cases import CaseNotFoundError, get_case
 
-ALLOWED_EXTENSIONS = {".pdf", ".csv", ".txt"}
+ALLOWED_EXTENSIONS = {
+    ".pdf", ".csv", ".txt", ".docx",
+    ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif",
+}
 ALLOWED_CONTENT_TYPES = {
     ".pdf": {"application/pdf", "application/x-pdf"},
     ".csv": {"text/csv", "application/csv", "text/plain", "application/vnd.ms-excel"},
     ".txt": {"text/plain"},
+    ".docx": {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    },
+    ".png": {"image/png"},
+    ".jpg": {"image/jpeg"},
+    ".jpeg": {"image/jpeg"},
+    ".tif": {"image/tiff"},
+    ".tiff": {"image/tiff"},
+    ".bmp": {"image/bmp", "image/x-ms-bmp"},
+    ".gif": {"image/gif"},
 }
 GENERIC_BINARY_TYPES = {"", "application/octet-stream", "binary/octet-stream"}
 
@@ -80,11 +93,22 @@ def validate_upload(filename: str, content_type: str | None, data: bytes) -> Non
 
     ext = Path(filename).suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
-        raise UnsupportedFileTypeError("Only PDF, CSV, and TXT files are allowed.")
+        raise UnsupportedFileTypeError("This document format is not supported.")
 
-    if ext == ".pdf" and not data.startswith(b"%PDF"):
-        raise UnsupportedFileTypeError("File content does not match a PDF.")
-    if ext in {".csv", ".txt"} and data.startswith(b"%PDF"):
+    signatures = {
+        ".pdf": data.startswith(b"%PDF"),
+        ".docx": data.startswith(b"PK\x03\x04"),
+        ".png": data.startswith(b"\x89PNG\r\n\x1a\n"),
+        ".jpg": data.startswith(b"\xff\xd8\xff"),
+        ".jpeg": data.startswith(b"\xff\xd8\xff"),
+        ".tif": data.startswith((b"II*\x00", b"MM\x00*")),
+        ".tiff": data.startswith((b"II*\x00", b"MM\x00*")),
+        ".bmp": data.startswith(b"BM"),
+        ".gif": data.startswith((b"GIF87a", b"GIF89a")),
+    }
+    if ext in signatures and not signatures[ext]:
+        raise UnsupportedFileTypeError("File content does not match the declared type.")
+    if ext in {".csv", ".txt"} and data.startswith((b"%PDF", b"PK\x03\x04")):
         raise UnsupportedFileTypeError("File content does not match the declared type.")
 
     ct = _normalized_content_type(content_type)

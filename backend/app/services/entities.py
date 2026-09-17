@@ -10,10 +10,12 @@ from sqlalchemy.orm import Session
 from app.graph.driver import get_driver
 from app.graph.schema import RELATIONSHIP_TYPES
 from app.models.case import Case
-from app.models.entity import Entity, EntityCaseLink
+from app.models.document import Document
+from app.models.entity import Entity, EntityCaseLink, EntityMention
 from app.models.enums import EntityType, RelationshipStatus, RelationshipType
 from app.models.user import User
 from app.schemas.entity import (
+    EntityAttributes,
     EntityCaseRef,
     EntityConnection,
     EntityConnectionsResult,
@@ -89,11 +91,66 @@ def get_entity_for_user(
         if _case_link_count(session, entity_id) == 0:
             raise EntityNotFoundError()
         raise EntityForbiddenError()
+    # Collect mentions to extract aliases, evidence snippets, and source documents
+    mentions = list(
+        session.scalars(
+            select(EntityMention).where(EntityMention.entity_id == entity_id)
+        ).all()
+    )
+    aliases = sorted(
+        {
+            m.name.strip()
+            for m in mentions
+            if m.name and m.name.strip() and m.name.strip().casefold() != entity.canonical_name.casefold()
+        }
+    )
+    evidence_snippets = [
+        m.evidence_snippet.strip()
+        for m in mentions
+        if m.evidence_snippet and m.evidence_snippet.strip()
+    ]
+    doc_ids = {m.document_id for m in mentions if m.document_id}
+    source_docs: list[str] = []
+    if doc_ids:
+        docs = session.scalars(select(Document).where(Document.id.in_(doc_ids))).all()
+        source_docs = sorted({doc.filename for doc in docs if doc.filename})
+
+    # Collect connected attributes (phones, locations, vehicles, orgs) from 1-hop connections
+    phone_numbers: list[str] = []
+    locations: list[str] = []
+    vehicles: list[str] = []
+    organizations: list[str] = []
+    try:
+        conns = list_entity_connections(session, user, entity_id, limit=50)
+        for c in conns.connections:
+            if c.type == EntityType.PHONE and c.name not in phone_numbers:
+                phone_numbers.append(c.name)
+            elif c.type == EntityType.LOCATION and c.name not in locations:
+                locations.append(c.name)
+            elif c.type == EntityType.VEHICLE and c.name not in vehicles:
+                vehicles.append(c.name)
+            elif c.type == EntityType.ORGANIZATION and c.name not in organizations:
+                organizations.append(c.name)
+    except Exception:
+        pass
+
+    attributes = EntityAttributes(
+        aliases=aliases,
+        phone_numbers=phone_numbers,
+        locations=locations,
+        vehicles=vehicles,
+        organizations=organizations,
+        occupations=[],
+        evidence_snippets=evidence_snippets,
+        source_documents=source_docs,
+    )
+
     return EntityRead(
         id=entity.id,
         type=_entity_type(entity.type),
         canonical_name=entity.canonical_name,
         cases=[EntityCaseRef(case_id=case.id, case_number=case.case_number) for case in cases],
+        attributes=attributes,
     )
 
 

@@ -7,8 +7,10 @@ topologies, and act as an interactive Copilot for investigators.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+import re
 import uuid
 from typing import Any, Optional
 
@@ -68,7 +70,7 @@ class GeminiIntelligenceEngine:
                 g_res = g_client.chat.completions.create(
                     model="openai/gpt-oss-20b",
                     messages=[{"role": "user", "content": prompt_or_contents}],
-                    max_completion_tokens=8192,
+                    max_completion_tokens=2048,
                     temperature=0.3,
                     reasoning_effort="medium",
                 )
@@ -83,8 +85,14 @@ class GeminiIntelligenceEngine:
     def is_available(self) -> bool:
         return bool(self.api_keys) or bool(os.getenv("GROQ_API_KEY"))
 
-    def build_case_tables(self, session: Session, case_id: uuid.UUID) -> dict[str, Any]:
-        """Constructs markdown tables of all entities and relationships for a case."""
+    def build_case_tables(
+        self,
+        session: Session,
+        case_id: uuid.UUID,
+        filter_entity_ids: Optional[set[uuid.UUID]] = None,
+        filter_rel_ids: Optional[set[uuid.UUID]] = None,
+    ) -> dict[str, Any]:
+        """Constructs markdown tables of entities and relationships for a case (optionally filtered)."""
         # 1. Fetch Entities
         entities_stmt = (
             select(Entity)
@@ -92,8 +100,12 @@ class GeminiIntelligenceEngine:
             .where(EntityCaseLink.case_id == case_id)
             .order_by(Entity.type, Entity.canonical_name)
         )
-        entities = list(session.scalars(entities_stmt).all())
-        entity_map = {e.id: e for e in entities}
+        all_entities = list(session.scalars(entities_stmt).all())
+        if filter_entity_ids is not None:
+            entities = [e for e in all_entities if e.id in filter_entity_ids]
+        else:
+            entities = all_entities
+        entity_map = {e.id: e for e in all_entities}
 
         # 2. Fetch Relationships
         rels_stmt = (
@@ -101,7 +113,16 @@ class GeminiIntelligenceEngine:
             .where(RelationshipStaging.case_id == case_id)
             .order_by(RelationshipStaging.confidence.desc())
         )
-        rels = list(session.scalars(rels_stmt).all())
+        all_rels = list(session.scalars(rels_stmt).all())
+        if filter_rel_ids is not None:
+            rels = [r for r in all_rels if r.id in filter_rel_ids]
+        elif filter_entity_ids is not None:
+            rels = [
+                r for r in all_rels
+                if r.source_entity_id in filter_entity_ids and r.target_entity_id in filter_entity_ids
+            ]
+        else:
+            rels = all_rels
 
         # Markdown Table: Entities
         ent_rows = ["| Entity Name | Type | Entity ID |", "|---|---|---|"]
@@ -126,6 +147,8 @@ class GeminiIntelligenceEngine:
         return {
             "entities_count": len(entities),
             "relationships_count": len(rels),
+            "entities": entities,
+            "relationships": rels,
             "entities_table_md": entities_table_md,
             "relationships_table_md": rels_table_md,
         }
@@ -159,6 +182,170 @@ Cite specific evidence snippets from the relationship table when making claims. 
 """
 
         return self._generate_with_fallback(prompt)
+
+    def analyze_network(
+        self,
+        session: Session,
+        case_id: uuid.UUID,
+        selected_node_ids: Optional[list[str]] = None,
+        mode: str = "full",
+        hops: int = 2,
+    ) -> dict[str, Any]:
+        """Performs deep graph reasoning over selected nodes (1/2-hop) or full case network."""
+        if not self.is_available():
+            return {
+                "mode": mode,
+                "case_summary": "Intelligence engine is currently offline or unconfigured.",
+                "key_entities": [],
+                "important_relationships": [],
+                "potential_persons_of_interest": [],
+                "investigative_leads": [],
+                "supporting_evidence": [],
+                "contradictions_or_anomalies": [],
+                "confidence_score": 0.0,
+                "dossier_markdown": "### Intelligence Engine Offline\nPlease ensure GEMINI_API_KEY or GROQ_API_KEY is configured in backend environment.",
+                "model": "offline",
+            }
+
+        case = session.get(Case, case_id)
+        case_title = case.title if case else f"Case {case_id}"
+
+        # 1. Determine subgraph boundary
+        target_uuid_set: set[uuid.UUID] = set()
+        if selected_node_ids and mode in ("node", "selected"):
+            for nid in selected_node_ids:
+                try:
+                    target_uuid_set.add(uuid.UUID(str(nid)))
+                except (ValueError, TypeError):
+                    continue
+
+        # If node mode requested with valid nodes, expand 1-hop & 2-hop
+        filter_entity_ids: Optional[set[uuid.UUID]] = None
+        filter_rel_ids: Optional[set[uuid.UUID]] = None
+
+        if target_uuid_set:
+            # Fetch all rels to traverse hops
+            all_rels_stmt = select(RelationshipStaging).where(RelationshipStaging.case_id == case_id)
+            all_rels = list(session.scalars(all_rels_stmt).all())
+
+            # 1-hop expansion
+            hop1_entities = set(target_uuid_set)
+            included_rels: set[RelationshipStaging] = set()
+            for r in all_rels:
+                if r.source_entity_id in target_uuid_set or r.target_entity_id in target_uuid_set:
+                    hop1_entities.add(r.source_entity_id)
+                    hop1_entities.add(r.target_entity_id)
+                    included_rels.add(r)
+
+            # 2-hop expansion if requested
+            if hops >= 2:
+                hop2_entities = set(hop1_entities)
+                for r in all_rels:
+                    if r.source_entity_id in hop1_entities or r.target_entity_id in hop1_entities:
+                        hop2_entities.add(r.source_entity_id)
+                        hop2_entities.add(r.target_entity_id)
+                        included_rels.add(r)
+                filter_entity_ids = hop2_entities
+            else:
+                filter_entity_ids = hop1_entities
+
+            filter_rel_ids = {r.id for r in included_rels}
+
+        tables = self.build_case_tables(
+            session,
+            case_id,
+            filter_entity_ids=filter_entity_ids,
+            filter_rel_ids=filter_rel_ids,
+        )
+
+        scope_desc = (
+            f"Focused {hops}-Hop Neighborhood of selected entities: {len(target_uuid_set)} entity/entities"
+            if target_uuid_set
+            else "Complete Multi-Document Case Network"
+        )
+
+        prompt = f"""You are a Senior Criminal Intelligence Reasoning Engine for CrimeLens.
+Analyze the following investigative graph tables for Case: '{case_title}'.
+Analysis Scope: {scope_desc}
+
+### EXTRACTED CASE ENTITIES ({tables['entities_count']} Total in Scope)
+{tables['entities_table_md']}
+
+### EXTRACTED CASE RELATIONSHIPS ({tables['relationships_count']} Total in Scope)
+{tables['relationships_table_md']}
+
+CRITICAL INSTRUCTIONS:
+1. SEPARATION OF KNOWLEDGE:
+   - Internal Domain Knowledge: Use your understanding of criminal methodology, money laundering layers, front companies, CDR frequency patterns, and smuggling networks to interpret motives and structures.
+   - Case-Specific Evidence: Base ALL factual claims, connections, names, and transactions STRICTLY on the tables above.
+   - ZERO HALLUCINATION: Never fabricate people, banks, dates, or relationships not grounded in the table evidence.
+2. OUTPUT FORMAT:
+   You MUST return a valid JSON object wrapped inside a ```json ... ``` codeblock.
+   JSON schema:
+   {{
+     "case_summary": "Concise summary of network structure and primary illicit activity",
+     "key_entities": [
+       {{ "name": "...", "type": "...", "role": "...", "risk_level": "LOW|MEDIUM|HIGH|CRITICAL" }}
+     ],
+     "important_relationships": [
+       {{ "source": "...", "target": "...", "type": "...", "significance": "...", "evidence_snippet": "..." }}
+     ],
+     "potential_persons_of_interest": [
+       {{ "name": "...", "reason": "...", "threat_level": "LOW|MEDIUM|HIGH|CRITICAL", "evidence": "..." }}
+     ],
+     "investigative_leads": [
+       "Actionable lead 1 with specific target and justification",
+       "Actionable lead 2 with subpoena or surveillance recommendation"
+     ],
+     "supporting_evidence": [
+       {{ "claim": "...", "quote": "..." }}
+     ],
+     "contradictions_or_anomalies": [
+       "Identified contradiction, timeline conflict, or anomaly"
+     ],
+     "confidence_score": 0.88,
+     "dossier_markdown": "Full GitHub-flavored Markdown intelligence dossier for investigators with sections: Executive Summary, Network Hubs & Roles, Flow of Transactions/Calls, Identified Threat Entities, and Prioritized Action Steps."
+   }}
+"""
+
+        raw_output = self._generate_with_fallback(prompt)
+
+        # Parse output JSON
+        parsed: dict[str, Any] = {}
+        json_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", raw_output)
+        if json_match:
+            try:
+                parsed = json.loads(json_match.group(1))
+            except Exception:
+                parsed = {}
+
+        if not parsed:
+            # Try raw json load
+            try:
+                parsed = json.loads(raw_output)
+            except Exception:
+                parsed = {}
+
+        # If JSON parsing failed, salvage into valid schema
+        if not parsed:
+            parsed = {
+                "case_summary": f"Automated analysis for {case_title}",
+                "key_entities": [],
+                "important_relationships": [],
+                "potential_persons_of_interest": [],
+                "investigative_leads": ["Review highlighted entity connections in case graph."],
+                "supporting_evidence": [],
+                "contradictions_or_anomalies": [],
+                "confidence_score": 0.75,
+                "dossier_markdown": raw_output,
+            }
+
+        parsed["mode"] = "node" if target_uuid_set else "full"
+        parsed["model"] = self.model
+        parsed["in_scope_entities"] = tables["entities_count"]
+        parsed["in_scope_relationships"] = tables["relationships_count"]
+
+        return parsed
 
     def chat_copilot(
         self,
@@ -209,3 +396,4 @@ RULES:
 
 # Singleton instance
 gemini_engine = GeminiIntelligenceEngine()
+

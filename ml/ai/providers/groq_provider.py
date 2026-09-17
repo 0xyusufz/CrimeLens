@@ -29,47 +29,50 @@ VALID_RELATIONSHIP_TYPES = {r.value for r in RelationshipType}
 
 SYSTEM_PROMPT = """You are a specialized Law Enforcement and Criminal Intelligence extraction engine.
 Your task is to analyze evidence text and extract:
-1. All Entities (PERSON, ORGANIZATION, LOCATION, PHONE, BANK_ACCOUNT, VEHICLE, EVENT)
+1. High-precision Entities (PERSON, ORGANIZATION, LOCATION, PHONE, BANK_ACCOUNT, VEHICLE, EVENT)
 2. Network Connections / Relationships between them (who is connected to whom, why, and the exact evidence snippet)
 
 Allowed Entity Types:
-- PERSON: Names of individuals (suspects, victims, associates, witnesses)
-- PHONE: Phone numbers, mobile numbers
-- BANK_ACCOUNT: Bank account numbers, UPI IDs, wallets
-- VEHICLE: Vehicle plate numbers, model details
-- ORGANIZATION: Companies, gangs, shell firms, departments
-- LOCATION: Addresses, hideouts, cities, bank branches
-- EVENT: Murders, robberies, meetings, raids, cyberattacks
+- PERSON: Names of individuals only (e.g. Md. Faizaan Raza Khan, Rajesh Kumar, Smt. Sunita Devi, Punjilal Meher).
+  NEVER extract organizations, laboratories, courts, or legal terms as PERSON.
+- ORGANIZATION: Companies, forensic laboratories (e.g. State Forensic Science Laboratory), police stations/branches, courts, hospitals, gangs, transport firms.
+- LOCATION: Cities, districts, streets, landmarks, addresses (e.g. Gandhi Chowk, Jharsuguda, Patnagarh).
+- PHONE: Contact numbers with context (e.g. +919876543210).
+- BANK_ACCOUNT: Bank account numbers, UPI IDs, wallets.
+- VEHICLE: Vehicle registration numbers, plate numbers (e.g. OD-02-AB-1234).
+- EVENT: Specific crime occurrences, meetings, incidents (e.g. Murder of Soumya Sekhar Sahu).
 
 Allowed Relationship Types:
 - CALLED: Phone communications, messages, calls
-- SENT_MONEY_TO: Fund transfers, hawala, bribes, wire transfers
-- OWNS_VEHICLE: Registered owner of car/bike/truck
+- SENT_MONEY_TO: Fund transfers, payments, wire transfers
+- OWNS_VEHICLE: Registered owner of vehicle
 - USED_VEHICLE: Observed driving or traveling in vehicle
-- WORKS_FOR: Employment or subordinate relationship
+- WORKS_FOR: Employment or official subordinate relationship
 - LOCATED_AT: Residing, operating, or spotted at location
-- ASSOCIATED_WITH: Conspirators, partners, accomplices, family ties
-- PART_OF_EVENT: Participant, perpetrator, or victim of crime event
+- ASSOCIATED_WITH: Document-supported contacts, accomplices, or family ties
+- PART_OF_EVENT: Participant, victim, or perpetrator in an event
 
-CRITICAL INSTRUCTIONS:
-- You must output ONLY valid JSON in the exact format shown below.
-- Do not include conversational markdown, greetings, or explanations outside the JSON.
-- Every relationship MUST cite an exact verbatim snippet from the text proving the connection.
-- Normalize entity names cleanly (e.g., 'Rajesh Kumar', '+919876543210', 'ICICI982134').
+CRITICAL NEGATIVE GUARDRAILS & QUALITY RULES:
+1. DO NOT extract legal/procedural boilerplate as entities (e.g. "Bail", "Case No", "Evidence Act", "Standing Counsel", "Charge Sheet", "Log Line", "Statements", "Party", "Appellate", "Advocate").
+2. DO NOT extract sentence fragments or verbs as entities (e.g. "Reema was referred", "built an improvised", "it must show", "more suspicion").
+3. NEVER classify institutions or laboratories like "State Forensic Science", "Crime Branch", "Orissa High Court", or "SCB Medical College" as PERSON. They are ORGANIZATION.
+4. NEVER invent relationship semantics. If text says "spoke to" or "called", use CALLED or ASSOCIATED_WITH; do NOT manufacture "gang member" or "criminal associate" unless explicitly stated.
+5. Co-occurrence alone is NOT a relationship. Do not connect two entities just because they appear on the same page.
+6. Every relationship MUST cite an exact verbatim snippet from the text proving the connection.
 
 OUTPUT JSON FORMAT:
 {
   "entities": [
     {"name": "Rajesh Kumar", "type": "PERSON", "confidence": 0.95},
-    {"name": "Apex Shell Corp", "type": "ORGANIZATION", "confidence": 0.92}
+    {"name": "State Forensic Science Laboratory", "type": "ORGANIZATION", "confidence": 0.94}
   ],
   "relationships": [
     {
       "source": "Rajesh Kumar",
-      "target": "Apex Shell Corp",
-      "type": "WORKS_FOR",
-      "evidence": "Rajesh Kumar served as dummy director for Apex Shell Corp",
-      "confidence": 0.9
+      "target": "State Forensic Science Laboratory",
+      "type": "ASSOCIATED_WITH",
+      "evidence": "Rajesh Kumar submitted samples to the State Forensic Science Laboratory",
+      "confidence": 0.92
     }
   ]
 }
@@ -84,8 +87,8 @@ class GroqNetworkExtractor:
         api_key: Optional[str] = None,
         model: str = "openai/gpt-oss-20b",
         temperature: float = 0.2,
-        max_completion_tokens: int = 8192,
-        reasoning_effort: str = "medium",
+        max_completion_tokens: int = 2048,
+        reasoning_effort: str = "low",
     ):
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         if not self.api_key:
@@ -113,9 +116,9 @@ class GroqNetworkExtractor:
         if not text or not text.strip() or not self.is_available():
             return [], []
 
-        # Split text into chunks if it exceeds 24,000 characters (~5,000-6,000 tokens)
-        chunk_size = 22000
-        overlap = 2000
+        # Split text into chunks fitting Groq 8,000 TPM limit (9000 chars ~ 2,000 tokens)
+        chunk_size = 9000
+        overlap = 1000
         chunks = []
         if len(text) <= chunk_size:
             chunks = [text]
@@ -191,16 +194,36 @@ class GroqNetworkExtractor:
 
         prompt = f"Analyze the following evidence text carefully and extract all entities and relationships as strict JSON:\n\n---\n{text_chunk}\n---"
 
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=self.temperature,
-            max_completion_tokens=self.max_completion_tokens,
-            reasoning_effort=self.reasoning_effort,
-        )
+        tokens_to_request = min(self.max_completion_tokens, 2048)
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=self.temperature,
+                max_completion_tokens=tokens_to_request,
+                reasoning_effort=self.reasoning_effort,
+            )
+        except Exception as e:
+            err_str = str(e).lower()
+            if "413" in err_str or "request too large" in err_str or "rate_limit" in err_str:
+                logger.warning(f"Groq chunk {chunk_idx} hit token limits ({e}). Retrying with 1024 tokens...")
+                # Shorten chunk if needed and reduce completion tokens
+                shortened_prompt = f"Analyze the following evidence text carefully and extract all entities and relationships as strict JSON:\n\n---\n{text_chunk[:5000]}\n---"
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": shortened_prompt},
+                    ],
+                    temperature=self.temperature,
+                    max_completion_tokens=1024,
+                    reasoning_effort=self.reasoning_effort,
+                )
+            else:
+                raise e
 
         raw_output = ""
         if response.choices and response.choices[0].message:
@@ -231,8 +254,26 @@ class GroqNetworkExtractor:
             entities = data.get("entities", [])
             relationships = data.get("relationships", [])
             return entities, relationships
-        except Exception as e:
-            logger.warning(f"Failed to parse Groq extraction JSON: {e}. Output snippet: {raw_output[:200]}")
+        except Exception:
+            # Fallback: regex extraction of valid entity and relationship dicts in case of truncation
+            entities = []
+            relationships = []
+            for ent_match in re.finditer(r'\{[^{}]*?"name"\s*:\s*"([^"]+)"[^{}]*?"type"\s*:\s*"([^"]+)"[^{}]*?\}', raw_output):
+                try:
+                    ent_data = json.loads(ent_match.group(0))
+                    entities.append(ent_data)
+                except Exception:
+                    pass
+            for rel_match in re.finditer(r'\{[^{}]*?"source"\s*:\s*"([^"]+)"[^{}]*?"target"\s*:\s*"([^"]+)"[^{}]*?\}', raw_output):
+                try:
+                    rel_data = json.loads(rel_match.group(0))
+                    relationships.append(rel_data)
+                except Exception:
+                    pass
+            if entities or relationships:
+                logger.info(f"Salvaged {len(entities)} entities and {len(relationships)} relationships from partial Groq output.")
+                return entities, relationships
+            logger.warning(f"Failed to parse Groq extraction JSON. Output snippet: {raw_output[:200]}")
             return [], []
 
 

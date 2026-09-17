@@ -123,11 +123,17 @@ def get_case_subgraph(
     case: Case = Depends(require_case_access),
     entity_id: UUID | None = None,
     limit: int = Query(default=DEFAULT_GRAPH_LIMIT, ge=1, le=MAX_GRAPH_LIMIT),
+    connected_only: bool = Query(
+        default=True,
+        description="When True (default), only entities participating in valid relationships are included.",
+    ),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> CaseGraphResult:
     try:
-        result = get_case_graph(db, case.id, entity_id=entity_id, limit=limit)
+        result = get_case_graph(
+            db, case.id, entity_id=entity_id, limit=limit, connected_only=connected_only
+        )
         record_audit(
             db,
             action=AuditAction.CASE_GRAPH_VIEWED,

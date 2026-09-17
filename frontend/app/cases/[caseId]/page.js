@@ -26,7 +26,7 @@ export default function CaseDetailsPage() {
   const [caseError, setCaseError] = useState(null);
 
   // Upload states
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(null);
@@ -96,24 +96,48 @@ export default function CaseDetailsPage() {
     fetchDocuments();
   }, [fetchCaseDetails, fetchDocuments]);
 
-  // Handle file selection
-  const handleFileSelect = (file) => {
+  // Handle multi-file selection (max 5 files at once)
+  const handleFileSelect = (fileList) => {
     setUploadError(null);
     setUploadSuccess(null);
 
-    if (!file) return;
+    const newFiles = Array.from(fileList || []);
+    if (!newFiles.length) return;
 
-    const ext = "." + file.name.split(".").pop().toLowerCase();
-    const allowed = [".pdf", ".csv", ".txt"];
+    const allowed = [".pdf", ".csv", ".txt", ".docx", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif"];
+    const invalidFile = newFiles.find((file) => {
+      const ext = "." + file.name.split(".").pop().toLowerCase();
+      return !allowed.includes(ext);
+    });
 
-    if (!allowed.includes(ext)) {
-      setUploadError("Unsupported file type. Only PDF, CSV, and TXT files are accepted for evidentiary upload.");
-      setSelectedFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+    if (invalidFile) {
+      setUploadError("Unsupported file type. Use PDF, DOCX, CSV, TXT, PNG, JPG, TIFF, BMP, or GIF files.");
       return;
     }
 
-    setSelectedFile(file);
+    setSelectedFiles((prev) => {
+      const combined = [...prev, ...newFiles];
+      const unique = [];
+      const seen = new Set();
+      for (const f of combined) {
+        const key = `${f.name}_${f.size}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          unique.push(f);
+        }
+      }
+
+      if (unique.length > 5) {
+        setUploadError("Maximum 5 documents can be uploaded at once. Staged the first 5 documents.");
+        return unique.slice(0, 5);
+      }
+      return unique;
+    });
+  };
+
+  const handleRemoveFile = (indexToRemove) => {
+    setSelectedFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+    setUploadError(null);
   };
 
   // Drag & drop handlers
@@ -135,7 +159,7 @@ export default function CaseDetailsPage() {
     setIsDragging(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileSelect(e.dataTransfer.files[0]);
+      handleFileSelect(e.dataTransfer.files);
     }
   };
 
@@ -179,43 +203,73 @@ export default function CaseDetailsPage() {
     }
   };
 
-  // Upload file to backend
+  // Upload up to 5 files via batch endpoint with single-file fallback
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!selectedFile || uploading || !caseId) return;
+    if (!selectedFiles.length || uploading || !caseId) return;
 
     setUploading(true);
     setUploadError(null);
     setUploadSuccess(null);
 
+    const count = selectedFiles.length;
+
     try {
+      // 1. Try batch upload endpoint
       const formData = new FormData();
-      formData.append("file", selectedFile);
+      for (const file of selectedFiles) {
+        formData.append("files", file);
+      }
 
-      const uploadedDoc = await apiClient(`/api/cases/${caseId}/documents`, {
-        method: "POST",
-        body: formData,
-      });
+      try {
+        await apiClient(`/api/cases/${caseId}/documents/batch`, {
+          method: "POST",
+          body: formData,
+        });
+      } catch (batchErr) {
+        // Fallback: sequential upload if batch endpoint encounters format mismatch
+        for (const file of selectedFiles) {
+          const singleFormData = new FormData();
+          singleFormData.append("file", file);
+          await apiClient(`/api/cases/${caseId}/documents`, {
+            method: "POST",
+            body: singleFormData,
+          });
+        }
+      }
 
-      setUploadSuccess(`Successfully uploaded "${uploadedDoc.filename || selectedFile.name}". Evidentiary hash verified.`);
-      setSelectedFile(null);
+      setUploadSuccess(`Successfully registered ${count} evidentiary document${count === 1 ? "" : "s"} to case! Cryptographic hashing complete.`);
+      setSelectedFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
 
       // Refresh documents list
       await fetchDocuments();
     } catch (err) {
       if (err?.status === 415) {
-        setUploadError("Unsupported media type. Only PDF, CSV, and TXT files are allowed.");
+        setUploadError("Unsupported media type. Use PDF, DOCX, CSV, TXT, or supported image files.");
       } else if (err?.status === 413) {
-        setUploadError("File exceeds maximum allowed upload size.");
+        setUploadError("One or more files exceed the maximum allowed upload size.");
       } else if (err?.status === 400) {
-        setUploadError(err.message || "Invalid upload file.");
+        setUploadError(err.message || "Invalid upload files.");
       } else {
-        setUploadError("Failed to upload document. Please ensure backend connectivity and try again.");
+        setUploadError(err?.message || "Failed to upload documents. Please check server connectivity and try again.");
       }
     } finally {
       setUploading(false);
     }
+  };
+
+  // Batch process all registered documents
+  const [batchProcessing, setBatchProcessing] = useState(false);
+  const handleProcessAllDocuments = async () => {
+    if (!documents.length || batchProcessing) return;
+    setBatchProcessing(true);
+    for (const doc of documents) {
+      if (processStates[doc.id]?.status !== "success") {
+        await handleProcessDocument(doc.id);
+      }
+    }
+    setBatchProcessing(false);
   };
 
   // Formatting helpers
@@ -504,7 +558,7 @@ export default function CaseDetailsPage() {
               <div className="upload-container-card">
                 <h3 className="upload-card-title">Register Evidentiary Document</h3>
                 <p className="upload-card-subtitle">
-                  Authorized document formats: <strong>PDF</strong>, <strong>CSV</strong>, <strong>TXT</strong>. Files are cryptographically hashed upon ingestion.
+                  Authorized formats: <strong>PDF</strong>, <strong>DOCX</strong>, <strong>CSV</strong>, <strong>TXT</strong>, and common image files. Files are cryptographically hashed upon ingestion.
                 </p>
 
                 {/* NOTIFICATIONS */}
@@ -532,7 +586,7 @@ export default function CaseDetailsPage() {
                 {/* DROPZONE */}
                 <form onSubmit={handleUpload}>
                   <div
-                    className={`dropzone-box ${isDragging ? "dropzone-dragging" : ""} ${selectedFile ? "dropzone-has-file" : ""}`}
+                    className={`dropzone-box ${isDragging ? "dropzone-dragging" : ""} ${selectedFiles.length ? "dropzone-has-file" : ""}`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
@@ -541,19 +595,20 @@ export default function CaseDetailsPage() {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".pdf,.csv,.txt,application/pdf,text/csv,text/plain"
+                      accept=".pdf,.csv,.txt,.docx,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.gif,application/pdf,text/csv,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
+                      multiple
                       className="hidden-file-input"
                       onChange={(e) => {
                         if (e.target.files && e.target.files.length > 0) {
-                          handleFileSelect(e.target.files[0]);
+                          handleFileSelect(e.target.files);
                         }
                       }}
                     />
 
-                    {!selectedFile ? (
+                    {!selectedFiles.length ? (
                       <div className="dropzone-prompt">
                         <div className="upload-icon-circle">
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                             <polyline points="17 8 12 3 7 8" />
                             <line x1="12" y1="3" x2="12" y2="15" />
@@ -561,42 +616,74 @@ export default function CaseDetailsPage() {
                         </div>
                         <div className="dropzone-text-group">
                           <span className="dropzone-main-text">
-                            <strong>Click to select</strong> or drag evidentiary document here
+                            <strong>Click to select</strong> or drag up to 5 evidentiary documents here
                           </span>
                           <span className="dropzone-sub-text">
-                            Accepted formats: PDF, CSV, TXT
+                            Batch upload at once (Max 5 files) · PDF, DOCX, CSV, TXT, Images
                           </span>
                         </div>
                       </div>
                     ) : (
-                      <div className="selected-file-display" onClick={(e) => e.stopPropagation()}>
-                        <div className="file-info-col">
-                          <span className="file-type-pill">{getFileType(selectedFile.name)}</span>
-                          <div className="file-name-size">
-                            <span className="selected-filename">{selectedFile.name}</span>
-                            <span className="selected-filesize">{formatFileSize(selectedFile.size)}</span>
+                      <div className="staged-files-container" onClick={(e) => e.stopPropagation()}>
+                        <div className="staged-files-header">
+                          <div className="staged-counter-pill">
+                            <span>STAGED DOCUMENTS ({selectedFiles.length} / 5 MAX)</span>
+                          </div>
+                          <div className="staged-header-actions">
+                            <span className="staged-total-size">
+                              Total: {formatFileSize(selectedFiles.reduce((total, file) => total + file.size, 0))}
+                            </span>
+                            {selectedFiles.length < 5 && (
+                              <button
+                                type="button"
+                                className="btn-add-more-files"
+                                onClick={() => fileInputRef.current?.click()}
+                              >
+                                + Add More
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="btn-clear-all-staged"
+                              onClick={() => {
+                                setSelectedFiles([]);
+                                if (fileInputRef.current) fileInputRef.current.value = "";
+                              }}
+                            >
+                              Clear All
+                            </button>
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          className="remove-file-btn"
-                          onClick={() => {
-                            setSelectedFile(null);
-                            if (fileInputRef.current) fileInputRef.current.value = "";
-                          }}
-                          title="Remove file"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
+                        <div className="staged-files-grid">
+                          {selectedFiles.map((file, idx) => {
+                            const ext = file.name.split(".").pop().toUpperCase();
+                            return (
+                              <div key={idx} className="staged-file-card">
+                                <div className="staged-file-left">
+                                  <span className={`staged-ext-badge ext-${ext.toLowerCase()}`}>{ext}</span>
+                                  <div className="staged-meta">
+                                    <span className="staged-filename" title={file.name}>{file.name}</span>
+                                    <span className="staged-size">{formatFileSize(file.size)}</span>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="staged-remove-btn"
+                                  onClick={() => handleRemoveFile(idx)}
+                                  title={`Remove ${file.name}`}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  {selectedFile && (
+                  {selectedFiles.length > 0 && (
                     <div className="upload-submit-bar">
                       <button
                         type="submit"
@@ -615,7 +702,7 @@ export default function CaseDetailsPage() {
                               <polyline points="17 8 12 3 7 8" />
                               <line x1="12" y1="3" x2="12" y2="15" />
                             </svg>
-                            <span>Upload to Case File</span>
+                            <span>Upload All {selectedFiles.length} Documents</span>
                           </>
                         )}
                       </button>
@@ -643,11 +730,26 @@ export default function CaseDetailsPage() {
                     </div>
                     <h4 className="empty-docs-title">No Evidentiary Documents Attached</h4>
                     <p className="empty-docs-desc">
-                      There are currently no documents registered to this case file. Upload a PDF, CSV, or TXT record above to begin evidence ingestion.
+                      There are currently no documents registered to this case file. Upload a PDF, DOCX, CSV, TXT, or image record above to begin evidence ingestion.
                     </p>
                   </div>
                 ) : (
                   <div className="documents-table-container">
+                    <div className="docs-table-top-bar">
+                      <span className="docs-count-label">
+                        {documents.length} Evidentiary Document{documents.length === 1 ? "" : "s"} Registered
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleProcessAllDocuments}
+                        disabled={batchProcessing || !documents.length}
+                        className="btn-batch-process-all"
+                        title="Run AI extraction and intelligence pipeline on all documents"
+                      >
+                        <span className="ai-spark-icon">⚡</span>
+                        <span>{batchProcessing ? "Processing Documents..." : "Process All Documents with AI"}</span>
+                      </button>
+                    </div>
                     <div className="docs-list">
                         {documents.map((doc) => {
                         const fileType = getFileType(doc.filename);
@@ -1587,6 +1689,201 @@ export default function CaseDetailsPage() {
             flex: 1;
           }
         }
+
+        /* Staged Files Tray for Multi-Document Upload */
+        .staged-files-container {
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+          padding: 0.25rem;
+        }
+
+        .staged-files-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-bottom: 0.5rem;
+          border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+
+        .staged-counter-pill {
+          background: #e0f2fe;
+          color: #0369a1;
+          font-size: 0.72rem;
+          font-weight: 800;
+          padding: 0.2rem 0.6rem;
+          border-radius: 9999px;
+          border: 1px solid #bae6fd;
+          letter-spacing: 0.04em;
+        }
+
+        .staged-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .staged-total-size {
+          font-size: 0.75rem;
+          color: #64748b;
+          font-weight: 600;
+        }
+
+        .btn-add-more-files {
+          background: #f8fafc;
+          border: 1px solid #cbd5e1;
+          color: #0ea5e9;
+          font-size: 0.74rem;
+          font-weight: 700;
+          padding: 0.2rem 0.55rem;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+
+        .btn-add-more-files:hover {
+          background: #e0f2fe;
+          border-color: #0ea5e9;
+        }
+
+        .btn-clear-all-staged {
+          background: transparent;
+          border: none;
+          color: #ef4444;
+          font-size: 0.74rem;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 0.2rem 0.4rem;
+        }
+
+        .btn-clear-all-staged:hover {
+          text-decoration: underline;
+        }
+
+        .staged-files-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 0.6rem;
+        }
+
+        .staged-file-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 0.55rem 0.75rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .staged-file-left {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+          overflow: hidden;
+        }
+
+        .staged-ext-badge {
+          font-size: 0.65rem;
+          font-weight: 800;
+          padding: 0.15rem 0.45rem;
+          border-radius: 4px;
+          letter-spacing: 0.04em;
+          background: #f1f5f9;
+          color: #475569;
+        }
+
+        .ext-pdf { background: #fee2e2; color: #b91c1c; }
+        .ext-docx { background: #dbeafe; color: #1d4ed8; }
+        .ext-csv { background: #fef3c7; color: #b45309; }
+        .ext-txt { background: #f1f5f9; color: #334155; }
+        .ext-png, .ext-jpg, .ext-jpeg { background: #fae8ff; color: #86198f; }
+
+        .staged-meta {
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        .staged-filename {
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: #0f172a;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 190px;
+        }
+
+        .staged-size {
+          font-size: 0.7rem;
+          color: #94a3b8;
+        }
+
+        .staged-remove-btn {
+          background: transparent;
+          border: none;
+          color: #94a3b8;
+          font-size: 0.85rem;
+          cursor: pointer;
+          padding: 0.2rem 0.35rem;
+          border-radius: 4px;
+          transition: all 0.15s;
+        }
+
+        .staged-remove-btn:hover {
+          color: #ef4444;
+          background: #fee2e2;
+        }
+
+        /* Batch Process All Header Bar */
+        .docs-table-top-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0.65rem 1rem;
+          background: #ffffff;
+          border-bottom: 1px solid #e2e8f0;
+          margin-bottom: 0.5rem;
+          border-radius: 8px 8px 0 0;
+        }
+
+        .docs-count-label {
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: #334155;
+        }
+
+        .btn-batch-process-all {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.45rem;
+          padding: 0.4rem 0.85rem;
+          background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+          color: #ffffff;
+          border: 1px solid rgba(56, 189, 248, 0.4);
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          cursor: pointer;
+          box-shadow: 0 2px 6px rgba(14, 165, 233, 0.25);
+          transition: all 0.15s ease;
+        }
+
+        .btn-batch-process-all:hover:not(:disabled) {
+          background: #0ea5e9;
+          transform: translateY(-1px);
+        }
+
+        .btn-batch-process-all:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
       `}</style>
     </AuthLayout>
   );

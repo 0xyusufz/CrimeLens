@@ -35,3 +35,7 @@ data/postgres/
 data/neo4j/
 data/uploads/*
 !data/uploads/.gitkeep
+
+# Scratch scripts
+scratch/
+

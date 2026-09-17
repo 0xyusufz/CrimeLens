@@ -95,3 +95,35 @@ def chat_with_case_copilot(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Copilot query failed: {str(e)}",
         )
+
+
+class NetworkAnalyzeRequest(BaseModel):
+    mode: str = Field(default="full")  # "full" or "node"
+    selected_node_ids: list[str] = Field(default_factory=list)
+    hops: int = Field(default=2, ge=1, le=3)
+
+
+@router.post("/{case_id}/intelligence/analyze")
+def analyze_case_network(
+    case_id: UUID,
+    payload: NetworkAnalyzeRequest,
+    db: Session = Depends(get_db),
+    case: Case = Depends(require_case_access),
+    current_user: User = Depends(get_current_user),
+):
+    """Deep graph reasoning with Gemini/Groq for selected node(s) or full case network."""
+    try:
+        result = gemini_engine.analyze_network(
+            session=db,
+            case_id=case_id,
+            selected_node_ids=payload.selected_node_ids,
+            mode=payload.mode,
+            hops=payload.hops,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Network analysis failed: {str(e)}",
+        )
+

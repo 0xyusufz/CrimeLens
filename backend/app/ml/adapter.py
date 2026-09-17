@@ -30,8 +30,8 @@ class MlDocumentProcessor(Protocol):
 
 
 _PERSON_B_CANDIDATES = (
-    ("ml.process", "process_document"),
     ("ml.pipeline", "process_document"),
+    ("ml.process", "process_document"),
     ("ml.extract", "process_document"),
 )
 

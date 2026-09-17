@@ -11,6 +11,7 @@ Does NOT perform entity extraction, relationship extraction, resolution, or DB o
 """
 
 import os
+import io
 import shutil
 import subprocess
 import tempfile
@@ -129,7 +130,7 @@ def run_tesseract(image_bytes: bytes, lang: str = "eng") -> str:
         )
 
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
-        tmp_file.write(image_bytes)
+        tmp_file.write(_preprocess_image(image_bytes))
         tmp_path = tmp_file.name
 
     try:
@@ -152,6 +153,26 @@ def run_tesseract(image_bytes: bytes, lang: str = "eng") -> str:
                 os.remove(tmp_path)
             except OSError:
                 pass
+
+
+def _preprocess_image(image_bytes: bytes) -> bytes:
+    """Improve common photographed/scanned pages without making OCR mandatory."""
+    try:
+        from PIL import Image, ImageFilter, ImageOps
+
+        image = Image.open(io.BytesIO(image_bytes)).convert("L")
+        image = ImageOps.exif_transpose(image)
+        image = ImageOps.autocontrast(image)
+        if image.width < 1600:
+            scale = 1600 / max(image.width, 1)
+            image = image.resize((1600, max(1, int(image.height * scale))))
+        image = image.filter(ImageFilter.MedianFilter(size=3))
+        output = io.BytesIO()
+        image.save(output, format="PNG", optimize=True)
+        return output.getvalue()
+    except Exception:
+        # Pillow is an enhancement, not a hard runtime requirement.
+        return image_bytes
 
 
 def extract_ocr_result(

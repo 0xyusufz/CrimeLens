@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { apiClient } from "../lib/apiClient";
 import AuthLayout from "../components/Layout";
@@ -15,6 +15,8 @@ export default function Dashboard() {
   const [createForm, setCreateForm] = useState({ title: "", description: "" });
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [createError, setCreateError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   const fetchCases = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) {
@@ -52,6 +54,43 @@ export default function Dashboard() {
   useEffect(() => {
     fetchCases();
   }, [fetchCases]);
+
+  const keywordSuggestions = useMemo(() => {
+    const keywords = new Set();
+    cases.forEach((caseItem) => {
+      const source = `${caseItem.title || ""} ${caseItem.description || ""} ${caseItem.case_number || ""}`;
+      source
+        .split(/[^a-zA-Z0-9-]+/)
+        .map((word) => word.trim())
+        .filter((word) => word.length >= 3)
+        .forEach((word) => keywords.add(word));
+    });
+
+    const query = searchTerm.trim().toLowerCase();
+    return Array.from(keywords)
+      .filter((keyword) => !query || keyword.toLowerCase().includes(query))
+      .sort((a, b) => a.localeCompare(b))
+      .slice(0, 7);
+  }, [cases, searchTerm]);
+
+  const filteredCases = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    return cases.filter((caseItem) => {
+      const matchesStatus = statusFilter === "ALL" || caseItem.status === statusFilter;
+      const searchableText = `${caseItem.title || ""} ${caseItem.description || ""} ${caseItem.case_number || ""}`.toLowerCase();
+      return matchesStatus && (!query || searchableText.includes(query));
+    });
+  }, [cases, searchTerm, statusFilter]);
+
+  const repositorySummary = useMemo(() => {
+    const openCases = cases.filter((caseItem) => caseItem.status === "OPEN").length;
+    const closedCases = cases.filter((caseItem) => caseItem.status === "CLOSED").length;
+    const latestCase = [...cases]
+      .filter((caseItem) => caseItem.created_at)
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+
+    return { openCases, closedCases, latestCase };
+  }, [cases]);
 
   const formatDate = (dateString) => {
     if (!dateString) return "Unknown";
@@ -121,7 +160,7 @@ export default function Dashboard() {
               )}
             </div>
             <p className="dashboard-subtitle">
-              Accessible intelligence files and active investigation records across authorized jurisdictions.
+              Review active and archived investigation records, evidence files, and connected case findings.
             </p>
           </div>
 
@@ -159,6 +198,99 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+
+        {/* CASE SEARCH & FILTERS */}
+        {!loading && !errorState && cases.length > 0 && (
+          <div className="case-search-area">
+            <div className="case-search-controls">
+              <div className="case-search-field-wrap">
+                <svg className="case-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-4-4" />
+                </svg>
+                <label className="sr-only" htmlFor="case-search">Search cases</label>
+                <input
+                  id="case-search"
+                  className="case-search-input"
+                  type="search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by case title, case number, or keyword"
+                  autoComplete="off"
+                />
+                {searchTerm && (
+                  <button className="case-search-clear" onClick={() => setSearchTerm("")} title="Clear search" aria-label="Clear search">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 6 12 12M18 6 6 18" /></svg>
+                  </button>
+                )}
+                {searchTerm.trim() && (
+                  <div className="case-search-suggestions" role="listbox" aria-label="Search recommendations">
+                    <span className="suggestions-label">RECOMMENDED KEYWORDS</span>
+                    {keywordSuggestions.length > 0 ? (
+                      keywordSuggestions.map((keyword) => (
+                        <button key={keyword} className="suggestion-item" onClick={() => setSearchTerm(keyword)} role="option">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m10 17 5-5-5-5" /></svg>
+                          <span>{keyword}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="suggestions-none">No matching keyword found</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <label className="case-status-filter">
+                <span className="filter-label-text">Status</span>
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Filter cases by status">
+                  <option value="ALL">All cases</option>
+                  <option value="OPEN">Open only</option>
+                  <option value="CLOSED">Closed only</option>
+                </select>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" /></svg>
+              </label>
+            </div>
+            <div className="case-search-meta">
+              <span>{filteredCases.length} {filteredCases.length === 1 ? "case" : "cases"} shown</span>
+              {(searchTerm || statusFilter !== "ALL") && <button onClick={() => { setSearchTerm(""); setStatusFilter("ALL"); }}>Clear filters</button>}
+            </div>
+          </div>
+        )}
+
+        {/* REAL REPOSITORY SUMMARY — DERIVED FROM LOADED CASE DATA */}
+        {!loading && !errorState && cases.length > 0 && (
+          <section className="repository-summary" aria-label="Case repository summary">
+            <div className="repository-summary-heading">
+              <div>
+                <span className="repository-kicker">CASE REPOSITORY</span>
+                <h2>Investigation records</h2>
+              </div>
+              <span className="repository-note">Each record includes its own case ID and status.</span>
+            </div>
+            <div className="repository-summary-grid">
+              <article className="repository-stat-card">
+                <span className="repository-stat-label">Total records</span>
+                <strong>{cases.length}</strong>
+                <span>Authorized case files</span>
+              </article>
+              <article className="repository-stat-card repository-stat-open">
+                <span className="repository-stat-label">Open investigations</span>
+                <strong>{repositorySummary.openCases}</strong>
+                <span>Currently in progress</span>
+              </article>
+              <article className="repository-stat-card">
+                <span className="repository-stat-label">Archived records</span>
+                <strong>{repositorySummary.closedCases}</strong>
+                <span>Closed case files</span>
+              </article>
+              <article className="repository-stat-card repository-stat-latest">
+                <span className="repository-stat-label">Latest record</span>
+                <strong>{repositorySummary.latestCase ? formatDate(repositorySummary.latestCase.created_at).split(",")[0] : "—"}</strong>
+                <span>{repositorySummary.latestCase?.case_number || "No date available"}</span>
+              </article>
+            </div>
+          </section>
+        )}
 
         {/* ERROR STATE */}
         {errorState && (
@@ -225,25 +357,33 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* NO SEARCH MATCH */}
+        {!loading && !errorState && cases.length > 0 && filteredCases.length === 0 && (
+          <div className="search-empty-state">
+            <div className="search-empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4M8 11h6" /></svg>
+            </div>
+            <h3>No cases found</h3>
+            <p>No case matches “{searchTerm || statusFilter.toLowerCase()}”. Try another keyword or change the status filter.</p>
+            <button onClick={() => { setSearchTerm(""); setStatusFilter("ALL"); }}>Clear search</button>
+          </div>
+        )}
+
         {/* CASE CARDS GRID */}
-        {!loading && !errorState && cases.length > 0 && (
+        {!loading && !errorState && filteredCases.length > 0 && (
           <div className="cases-grid">
-            {cases.map((c) => {
+            {filteredCases.map((c) => {
               const isOpen = c.status === "OPEN";
               return (
                 <Link href={`/cases/${c.id}`} key={c.id} className="case-card-link">
                   <article className={`case-card ${isOpen ? "case-card-open" : "case-card-closed"}`}>
                     {/* CARD TOP META */}
                     <div className="card-top-row">
+                      <span className="case-record-label">CASE RECORD</span>
                       <span className="case-number-badge" title="Unique Case Identifier">
                         {c.case_number}
                       </span>
-                      <span
-                        className={`status-pill ${isOpen ? "status-pill-open" : "status-pill-closed"}`}
-                      >
-                        <span className={`status-dot ${isOpen ? "status-dot-open" : "status-dot-closed"}`} />
-                        {isOpen ? "OPEN" : "CLOSED"}
-                      </span>
+                      {isOpen && <span className="case-active-label">ACTIVE</span>}
                     </div>
 
                     {/* TITLE */}
@@ -251,7 +391,7 @@ export default function Dashboard() {
 
                     {/* DESCRIPTION (if present or fallback) */}
                     <p className="case-card-description">
-                      {c.description ? c.description : "Investigation file registered in intelligence repository."}
+                      {c.description ? c.description : "Investigation record registered in the authorized case repository."}
                     </p>
 
                     {/* CARD FOOTER META */}
