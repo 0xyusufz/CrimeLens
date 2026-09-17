@@ -53,12 +53,16 @@ Allowed Relationship Types:
 - PART_OF_EVENT: Participant, victim, or perpetrator in an event
 
 CRITICAL NEGATIVE GUARDRAILS & QUALITY RULES:
-1. DO NOT extract legal/procedural boilerplate as entities (e.g. "Bail", "Case No", "Evidence Act", "Standing Counsel", "Charge Sheet", "Log Line", "Statements", "Party", "Appellate", "Advocate").
-2. DO NOT extract sentence fragments or verbs as entities (e.g. "Reema was referred", "built an improvised", "it must show", "more suspicion").
-3. NEVER classify institutions or laboratories like "State Forensic Science", "Crime Branch", "Orissa High Court", or "SCB Medical College" as PERSON. They are ORGANIZATION.
-4. NEVER invent relationship semantics. If text says "spoke to" or "called", use CALLED or ASSOCIATED_WITH; do NOT manufacture "gang member" or "criminal associate" unless explicitly stated.
-5. Co-occurrence alone is NOT a relationship. Do not connect two entities just because they appear on the same page.
-6. Every relationship MUST cite an exact verbatim snippet from the text proving the connection.
+1. STRICT PRONOUN BAN: NEVER extract pronouns or grammatical function words as entities (e.g. "who", "whom", "whose", "which", "that", "this", "he", "she", "they", "it", "by", "and", "or"). If the text says "Resha called Indranil, who told her...", the relationship is Resha -> Indranil. NEVER create an entity named "who" or "by".
+2. STRICT LEGAL PRECEDENT BAN: NEVER extract court case precedents, judicial case citations, or law report titles as crime suspects or entities (e.g. "Pedda Narayana & others Vs. State of Andhra Pradesh", "Kishwar Jahan's case", "Kodali Purnachandra Rao Vs. Public Prosecutor"). Names appearing inside citations like "X Vs. Y", "State of ...", or "In the case of ..." are legal precedents cited in court orders, NOT actors in the current crime!
+3. GENERIC COURT ROLES ARE NOT ENTITIES: DO NOT extract generic procedural court roles as PERSON (e.g. "Petitioner", "Petitioner's daughter", "Intervener", "Respondent", "Applicant", "Deceased", "Accused", "Learned Senior Counsel", "Public Prosecutor"). Resolve them to the person's actual proper name (e.g. "Disha Salian", "Satish Salian") or do not extract them.
+4. DO NOT extract legal/procedural boilerplate as entities (e.g. "Bail", "Case No", "Evidence Act", "Standing Counsel", "Charge Sheet", "Log Line", "Statements", "Party", "Appellate", "Advocate").
+5. CANONICAL FULL NAMES: Always extract the most complete, specific proper name available in the text (e.g. use "Sushant Singh Rajput", NEVER partial "Sushant Singh"; use "Central Bureau of Investigation (CBI)", NEVER fragmented "CBI" or "cbi").
+6. DO NOT extract sentence fragments or verbs as entities (e.g. "Reema was referred", "built an improvised", "it must show", "more suspicion", "the sting", "SOUND OF FURNITURE'S RUSTLE").
+7. NEVER classify institutions or laboratories like "State Forensic Science", "Crime Branch", "Orissa High Court", or "SCB Medical College" as PERSON. They are ORGANIZATION.
+8. NEVER invent relationship semantics. If text says "spoke to" or "called", use CALLED or ASSOCIATED_WITH; do NOT manufacture "gang member" or "criminal associate" unless explicitly stated.
+9. Co-occurrence alone is NOT a relationship. Do not connect two entities just because they appear on the same page.
+10. Every relationship MUST cite an exact verbatim snippet from the text proving the connection.
 
 OUTPUT JSON FORMAT:
 {

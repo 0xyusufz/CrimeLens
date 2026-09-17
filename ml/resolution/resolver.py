@@ -78,6 +78,11 @@ def is_name_fuzzy_match(norm_a: str, norm_b: str) -> bool:
     if len(w1) == len(w2) and len(w1) >= 2:
         if (len(w1[1]) == 1 and w2[1].startswith(w1[1])) or (len(w2[1]) == 1 and w1[1].startswith(w2[1])):
             return True
+    # Substring / Prefix match for multi-word full names (e.g. "sushant singh" vs "sushant singh rajput")
+    if len(w1) >= 2 and len(w2) >= 2:
+        shorter, longer = (w1, w2) if len(w1) < len(w2) else (w2, w1)
+        if longer[:len(shorter)] == shorter:
+            return True
     # Single-word first name vs multi-word (e.g. "rahul" vs "rahul kumar")
     if len(w1) == 1 or len(w2) == 1:
         if w1[0] == w2[0]:
@@ -209,8 +214,15 @@ def compare_mentions(
     if etype == EntityType.ORGANIZATION:
         o1 = normalize_org(mention_a.name)
         o2 = normalize_org(mention_b.name)
-        if o1 and o2 and o1 == o2:
-            return (0.90, [ResolutionSignal.ORGANIZATION_MATCH])
+        if o1 and o2:
+            if o1 == o2:
+                return (0.90, [ResolutionSignal.ORGANIZATION_MATCH])
+            words1 = o1.split()
+            words2 = o2.split()
+            acronym1 = "".join(w[0] for w in words1 if w)
+            acronym2 = "".join(w[0] for w in words2 if w)
+            if (o1 in o2 or o2 in o1) or (len(acronym1) >= 2 and (acronym1 == o2 or acronym1 == acronym2)) or (len(acronym2) >= 2 and (acronym2 == o1)):
+                return (0.88, [ResolutionSignal.ORGANIZATION_MATCH])
         return None
 
     if etype == EntityType.LOCATION:

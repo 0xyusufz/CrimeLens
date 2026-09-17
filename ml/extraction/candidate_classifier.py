@@ -57,6 +57,31 @@ LEGAL_BOILERPLATE_TERMS = frozenset(
     }
 )
 
+PRONOUNS_AND_FUNCTION_WORDS = frozenset(
+    {
+        "who", "whom", "whose", "which", "what", "that", "this", "these", "those",
+        "he", "she", "it", "they", "them", "him", "her", "his", "their", "theirs", "its",
+        "by", "and", "or", "the", "a", "an", "from", "into", "onto", "upon", "about",
+        "someone", "anyone", "everyone", "nobody", "no one", "somebody", "anybody",
+        "4y", "11thwards", "the sting", "sound of furniture's rustle"
+    }
+)
+
+COURT_PROCEDURAL_ROLES = frozenset(
+    {
+        "petitioner", "petitioner's daughter", "petitioners daughter", "petitioner daughter",
+        "intervener", "intervenor", "respondent", "applicant", "deceased", "accused",
+        "learned senior counsel", "senior counsel", "public prosecutor", "learned counsel",
+        "division bench", "court of magistrate", "special executive magistrate",
+        "magistrate", "hon'ble supreme court", "supreme court", "high court"
+    }
+)
+
+_LEGAL_CITATION_PATTERN = re.compile(
+    r"\b(?:vs\.?|versus|v/s|state\s+of|union\s+of\s+india|in\s+re\b|judgment\s+in\b|case\s+of\b|air\s+\d{4}|scc\s+\d{4}|pedda\s+narayana|kishwar\s+jahan|kodali\s+purna)\b",
+    re.IGNORECASE,
+)
+
 _VERB_OR_FRAGMENT_PATTERN = re.compile(
     r"\b(?:was\s+\w+|acted\s+as|built\s+an?|it\s+must|more\s+suspicion|though\s+\w+|referred\s+to|seen\s+at)\b",
     re.IGNORECASE,
@@ -130,6 +155,21 @@ def classify_entity_candidates(
             or _VERB_OR_FRAGMENT_PATTERN.search(normalized)
         ):
             decisions.append(CandidateDecision(candidate.name, "LEGAL_BOILERPLATE", False, "legal_or_procedural_boilerplate"))
+            continue
+
+        # Reject pronouns and grammatical function words (e.g. who, by, they)
+        if normalized in PRONOUNS_AND_FUNCTION_WORDS or any(term == normalized for term in PRONOUNS_AND_FUNCTION_WORDS):
+            decisions.append(CandidateDecision(candidate.name, "PRONOUN_OR_FUNCTION_WORD", False, "pronoun_or_function_word"))
+            continue
+
+        # Reject generic court procedural roles (e.g. Petitioner, Intervener, Respondent)
+        if normalized in COURT_PROCEDURAL_ROLES or any(term == normalized for term in COURT_PROCEDURAL_ROLES):
+            decisions.append(CandidateDecision(candidate.name, "COURT_ROLE", False, "generic_court_procedural_role"))
+            continue
+
+        # Reject legal case precedent citations (e.g. Pedda Narayana Vs. State, Kishwar Jahan's case)
+        if _LEGAL_CITATION_PATTERN.search(normalized):
+            decisions.append(CandidateDecision(candidate.name, "LEGAL_CITATION", False, "case_law_or_precedent_citation"))
             continue
 
         if candidate.type == EntityType.PERSON:

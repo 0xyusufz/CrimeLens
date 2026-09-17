@@ -435,17 +435,70 @@ function buildInvestigationLayout(rfNodes, rawRels, focusNodeId = null, isFocusM
     });
   }
 
-  // Position any remaining satellite nodes in an orderly grid on the far bottom-right
+  // Position any remaining disconnected clusters in clean orbital pods around the network
   if (remaining.length > 0) {
-    const startSatX = centerX + radius1 + 280;
-    const startSatY = centerY - 120;
-    remaining.forEach((id, i) => {
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      positions.set(id, {
-        x: startSatX + col * 220,
-        y: startSatY + row * 150,
-      });
+    const remainingSet = new Set(remaining);
+    const remClusters = [];
+    const remVisited = new Set();
+
+    for (const remId of remaining) {
+      if (!remVisited.has(remId)) {
+        const cluster = [];
+        const queue = [remId];
+        remVisited.add(remId);
+        while (queue.length > 0) {
+          const curr = queue.shift();
+          cluster.push(curr);
+          const neighbors = adj.get(curr) || new Set();
+          for (const nId of neighbors) {
+            if (remainingSet.has(nId) && !remVisited.has(nId)) {
+              remVisited.add(nId);
+              queue.push(nId);
+            }
+          }
+        }
+        remClusters.push(cluster);
+      }
+    }
+
+    // Sort clusters by size (largest first)
+    remClusters.sort((a, b) => b.length - a.length);
+    const numClusters = remClusters.length;
+    const baseOrbitDist = radius2 + 380;
+
+    remClusters.forEach((cluster, cIdx) => {
+      // Pick local hub (node with highest degree in this cluster)
+      let localHubId = cluster[0];
+      let maxLocalDeg = -1;
+      for (const cId of cluster) {
+        const d = degreeMap.get(cId) || 0;
+        if (d > maxLocalDeg) {
+          maxLocalDeg = d;
+          localHubId = cId;
+        }
+      }
+
+      // Distribute cluster centers radially around the main graph
+      const clusterAngle = -Math.PI / 4 + (cIdx * (2 * Math.PI)) / Math.max(1, numClusters);
+      const orbitDist = baseOrbitDist + (cIdx % 2) * 120;
+      const clusterCenterX = centerX + orbitDist * Math.cos(clusterAngle);
+      const clusterCenterY = centerY + orbitDist * Math.sin(clusterAngle);
+
+      positions.set(localHubId, { x: clusterCenterX, y: clusterCenterY });
+
+      const otherMembers = cluster.filter((id) => id !== localHubId);
+      const mCount = otherMembers.length;
+      if (mCount > 0) {
+        const miniRadius = Math.max(180, 120 + mCount * 18);
+        const miniAngleStep = (2 * Math.PI) / mCount;
+        otherMembers.forEach((mId, mIdx) => {
+          const mAngle = mIdx * miniAngleStep;
+          positions.set(mId, {
+            x: clusterCenterX + miniRadius * Math.cos(mAngle),
+            y: clusterCenterY + miniRadius * Math.sin(mAngle),
+          });
+        });
+      }
     });
   }
 
@@ -648,16 +701,39 @@ function GraphCanvas({ caseId }) {
         return null;
       }
 
+      // Client-side sanitizer: filter out pronouns, generic fragments, and empty labels
+      const JUNK_LABELS = new Set([
+        "who", "by", "whom", "whose", "which", "what", "that", "this", "these", "those",
+        "he", "she", "it", "they", "them", "him", "her", "his", "their", "theirs", "its",
+        "someone", "anyone", "everyone", "nobody", "no one", "somebody", "anybody",
+        "4y", "11thwards", "the sting", "sound of furniture's rustle"
+      ]);
+
+      const isJunkName = (name) => {
+        if (!name) return true;
+        const norm = name.trim().toLowerCase();
+        return norm.length <= 1 || JUNK_LABELS.has(norm);
+      };
+
+      const validRawNodes = (rawNodes || []).filter((n) => !isJunkName(n.name));
+      const validEntityIds = new Set(validRawNodes.map((n) => n.entity_id || n.id));
+
+      const validRels = (rawRels || []).filter((r) => {
+        const s = r.source_entity_id || r.source;
+        const t = r.target_entity_id || r.target;
+        return validEntityIds.has(s) && validEntityIds.has(t);
+      });
+
       // Safety guard: only nodes participating in an active relationship are rendered
       const connectedEntityIds = new Set();
-      (rawRels || []).forEach((r) => {
+      validRels.forEach((r) => {
         const s = r.source_entity_id || r.source;
         const t = r.target_entity_id || r.target;
         if (s) connectedEntityIds.add(s);
         if (t) connectedEntityIds.add(t);
       });
 
-      const activeNodes = (rawNodes || []).filter((n) =>
+      const activeNodes = validRawNodes.filter((n) =>
         connectedEntityIds.has(n.entity_id || n.id)
       );
 
@@ -689,7 +765,7 @@ function GraphCanvas({ caseId }) {
 
       const layoutResult = buildInvestigationLayout(
         rfNodesBase,
-        rawRels,
+        validRels,
         targetFocusId,
         targetFocusMode
       );
