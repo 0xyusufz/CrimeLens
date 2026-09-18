@@ -15,54 +15,54 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { apiClient } from "../lib/apiClient";
 
-// Entity type visual tokens with refined analytical aesthetics
+// Entity type visual tokens with refined analytical aesthetics (Clean light badges)
 const ENTITY_CONFIG = {
   PERSON: {
-    color: "#35A7FF",
-    bg: "rgba(53, 167, 255, 0.15)",
-    border: "rgba(53, 167, 255, 0.35)",
+    color: "#1d4ed8",
+    bg: "#eff6ff",
+    border: "#bfdbfe",
     icon: "👤",
     label: "Person",
   },
   PHONE: {
-    color: "#FCBA04",
-    bg: "rgba(252, 186, 4, 0.15)",
-    border: "rgba(252, 186, 4, 0.35)",
+    color: "#7c3aed",
+    bg: "#f5f3ff",
+    border: "#ddd6fe",
     icon: "📞",
     label: "Phone",
   },
   BANK_ACCOUNT: {
-    color: "#FCBA04",
-    bg: "rgba(252, 186, 4, 0.15)",
-    border: "rgba(252, 186, 4, 0.35)",
+    color: "#047857",
+    bg: "#ecfdf5",
+    border: "#a7f3d0",
     icon: "💳",
     label: "Bank Account",
   },
   VEHICLE: {
-    color: "#35A7FF",
-    bg: "rgba(53, 167, 255, 0.15)",
-    border: "rgba(53, 167, 255, 0.35)",
+    color: "#4338ca",
+    bg: "#eef2ff",
+    border: "#c7d2fe",
     icon: "🚗",
     label: "Vehicle",
   },
   ORGANIZATION: {
-    color: "#F2F7F2",
-    bg: "rgba(242, 247, 242, 0.12)",
-    border: "rgba(242, 247, 242, 0.25)",
+    color: "#334155",
+    bg: "#f1f5f9",
+    border: "#cbd5e1",
     icon: "🏢",
     label: "Organization",
   },
   LOCATION: {
-    color: "#FCBA04",
-    bg: "rgba(252, 186, 4, 0.15)",
-    border: "rgba(252, 186, 4, 0.35)",
+    color: "#be123c",
+    bg: "#fff1f2",
+    border: "#fecdd3",
     icon: "📍",
     label: "Location",
   },
   EVENT: {
-    color: "#35A7FF",
-    bg: "rgba(53, 167, 255, 0.15)",
-    border: "rgba(53, 167, 255, 0.35)",
+    color: "#c2410c",
+    bg: "#fff7ed",
+    border: "#fed7aa",
     icon: "🚨",
     label: "Event",
   },
@@ -136,12 +136,11 @@ function InvestigationNode({ data, selected }) {
           position: relative;
           width: 176px;
           min-height: 82px;
-          background: #1c2432;
-          border: 1px solid #2d3b4f;
-          border-top: 1px solid rgba(255, 255, 255, 0.16);
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
           border-radius: 9px;
           padding: 8px 10px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 10px -2px rgba(0, 0, 0, 0.04);
           cursor: pointer;
           transition: all 0.2s ease;
           display: flex;
@@ -152,63 +151,61 @@ function InvestigationNode({ data, selected }) {
         }
 
         .inv-card:hover {
-          background: #232e3f;
-          border-color: #3b4d66;
-          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+          background: #f8fafc;
+          border-color: #94a3b8;
+          box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.1);
           transform: translateY(-2px);
           z-index: 8;
         }
 
-        /* Focus Center Subject (Clean accent border, NO NEON LIGHT) */
+        /* Focus Center Subject (Clean neutral border, simple informative card) */
         .card-focus {
-          background: #243042 !important;
-          border: 2px solid #35A7FF !important;
-          border-top: 2px solid #70baff !important;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
-          transform: scale(1.03);
+          background: #ffffff !important;
+          border: 1.5px solid #94a3b8 !important;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
           z-index: 10 !important;
         }
 
-        /* Accused / SOS / Threat (Clean amber border, NO NEON LIGHT) */
+        /* Accused / SOS / Threat (Clean neutral border, simple informative card) */
         .card-sos {
-          background: #252e3c !important;
-          border: 2px solid #e2b339 !important;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+          background: #ffffff !important;
+          border: 1.5px solid #94a3b8 !important;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
         }
 
-        /* Selected Active State (Clean outline, NO NEON LIGHT) */
+        /* Selected Active State */
         .card-selected {
-          border-color: #35A7FF !important;
-          box-shadow: 0 0 0 2px rgba(53, 167, 255, 0.4), 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+          border-color: #64748b !important;
+          box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
         }
 
         /* Dimmed in Focus Mode */
         .card-dimmed {
-          opacity: 0.22 !important;
+          opacity: 0.25 !important;
           filter: grayscale(85%) !important;
           pointer-events: auto;
         }
 
         .card-top-banner {
           font-size: 0.58rem;
-          font-weight: 800;
+          font-weight: 750;
           letter-spacing: 0.04em;
           padding: 2px 4px;
           border-radius: 4px;
           text-align: center;
-          margin-bottom: 3px;
+          margin-bottom: 4px;
         }
 
         .banner-focus {
-          background: rgba(53, 167, 255, 0.15);
-          color: #38bdf8;
-          border: 1px solid rgba(53, 167, 255, 0.3);
+          background: #f1f5f9;
+          color: #334155;
+          border: 1px solid #cbd5e1;
         }
 
         .banner-sos {
-          background: rgba(252, 186, 4, 0.14);
-          color: #fbbf24;
-          border: 1px solid rgba(252, 186, 4, 0.3);
+          background: #f1f5f9;
+          color: #334155;
+          border: 1px solid #cbd5e1;
         }
 
         .card-header-row {
@@ -224,7 +221,7 @@ function InvestigationNode({ data, selected }) {
           gap: 3px;
           font-size: 0.65rem;
           font-weight: 700;
-          padding: 2px 5px;
+          padding: 2px 6px;
           border-radius: 4px;
           letter-spacing: 0.02em;
           white-space: nowrap;
@@ -237,13 +234,13 @@ function InvestigationNode({ data, selected }) {
 
         .card-degree-badge {
           font-size: 0.66rem;
-          font-weight: 800;
-          background: #171D1C;
-          color: #F2F7F2;
+          font-weight: 700;
+          background: #f1f5f9;
+          color: #475569;
           padding: 1px 5px;
           border-radius: 9999px;
           line-height: 1.1;
-          border: 1px solid rgba(242, 247, 242, 0.15);
+          border: 1px solid #cbd5e1;
         }
 
         .card-title-wrap {
@@ -256,7 +253,7 @@ function InvestigationNode({ data, selected }) {
         .card-name {
           font-size: 0.8rem;
           font-weight: 700;
-          color: #F2F7F2;
+          color: #0f172a;
           line-height: 1.25;
           display: -webkit-box;
           -webkit-line-clamp: 2;
@@ -267,15 +264,15 @@ function InvestigationNode({ data, selected }) {
         }
 
         .name-focus {
-          color: #FCBA04;
+          color: #0f172a;
           font-weight: 800;
         }
 
         :global(.inv-handle) {
           width: 7px !important;
           height: 7px !important;
-          background: #35A7FF !important;
-          border: 1.5px solid #171D1C !important;
+          background: #64748b !important;
+          border: 1.5px solid #ffffff !important;
           border-radius: 50% !important;
           opacity: 0 !important;
           pointer-events: none !important;
@@ -636,8 +633,8 @@ function buildInvestigationLayout(rfNodes, rawRels, focusNodeId = null, isFocusM
         transition: "all 0.3s ease",
       },
       label: isDimmed ? undefined : relLabel,
-      labelStyle: { fill: "#F2F7F2", fontWeight: 600, fontSize: 10.5 },
-      labelBgStyle: { fill: "#141a22", fillOpacity: 0.95, rx: 4, ry: 4, stroke: "rgba(220, 230, 242, 0.15)", strokeWidth: 1 },
+      labelStyle: { fill: "#334155", fontWeight: 600, fontSize: 10.5 },
+      labelBgStyle: { fill: "#ffffff", fillOpacity: 0.98, rx: 4, ry: 4, stroke: "#cbd5e1", strokeWidth: 1 },
       labelBgPadding: [6, 2],
       data: {
         relationshipId: r.relationship_id,
@@ -1061,41 +1058,47 @@ function GraphCanvas({ caseId }) {
       {/* 1. TOP GRAPH TOOLBAR */}
       <div className="graph-toolbar">
         <div className="toolbar-left">
-          {/* Topology Legend Matching Cards & Edges */}
+          {/* Metrics summary pills */}
+          <div className="toolbar-stats-group">
+            <span className="metric-pill" title="Total Entities in Graph">
+              <span className="metric-count">{nodes.length}</span>
+              <span className="metric-label">Entities</span>
+            </span>
+            <span className="metric-pill" title="Total Relationships/Connections">
+              <span className="metric-count">{edges.length}</span>
+              <span className="metric-label">Connections</span>
+            </span>
+          </div>
+
+          <div className="toolbar-divider" />
+
+          {/* Clean Topology Legend */}
           <div className="network-topology-legend">
-            <span className="legend-chip">
+            <span className="legend-chip" title="Investigation Subject">
               <span className="legend-dot-focus" />
-              <span>Subject (Center)</span>
+              <span>Subject</span>
             </span>
-            <span className="legend-chip">
+            <span className="legend-chip" title="Threat / SOS Alert">
               <span className="legend-dot-sos" />
-              <span>🚨 Threat / SOS</span>
+              <span>Threat</span>
             </span>
-            <span className="legend-chip">
+            <span className="legend-chip" title="Entity Node">
               <span className="legend-dot-entity" />
-              <span>Entity Card</span>
+              <span>Entity</span>
             </span>
-            <span className="legend-chip">
+            <span className="legend-chip" title="Direct Verified Connection">
               <span className="legend-line-dot cyan-line-dot" />
-              <span>Direct Tie</span>
+              <span>Direct</span>
             </span>
-            <span className="legend-chip">
+            <span className="legend-chip" title="Inferred / Predicted Connection">
               <span className="legend-line-dot dashed-line-dot" />
               <span>Inferred</span>
             </span>
           </div>
 
-          <div className="toolbar-stat">
-            <span className="stat-label">Entities:</span>
-            <span className="stat-value font-mono">{nodes.length}</span>
-          </div>
-          <div className="toolbar-stat">
-            <span className="stat-label">Relationships:</span>
-            <span className="stat-value font-mono">{edges.length}</span>
-          </div>
           {isTruncated && (
-            <span className="truncated-badge" title="Query limit reached.">
-              Limit Reached (Truncated)
+            <span className="truncated-badge" title="Query limit reached. Showing partial subgraph.">
+              ⚠️ Truncated
             </span>
           )}
         </div>
@@ -1104,7 +1107,7 @@ function GraphCanvas({ caseId }) {
           {/* AI Network Analysis Button */}
           <button
             onClick={() => handleRunAiAnalysis("full")}
-            className="tool-btn ai-analyze-btn"
+            className="tool-btn tool-btn-primary"
             disabled={analyzingAi}
             title="Run Gemini/Groq Deep Intelligence Reasoning over the Network"
           >
@@ -1112,91 +1115,55 @@ function GraphCanvas({ caseId }) {
             <span>{analyzingAi ? "Analyzing Network..." : "AI Network Analysis"}</span>
           </button>
 
-          {/* Focus Mode Toggle */}
-          <button
-            onClick={handleToggleFocusMode}
-            className={`tool-btn ${isFocusMode ? "focus-toggle-active" : ""}`}
-            title="Focus Mode: highlight primary subject connections and dim unrelated entities"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-            <span>{isFocusMode ? "Focus Mode ON" : "Focus Mode"}</span>
-          </button>
+          <div className="toolbar-divider action-divider" />
 
-          {/* Center Subject Button */}
-          <button
-            onClick={handleCenterSubject}
-            className="tool-btn"
-            title="Center camera on the active investigation subject"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="7" />
-              <polyline points="12 9 12 12 13.5 13.5" />
-              <path d="M12 2v3m0 14v3M2 12h3m14 0h3" />
-            </svg>
-            <span>Center Subject</span>
-          </button>
-
-          {/* Fit to View */}
-          <button
-            onClick={() => reactFlowInstance.fitView({ padding: 0.2, duration: 300 })}
-            className="tool-btn"
-            title="Fit entire network to viewport"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-            </svg>
-            <span>Fit Network</span>
-          </button>
-
-          {/* Reset Layout */}
-          <button
-            onClick={handleResetLayout}
-            className="tool-btn"
-            title="Reset layout back to prime suspect with equal radial spacing"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-            </svg>
-            <span>Reset Layout</span>
-          </button>
-
-          {/* Inspector Toggle */}
-          <button
-            onClick={() => setIsInspectorOpen((prev) => !prev)}
-            className={`tool-btn ${isInspectorOpen ? "inspector-toggle-active" : ""}`}
-            title="Toggle details inspector"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <path d="M9 3v18M13 8h4m-4 4h4m-4 4h3" />
-            </svg>
-            <span>{isInspectorOpen ? "Hide Inspector" : "Inspector"}</span>
-          </button>
-
-          {/* Refresh */}
-          <button
-            onClick={loadGraph}
-            className="tool-btn"
-            disabled={loading}
-            title="Reload initial graph"
-          >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className={loading ? "spinning" : ""}
+          <div className="tool-btn-group">
+            {/* Fit to View */}
+            <button
+              onClick={() => reactFlowInstance.fitView({ padding: 0.2, duration: 300 })}
+              className="tool-btn"
+              title="Fit entire network to viewport"
             >
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
-            </svg>
-            <span>Refresh</span>
-          </button>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+              </svg>
+              <span>Fit Network</span>
+            </button>
+
+            {/* Inspector Toggle */}
+            <button
+              onClick={() => setIsInspectorOpen((prev) => !prev)}
+              className={`tool-btn ${isInspectorOpen ? "tool-btn-active" : ""}`}
+              title="Toggle details inspector"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M9 3v18M13 8h4m-4 4h4m-4 4h3" />
+              </svg>
+              <span>{isInspectorOpen ? "Hide Inspector" : "Inspector"}</span>
+            </button>
+
+            {/* Refresh */}
+            <button
+              onClick={loadGraph}
+              className="tool-btn"
+              disabled={loading}
+              title="Reload initial graph"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className={loading ? "spinning" : ""}
+              >
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+              </svg>
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1731,165 +1698,190 @@ function GraphCanvas({ caseId }) {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 0.65rem 1.25rem;
-          background: #171D1C;
-          border-bottom: 1px solid rgba(242, 247, 242, 0.1);
+          padding: 0.55rem 1rem;
+          background: #ffffff;
+          border-bottom: 1px solid #e2e8f0;
           z-index: 10;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+          gap: 1rem;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
         }
 
         .toolbar-left {
           display: flex;
           align-items: center;
-          gap: 1.25rem;
+          gap: 0.85rem;
           flex-wrap: wrap;
+        }
+
+        .toolbar-stats-group {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+        }
+
+        .metric-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.22rem 0.55rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          font-size: 0.74rem;
+        }
+
+        .metric-count {
+          font-weight: 700;
+          color: #0f172a;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        .metric-label {
+          color: #64748b;
+          font-weight: 500;
+        }
+
+        .toolbar-divider {
+          width: 1px;
+          height: 18px;
+          background: #e2e8f0;
+        }
+
+        .action-divider {
+          margin: 0 0.2rem;
         }
 
         .network-topology-legend {
           display: flex;
           align-items: center;
-          gap: 0.85rem;
+          gap: 0.75rem;
         }
 
         .legend-chip {
-          display: flex;
+          display: inline-flex;
           align-items: center;
           gap: 0.35rem;
-          font-size: 0.75rem;
-          font-weight: 600;
-          color: #c8d4cf;
+          font-size: 0.73rem;
+          font-weight: 500;
+          color: #475569;
         }
 
         .legend-dot-focus {
-          width: 12px;
-          height: 12px;
-          border-radius: 3px;
-          background: #18202b;
-          border: 2px solid #FCBA04;
-          box-shadow: 0 0 6px rgba(252, 186, 4, 0.4);
+          width: 9px;
+          height: 9px;
+          border-radius: 2px;
+          background: #d97706;
+          border: 1.5px solid #b45309;
           display: inline-block;
         }
 
         .legend-dot-sos {
-          width: 12px;
-          height: 12px;
-          border-radius: 3px;
-          background: #18202b;
-          border: 2px solid #FCBA04;
-          box-shadow: 0 0 6px rgba(252, 186, 4, 0.4);
+          width: 9px;
+          height: 9px;
+          border-radius: 2px;
+          background: #dc2626;
+          border: 1.5px solid #b91c1c;
           display: inline-block;
         }
 
         .legend-dot-entity {
-          width: 12px;
-          height: 12px;
-          border-radius: 3px;
-          background: #18202b;
-          border: 1.5px solid rgba(242, 247, 242, 0.2);
+          width: 9px;
+          height: 9px;
+          border-radius: 2px;
+          background: #64748b;
+          border: 1.5px solid #475569;
           display: inline-block;
         }
 
         .cyan-line-dot {
-          width: 16px;
+          width: 14px;
           height: 2.5px;
-          background: #35A7FF;
+          background: #0284c7;
           border-radius: 2px;
           display: inline-block;
         }
 
         .dashed-line-dot {
-          width: 16px;
+          width: 14px;
           height: 0px;
-          border-top: 2px dashed #FCBA04;
+          border-top: 2px dashed #d97706;
           display: inline-block;
-        }
-
-        .toolbar-stat {
-          display: flex;
-          align-items: center;
-          gap: 0.35rem;
-          font-size: 0.78rem;
-          color: #c8d4cf;
-        }
-
-        .stat-label {
-          font-weight: 500;
-        }
-
-        .stat-value {
-          font-weight: 700;
-          color: #F2F7F2;
         }
 
         .truncated-badge {
           font-size: 0.7rem;
           font-weight: 600;
-          color: #FCBA04;
-          background: rgba(252, 186, 4, 0.15);
-          border: 1px solid rgba(252, 186, 4, 0.35);
+          color: #b45309;
+          background: #fef3c7;
+          border: 1px solid #fde68a;
           padding: 0.15rem 0.5rem;
-          border-radius: 4px;
+          border-radius: 6px;
         }
 
         .toolbar-actions {
           display: flex;
           align-items: center;
-          gap: 0.6rem;
+          gap: 0.5rem;
+        }
+
+        .tool-btn-group {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
         }
 
         .tool-btn {
           display: inline-flex;
           align-items: center;
-          gap: 0.4rem;
-          padding: 0.45rem 0.85rem;
-          background: #18202b;
-          border: 1px solid rgba(220, 230, 242, 0.15);
+          gap: 0.35rem;
+          padding: 0.4rem 0.75rem;
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
           border-radius: 6px;
-          color: #F2F7F2;
+          color: #334155;
           font-size: 0.78rem;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
           transition: all 0.15s ease;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+          white-space: nowrap;
         }
 
         .tool-btn:hover:not(:disabled) {
-          background: rgba(53, 167, 255, 0.15);
-          border-color: #35A7FF;
-          color: #35A7FF;
+          background: #f8fafc;
+          border-color: #94a3b8;
+          color: #0f172a;
         }
 
-        .inspector-toggle-active {
-          background: #35A7FF !important;
-          color: #171D1C !important;
-          font-weight: 750 !important;
-          border-color: #35A7FF !important;
+        .tool-btn:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
         }
 
-        .focus-toggle-active {
-          background: #FCBA04 !important;
-          color: #171D1C !important;
-          font-weight: 750 !important;
-          border-color: #FCBA04 !important;
-          box-shadow: 0 0 10px rgba(252, 186, 4, 0.35) !important;
+        .tool-btn-primary, .ai-analyze-btn {
+          background: #2563eb !important;
+          border: 1px solid #1d4ed8 !important;
+          color: #ffffff !important;
+          font-weight: 600 !important;
+          box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25) !important;
         }
 
-        /* AI Toolbar Button */
-        .ai-analyze-btn {
-          background: #35A7FF !important;
-          color: #171D1C !important;
-          border: 1px solid #35A7FF !important;
-          box-shadow: 0 0 12px rgba(53, 167, 255, 0.35) !important;
-          font-weight: 750 !important;
+        .tool-btn-primary:hover:not(:disabled), .ai-analyze-btn:hover:not(:disabled) {
+          background: #1d4ed8 !important;
+          border-color: #1e40af !important;
+          box-shadow: 0 2px 5px rgba(37, 99, 235, 0.35) !important;
         }
 
-        .ai-analyze-btn:hover:not(:disabled) {
-          background: #2392ea !important;
-          box-shadow: 0 0 18px rgba(53, 167, 255, 0.55) !important;
-          transform: translateY(-1px);
+        .tool-btn-active, .inspector-toggle-active {
+          background: #eff6ff !important;
+          border-color: #93c5fd !important;
+          color: #1d4ed8 !important;
+          font-weight: 600 !important;
         }
 
         .ai-spark-icon {
-          font-size: 0.95rem;
+          font-size: 0.88rem;
+          line-height: 1;
         }
 
         /* Main Canvas Layout */

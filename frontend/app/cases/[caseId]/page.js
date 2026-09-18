@@ -10,6 +10,48 @@ import InvestigationPathView from "../../../components/InvestigationPathView";
 import CaseInsightsView from "../../../components/CaseInsightsView";
 import CaseCopilotView from "../../../components/CaseCopilotView";
 
+export function parseCaseMeta(caseItem) {
+  let meta = {
+    category: "OTHER",
+    priority: "MEDIUM",
+    subStatus: caseItem?.status === "CLOSED" ? "SOLVED" : "ACTIVE",
+    incidentDate: null,
+    location: null,
+    leadOfficer: null,
+    narrative: caseItem?.description || "",
+  };
+
+  if (!caseItem) return meta;
+
+  if (caseItem.description && typeof caseItem.description === "string") {
+    const trimmed = caseItem.description.trim();
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed && typeof parsed === "object") {
+          meta.category = parsed.category || meta.category;
+          meta.priority = parsed.priority || meta.priority;
+          meta.subStatus = parsed.subStatus || (caseItem.status === "CLOSED" ? "SOLVED" : "ACTIVE");
+          meta.incidentDate = parsed.incidentDate || parsed.date || null;
+          meta.location = parsed.location || null;
+          meta.leadOfficer = parsed.leadOfficer || parsed.lead_officer || parsed.officer || null;
+          meta.narrative = parsed.narrative || parsed.description || parsed.notes || "";
+        }
+      } catch {
+        meta.narrative = trimmed;
+      }
+    } else {
+      meta.narrative = trimmed;
+    }
+  }
+
+  if (caseItem.status === "CLOSED" && meta.subStatus !== "SOLVED") {
+    meta.subStatus = "SOLVED";
+  }
+
+  return meta;
+}
+
 export default function CaseDetailsPage() {
   const { caseId } = useParams();
   const router = useRouter();
@@ -18,9 +60,11 @@ export default function CaseDetailsPage() {
   // Workspace Tab: "graph" | "documents" | "path" | "insights"
   const [activeTab, setActiveTab] = useState("graph");
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Case data states
   const [caseData, setCaseData] = useState(null);
+  const caseMeta = parseCaseMeta(caseData);
   const [documents, setDocuments] = useState([]);
   const [loadingCase, setLoadingCase] = useState(true);
   const [loadingDocs, setLoadingDocs] = useState(true);
@@ -321,25 +365,27 @@ export default function CaseDetailsPage() {
   return (
     <AuthLayout>
       <div className="case-details-container">
-        {/* BACK NAVIGATION */}
-        <div className="top-nav-bar">
-          <Link href="/" className="back-link">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="19" y1="12" x2="5" y2="12" />
-              <polyline points="12 19 5 12 12 5" />
-            </svg>
-            <span>Back to Cases</span>
-          </Link>
-        </div>
+        {/* BACK NAVIGATION (Only when loading or on error; otherwise sidebar provides navigation) */}
+        {(loadingCase || caseError) && (
+          <div className="top-nav-bar">
+            <Link href="/" className="back-link">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
+              <span>Back to Cases</span>
+            </Link>
+          </div>
+        )}
 
         {/* LOADING CASE STATE */}
         {loadingCase && (
@@ -388,127 +434,209 @@ export default function CaseDetailsPage() {
           </div>
         )}
 
-        {/* CASE CONTENT */}
+        {/* CASE CONTENT WITH COLLAPSIBLE SIDEBAR */}
         {!loadingCase && !caseError && caseData && (
-          <div className="case-content-layout">
-            {/* 1. CASE HEADER & OVERVIEW SECTION */}
-            <section className="case-header-card">
-              <div className="header-meta-bar">
-                <div className="badge-group">
-                  <span className="case-number-badge" title="Official Case Identifier">
-                    {caseData.case_number}
-                  </span>
-                  <span
-                    className={`status-pill ${caseData.status === "OPEN" ? "status-pill-open" : "status-pill-closed"}`}
+          <div className={`case-app-split-layout ${isSidebarOpen ? "with-sidebar" : "without-sidebar"}`}>
+            {/* 1. COLLAPSIBLE CASE SIDEBAR */}
+            {isSidebarOpen && (
+              <aside className="case-control-sidebar">
+                {/* Top Actions: Back to Dashboard & Hide Sidebar Button */}
+                <div className="sidebar-top-bar">
+                  <Link href="/" className="sidebar-back-link" title="Return to Cases Dashboard">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="19" y1="12" x2="5" y2="12" />
+                      <polyline points="12 19 5 12 12 5" />
+                    </svg>
+                    <span>All Cases</span>
+                  </Link>
+
+                  <button
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="sidebar-toggle-hide-btn"
+                    title="Hide sidebar (Focus mode)"
+                    aria-label="Hide Sidebar"
                   >
-                    <span className={`status-dot ${caseData.status === "OPEN" ? "dot-open" : "dot-closed"}`} />
-                    {caseData.status}
-                  </span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="18" height="18" x="3" y="3" rx="2" />
+                      <path d="M9 3v18" />
+                      <path d="m14 9-3 3 3 3" />
+                    </svg>
+                  </button>
                 </div>
 
-                <div className="case-created-meta">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  <span>Initiated: {formatDate(caseData.created_at)}</span>
-                </div>
-              </div>
-
-              <h1 className="case-main-title">{caseData.title}</h1>
-
-              <div className="overview-section">
-                <h3 className="section-label">Case Narrative & Scope</h3>
-                <div className="narrative-box">
-                  <p className="narrative-text">
-                    {caseData.description || "No specific narrative or operational scope provided for this case record."}
-                  </p>
-                </div>
-              </div>
-
-              <div className="case-technical-meta">
-                <div className="meta-item">
-                  <span className="meta-label">System UUID:</span>
-                  <span className="meta-value font-mono">{caseData.id}</span>
-                </div>
-                {caseData.created_by && (
-                  <div className="meta-item">
-                    <span className="meta-label">Assigned Lead:</span>
-                    <span className="meta-value font-mono">{caseData.created_by}</span>
+                {/* Case Dossier Information Block */}
+                <div className="sidebar-dossier-block">
+                  <div className="dossier-badges-row">
+                    <span className="case-number-badge" title="Official Case Identifier">
+                      {caseData.case_number}
+                    </span>
+                    <div className="badges-right-group">
+                      {caseMeta.priority && (
+                        <span className={`priority-tag priority-${caseMeta.priority.toLowerCase()}`}>
+                          {caseMeta.priority}
+                        </span>
+                      )}
+                      <span
+                        className={`status-pill ${caseData.status === "OPEN" ? "status-pill-open" : "status-pill-closed"}`}
+                      >
+                        {caseData.status}
+                      </span>
+                    </div>
                   </div>
-                )}
-              </div>
-            </section>
 
-            {/* WORKSPACE NAVIGATION TABS */}
-            <div className="workspace-tabs-bar">
-              <div className="tabs-primary-row">
-                <button
-                  onClick={() => setActiveTab("graph")}
-                  className={`workspace-tab-btn ${activeTab === "graph" ? "tab-btn-active" : ""}`}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="6" cy="6" r="3" />
-                    <circle cx="18" cy="18" r="3" />
-                    <circle cx="18" cy="6" r="3" />
-                    <line x1="8.5" y1="7.5" x2="15.5" y2="16.5" />
-                    <line x1="9" y1="6" x2="15" y2="6" />
-                  </svg>
-                  <span>Network Graph</span>
-                </button>
+                  <h1 className="sidebar-dossier-title">{caseData.title}</h1>
 
-                <button
-                  onClick={() => setActiveTab("documents")}
-                  className={`workspace-tab-btn ${activeTab === "documents" ? "tab-btn-active" : ""}`}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                  </svg>
-                  <span>Evidence & Documents ({documents.length})</span>
-                </button>
+                  {(caseMeta.category || caseMeta.location) && (
+                    <div className="sidebar-chips-row">
+                      {caseMeta.category && (
+                        <span className="sidebar-meta-chip category-chip">
+                          {caseMeta.category.replace(/_/g, " ")}
+                        </span>
+                      )}
+                      {caseMeta.location && (
+                        <span className="sidebar-meta-chip location-chip">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                            <circle cx="12" cy="10" r="3" />
+                          </svg>
+                          <span>{caseMeta.location}</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
 
-                <button
-                  onClick={() => setActiveTab("path")}
-                  className={`workspace-tab-btn ${activeTab === "path" ? "tab-btn-active" : ""}`}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                  </svg>
-                  <span>Investigation Path</span>
-                </button>
+                  {caseMeta.narrative ? (
+                    <div className="sidebar-narrative-box">
+                      <p className="sidebar-narrative-text">{caseMeta.narrative}</p>
+                    </div>
+                  ) : null}
 
-                <button
-                  onClick={() => setActiveTab("insights")}
-                  className={`workspace-tab-btn ${activeTab === "insights" ? "tab-btn-active" : ""}`}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                  </svg>
-                  <span>Intelligence</span>
-                </button>
-              </div>
+                  <div className="sidebar-dossier-meta">
+                    <div className="dossier-meta-item">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      <span>{formatDate(caseData.created_at)}</span>
+                    </div>
 
-              <div className="tabs-secondary-row">
-                <button
-                  onClick={() => setIsCopilotOpen((prev) => !prev)}
-                  className={`workspace-tab-btn copilot-toggle-btn ${isCopilotOpen ? "tab-btn-active" : ""}`}
-                  title={isCopilotOpen ? "Close AI Copilot Sidebar" : "Open AI Copilot Sidebar"}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                  <span>AI Copilot & Network</span>
-                  <span className="copilot-sidebar-indicator">
-                    <span className="live-dot-pulse" />
-                    {isCopilotOpen ? "OPEN" : "SIDEBAR"}
-                  </span>
-                </button>
-              </div>
-            </div>
+                    {(caseMeta.leadOfficer || caseData.created_by) && (
+                      <div className="dossier-meta-item">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                          <circle cx="12" cy="7" r="4" />
+                        </svg>
+                        <span>
+                          Lead: <strong className="lead-name-highlight">
+                            {caseMeta.leadOfficer || (caseData.created_by?.length > 16 ? `Det. ${caseData.created_by.slice(0, 8)}` : caseData.created_by)}
+                          </strong>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-            {/* WORKSPACE LAYOUT WITH DOCKED/SLIDE-OUT COPILOT SIDEBAR */}
-            <div className={`case-workspace-layout ${isCopilotOpen ? "has-copilot-open" : ""}`}>
+                {/* Workspace Navigation Views */}
+                <div className="sidebar-nav-section">
+                  <div className="sidebar-nav-section-title">WORKSPACE VIEWS</div>
+                  <nav className="sidebar-nav-menu">
+                    <button
+                      onClick={() => setActiveTab("graph")}
+                      className={`sidebar-nav-item ${activeTab === "graph" ? "active" : ""}`}
+                    >
+                      <div className="nav-item-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="6" cy="6" r="3" />
+                          <circle cx="18" cy="18" r="3" />
+                          <circle cx="18" cy="6" r="3" />
+                          <line x1="8.5" y1="7.5" x2="15.5" y2="16.5" />
+                          <line x1="9" y1="6" x2="15" y2="6" />
+                        </svg>
+                      </div>
+                      <span className="nav-item-label">Network Graph</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab("documents")}
+                      className={`sidebar-nav-item ${activeTab === "documents" ? "active" : ""}`}
+                    >
+                      <div className="nav-item-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                      </div>
+                      <span className="nav-item-label">Evidence & Documents</span>
+                      <span className="nav-item-count">{documents.length}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab("path")}
+                      className={`sidebar-nav-item ${activeTab === "path" ? "active" : ""}`}
+                    >
+                      <div className="nav-item-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                        </svg>
+                      </div>
+                      <span className="nav-item-label">Investigation Path</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab("insights")}
+                      className={`sidebar-nav-item ${activeTab === "insights" ? "active" : ""}`}
+                    >
+                      <div className="nav-item-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      </div>
+                      <span className="nav-item-label">Intelligence</span>
+                    </button>
+                  </nav>
+                </div>
+              </aside>
+            )}
+
+            {/* 2. MAIN WORKSPACE VIEWPORT */}
+            <main className="case-main-viewport">
+              {!isSidebarOpen && (
+                <div className="collapsed-top-floating-bar">
+                  <Link href="/" className="collapsed-back-link" title="Return to All Cases">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="19" y1="12" x2="5" y2="12" />
+                      <polyline points="12 19 5 12 12 5" />
+                    </svg>
+                    <span>All Cases</span>
+                  </Link>
+                  <button
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="sidebar-floating-toggle-btn"
+                    title="Show Case Sidebar"
+                    aria-label="Show Sidebar"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="18" height="18" x="3" y="3" rx="2" />
+                      <path d="M9 3v18" />
+                      <path d="m11 15 3-3-3-3" />
+                    </svg>
+                    <span>Show Sidebar</span>
+                  </button>
+                  <button
+                    onClick={() => setIsCopilotOpen((prev) => !prev)}
+                    className={`copilot-floating-toggle-btn ${isCopilotOpen ? "active" : ""}`}
+                    title={isCopilotOpen ? "Close AI Copilot" : "Open AI Copilot"}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    <span>AI Copilot</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Workspace Layout with active tab content */}
+              <div className={`case-workspace-layout ${isCopilotOpen ? "has-copilot-open" : ""}`}>
               <div className="workspace-main-column">
                 {/* TAB 1: NETWORK GRAPH INVESTIGATION */}
                 {(activeTab === "graph" || activeTab === "copilot") && (
@@ -519,7 +647,7 @@ export default function CaseDetailsPage() {
 
                 {/* TAB 3: INVESTIGATION PATH */}
                 {activeTab === "path" && (
-                  <section className="graph-workspace-section">
+                  <section className="path-workspace-section">
                     <InvestigationPathView caseId={caseId} />
                   </section>
                 )}
@@ -879,22 +1007,451 @@ export default function CaseDetailsPage() {
           className="floating-copilot-bubble-btn"
           title="Open AI Copilot & Network Sidebar"
         >
-          <span className="bubble-live-dot" />
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
           <span>AI Copilot</span>
         </button>
       )}
-    </div>
-  )}
+    </main>
+  </div>
+)}
 </div>
 
       <style>{`
         .case-details-container {
-          max-width: 1240px;
+          max-width: 100% !important;
           margin: 0 auto;
-          padding: 1.5rem 1.5rem 4rem;
+          padding: 0.75rem 1.25rem 0.75rem;
+          min-height: calc(100vh - 72px);
+          box-sizing: border-box;
+        }
+
+        /* Split Workspace Layout */
+        .case-app-split-layout {
+          display: flex;
+          gap: 1.25rem;
+          align-items: flex-start;
+          width: 100%;
+          position: relative;
+        }
+
+        /* Collapsible Sidebar */
+        .case-control-sidebar {
+          width: 320px;
+          min-width: 320px;
+          max-width: 330px;
+          flex-shrink: 0;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 14px;
+          padding: 1.25rem 1.15rem;
+          box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.04);
+          position: sticky;
+          top: 76px;
+          height: fit-content;
+          max-height: calc(100vh - 96px);
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+          z-index: 20;
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e1 transparent;
+        }
+
+        .case-control-sidebar::-webkit-scrollbar {
+          width: 3px;
+        }
+        .case-control-sidebar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 3px;
+        }
+
+        .sidebar-top-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.5rem;
+          padding-bottom: 0.85rem;
+          border-bottom: 1px solid #f1f5f9;
+        }
+
+        .sidebar-back-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          color: #64748b;
+          font-size: 0.82rem;
+          font-weight: 600;
+          padding: 0.25rem 0.5rem;
+          border-radius: 6px;
+          transition: all 0.15s ease;
+          text-decoration: none;
+        }
+
+        .sidebar-back-link:hover {
+          color: #0f172a;
+          background: #f1f5f9;
+        }
+
+        .sidebar-toggle-hide-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 30px;
+          height: 30px;
+          border-radius: 6px;
+          color: #64748b;
+          background: transparent;
+          border: 1px solid #e2e8f0;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .sidebar-toggle-hide-btn:hover {
+          color: #0f172a;
+          background: #f8fafc;
+          border-color: #cbd5e1;
+        }
+
+        /* Case Dossier Information Block (Generous vertical spacing) */
+        .sidebar-dossier-block {
+          display: flex;
+          flex-direction: column;
+          gap: 0.95rem;
+          padding-bottom: 1.25rem;
+          border-bottom: 1px solid #f1f5f9;
+        }
+
+        .dossier-badges-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+        }
+
+        .case-number-badge {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: #ffffff !important;
+          background: #0f172a !important;
+          border: 1px solid #0f172a !important;
+          padding: 2.5px 8px;
+          border-radius: 5px;
+          letter-spacing: 0.03em;
+        }
+
+        .badges-right-group {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 2px;
+          text-align: right;
+          line-height: 1.2;
+        }
+
+        .priority-tag {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.65rem;
+          font-weight: 800;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          background: none !important;
+          border: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          color: #475569 !important;
+        }
+
+        .priority-critical,
+        .priority-high,
+        .priority-medium,
+        .priority-low {
+          background: none !important;
+          border: none !important;
+          padding: 0 !important;
+          color: #475569 !important;
+        }
+
+        .status-pill {
+          display: inline-flex;
+          align-items: center;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.65rem;
+          font-weight: 800;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          background: none !important;
+          border: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          color: #64748b !important;
+        }
+
+        .status-pill-open,
+        .status-pill-closed {
+          background: none !important;
+          border: none !important;
+          padding: 0 !important;
+          color: #64748b !important;
+        }
+
+        .sidebar-dossier-title {
+          font-family: 'Plus Jakarta Sans', var(--font-sans);
+          font-size: 1.15rem;
+          font-weight: 800;
+          color: #0b0f19;
+          line-height: 1.35;
+          letter-spacing: -0.015em;
+          margin: 0.2rem 0;
+          word-break: break-word;
+        }
+
+        .sidebar-chips-row {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+        }
+
+        .sidebar-meta-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          font-size: 0.74rem;
+          font-weight: 600;
+          padding: 3px 9px;
+          border-radius: 6px;
+          line-height: 1.3;
+          background: #f1f5f9 !important;
+          color: #0f172a !important;
+          border: 1px solid #cbd5e1 !important;
+        }
+
+        .category-chip,
+        .location-chip {
+          background: #f1f5f9 !important;
+          color: #0f172a !important;
+          border: 1px solid #cbd5e1 !important;
+        }
+
+        .location-chip svg {
+          color: #475569;
+        }
+
+        .sidebar-narrative-box {
+          background: #f8fafc;
+          border: 1px solid #cbd5e1;
+          border-left: 3.5px solid #0f172a;
+          border-radius: 7px;
+          padding: 0.8rem 0.95rem;
+          min-height: 72px;
+          max-height: 120px;
+          overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e1 transparent;
+        }
+
+        .sidebar-narrative-box::-webkit-scrollbar {
+          width: 3px;
+        }
+        .sidebar-narrative-box::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 3px;
+        }
+
+        .sidebar-narrative-text {
+          font-size: 0.78rem;
+          color: #1e293b;
+          line-height: 1.5;
+          margin: 0;
+          word-break: break-word;
+          font-weight: 500;
+        }
+
+        .sidebar-dossier-meta {
+          display: flex;
+          flex-direction: column;
+          gap: 0.45rem;
+          font-size: 0.76rem;
+          color: #64748b;
+          padding-top: 0.45rem;
+        }
+
+        .dossier-meta-item {
+          display: flex;
+          align-items: center;
+          gap: 0.45rem;
+        }
+
+        .lead-name-highlight {
+          color: #0f172a;
+          font-weight: 700;
+        }
+
+        /* Workspace Navigation Views */
+        .sidebar-nav-section {
+          display: flex;
+          flex-direction: column;
+          gap: 0.55rem;
+        }
+
+        .sidebar-nav-section-title {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.62rem;
+          font-weight: 750;
+          letter-spacing: 0.09em;
+          color: #94a3b8;
+          text-transform: uppercase;
+          padding: 0 0.2rem;
+        }
+
+        .sidebar-nav-menu {
+          display: flex;
+          flex-direction: column;
+          gap: 0.45rem;
+        }
+
+        .sidebar-nav-item {
+          display: flex;
+          align-items: center;
+          gap: 0.65rem;
+          padding: 0.6rem 0.75rem;
+          border-radius: 9px;
+          border: 1px solid transparent;
+          background: transparent;
+          color: #475569;
+          font-size: 0.84rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          width: 100%;
+          text-align: left;
+        }
+
+        .sidebar-nav-item:hover {
+          background: #f8fafc;
+          color: #0f172a;
+        }
+
+        /* Solid website primary brand blue for active navigation tab */
+        .sidebar-nav-item.active {
+          background: #2563eb !important;
+          color: #ffffff !important;
+          border: 1px solid #1d4ed8 !important;
+          font-weight: 700 !important;
+          box-shadow: 0 2px 6px rgba(37, 99, 235, 0.22) !important;
+        }
+
+        .sidebar-nav-item.active:hover {
+          background: #1d4ed8 !important;
+        }
+
+        .sidebar-nav-item.active .nav-item-icon {
+          color: #ffffff !important;
+        }
+
+        .nav-item-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          color: inherit;
+        }
+
+        .nav-item-label {
+          flex: 1;
+        }
+
+        .nav-item-count {
+          font-size: 0.67rem;
+          font-weight: 700;
+          padding: 1px 5px;
+          border-radius: 9999px;
+          background: #e2e8f0;
+          color: #475569;
+        }
+
+        .sidebar-nav-item.active .nav-item-count {
+          background: rgba(255, 255, 255, 0.28) !important;
+          color: #ffffff !important;
+        }
+
+
+
+        .collapsed-sidebar-nav-actions {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .collapsed-back-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.38rem 0.65rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: #475569;
+          transition: all 0.15s ease;
+          text-decoration: none;
+        }
+
+        .collapsed-back-link:hover {
+          color: #0f172a;
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+        }
+
+        /* Main Workspace Viewport */
+        .case-main-viewport {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+          width: 100%;
+        }
+
+        .collapsed-top-floating-bar {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+          margin-bottom: 0.75rem;
+        }
+
+        .sidebar-floating-toggle-btn, .copilot-floating-toggle-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.45rem;
+          padding: 0.4rem 0.8rem;
+          background: #ffffff;
+          color: #334155;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.18s ease;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+
+        .sidebar-floating-toggle-btn:hover, .copilot-floating-toggle-btn:hover {
+          background: #f8fafc;
+          border-color: #94a3b8;
+          color: #0f172a;
+        }
+
+        .copilot-floating-toggle-btn.active {
+          background: #eff6ff;
+          border-color: #bfdbfe;
+          color: #1d4ed8;
         }
 
         .workspace-tabs-bar {
@@ -1071,7 +1628,7 @@ export default function CaseDetailsPage() {
         }
 
         .graph-workspace-section {
-          margin-bottom: 2rem;
+          margin-bottom: 0;
         }
 
         .top-nav-bar {

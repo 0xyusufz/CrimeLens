@@ -380,13 +380,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   line-height: 1.55 !important;
 }
 .case-number-badge, .case-uuid-pill {
-  color: #2563eb !important;
-  background: rgba(37, 99, 235, 0.08) !important;
-  border: 1px solid rgba(37, 99, 235, 0.2) !important;
-  font-weight: 650 !important;
+  color: #ffffff !important;
+  background: #0f172a !important;
+  border: 1px solid #0f172a !important;
+  font-weight: 700 !important;
 }
 .status-pill-open, .status-active, .status-active-text {
-  color: #d97706 !important;
+  color: #475569 !important;
   background: none !important;
   border: none !important;
   box-shadow: none !important;
@@ -395,7 +395,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   font-weight: 750 !important;
 }
 .status-pill-closed, .status-solved, .status-solved-text {
-  color: #059669 !important;
+  color: #64748b !important;
   background: none !important;
   border: none !important;
   box-shadow: none !important;
@@ -404,7 +404,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   font-weight: 750 !important;
 }
 .status-hold, .status-hold-text {
-  color: #d97706 !important;
+  color: #64748b !important;
   background: none !important;
   border: none !important;
   box-shadow: none !important;
@@ -451,11 +451,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
 }
 
-/* Case workspace shell */
 .case-details-container {
-  max-width: 1440px !important;
-  padding: 1.5rem clamp(1.25rem, 3.5vw, 2.5rem) 4rem !important;
+  max-width: 1560px !important;
+  padding: 0.75rem clamp(1rem, 2vw, 1.5rem) 0.75rem !important;
   background: #f8fafc !important;
+  min-height: calc(100vh - 72px);
+  box-sizing: border-box;
 }
 .top-nav-bar { margin-bottom: 1.25rem !important; }
 .back-link {
@@ -543,6 +544,18 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   border-radius: 18px !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.03) !important;
   overflow: hidden !important;
+  margin-bottom: 0 !important;
+}
+.path-workspace-section {
+  width: 100%;
+  overflow: visible !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin-bottom: 0 !important;
+}
+.path-view-root, .path-form-panel {
+  overflow: visible !important;
 }
 .documents-section { padding: 1.5rem !important; }
 .section-title { color: #0f172a !important; font-weight: 800 !important; }
@@ -647,6 +660,36 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   font-weight: 700 !important;
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25) !important;
 }
+.path-chain-container {
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+.path-form-select {
+  background: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+.path-form-select option {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+.path-form-label {
+  color: #475569 !important;
+}
+.path-node-card {
+  border: 2px solid #0f172a !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+}
+.path-rel-pill {
+  background: #ffffff !important;
+  border: 1.5px solid #0f172a !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06) !important;
+}
+.path-rel-type {
+  color: #1e293b !important;
+}
+
 
 /* Copilot & Intelligence Light Theme */
 .workspace-copilot-sidebar,
