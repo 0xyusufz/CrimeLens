@@ -14,7 +14,7 @@ from app.models.case import Case
 from app.models.enums import AuditAction, AuditResult
 from app.models.user import User
 from app.schemas.audit import AuditRead
-from app.schemas.case import CaseCreate, CaseListItem, CaseRead
+from app.schemas.case import CaseCreate, CaseListItem, CaseRead, CaseUpdate
 from app.schemas.entity import CaseGraphResult
 from app.schemas.insights import CaseInsights
 from app.schemas.ledger import EvidenceBlockRead
@@ -27,7 +27,9 @@ from app.services.case_graph import (
     get_case_graph,
 )
 from app.services.cases import create_case as create_case_row
+from app.services.cases import delete_case as delete_case_row
 from app.services.cases import list_cases_for_user
+from app.services.cases import update_case as update_case_row
 from app.services.insights import list_case_insights
 from app.services.ledger import list_case_ledger
 
@@ -89,6 +91,42 @@ def list_cases(
 @router.get("/{case_id}", response_model=CaseRead)
 def get_case(case: Case = Depends(require_case_access)) -> CaseRead:
     return CaseRead.model_validate(case)
+
+
+@router.patch("/{case_id}", response_model=CaseRead)
+def update_case(
+    payload: CaseUpdate,
+    case: Case = Depends(require_case_access),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> CaseRead:
+    try:
+        updated = update_case_row(
+            db,
+            case.id,
+            title=payload.title,
+            description=payload.description,
+            status=payload.status,
+        )
+    except SQLAlchemyError:
+        db.rollback()
+        raise _database_error() from None
+    return CaseRead.model_validate(updated)
+
+
+@router.delete("/{case_id}", status_code=status.HTTP_200_OK)
+def delete_case_endpoint(
+    case: Case = Depends(require_case_access),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
+    try:
+        delete_case_row(db, case.id)
+    except SQLAlchemyError:
+        db.rollback()
+        raise _database_error() from None
+    return {"message": f"Case {case.case_number} deleted successfully", "case_id": str(case.id)}
+
 
 
 @router.get("/{case_id}/audit", response_model=list[AuditRead])

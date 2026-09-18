@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getUser, logout } from "../lib/auth";
+import CrimeLensLogo from "./CrimeLensLogo";
 
 export default function Navbar() {
   const [user, setUser] = useState(null);
@@ -20,25 +21,11 @@ export default function Navbar() {
         {/* BRANDING */}
         <div className="header-brand-group">
           <Link href="/" className="header-logo-link" aria-label="CrimeLens Dashboard">
-            <div className="header-logo-icon">
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 32 32"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <circle cx="16" cy="16" r="14" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.4" />
-                <circle cx="16" cy="16" r="9" stroke="#0ea5e9" strokeWidth="1.5" opacity="0.8" />
-                <circle cx="16" cy="16" r="3.5" fill="#38bdf8" />
-                <line x1="16" y1="2" x2="16" y2="6" stroke="#38bdf8" strokeWidth="1.5" strokeLinecap="round" />
-                <line x1="16" y1="26" x2="16" y2="30" stroke="#38bdf8" strokeWidth="1.5" strokeLinecap="round" />
-                <line x1="2" y1="16" x2="6" y2="16" stroke="#38bdf8" strokeWidth="1.5" strokeLinecap="round" />
-                <line x1="26" y1="16" x2="30" y2="16" stroke="#38bdf8" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </div>
+            <CrimeLensLogo size={36} iconSize={20} withBadge={true} />
             <div className="header-titles">
-              <span className="brand-name">CrimeLens</span>
+              <span className="brand-name">
+                Crime<span className="brand-name-accent">Lens</span>
+              </span>
               <span className="system-subtitle">Investigation Dashboard</span>
             </div>
           </Link>

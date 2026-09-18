@@ -1,0 +1,16 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="8" fill="url(#crimelens-icon-grad)" />
+  <path
+    d="M16 4.5V27.5M4.5 16H27.5M7.85 7.85L24.15 24.15M7.85 24.15L24.15 7.85"
+    stroke="#ffffff"
+    stroke-width="4.2"
+    stroke-linecap="round"
+  />
+  <defs>
+    <linearGradient id="crimelens-icon-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38bdf8" />
+      <stop offset="0.45" stop-color="#0284c7" />
+      <stop offset="1" stop-color="#2563eb" />
+    </linearGradient>
+  </defs>
+</svg>

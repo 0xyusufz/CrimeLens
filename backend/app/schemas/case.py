@@ -20,6 +20,16 @@ class CaseCreate(BaseModel):
     status: CaseStatus = CaseStatus.OPEN
 
 
+class CaseUpdate(BaseModel):
+    """Client payload for updating a case."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None)
+    status: CaseStatus | None = Field(default=None)
+
+
 class CaseRead(BaseModel):
     """Full case row as stored in PostgreSQL.
 
@@ -38,13 +48,14 @@ class CaseRead(BaseModel):
 
 
 class CaseListItem(BaseModel):
-    """List projection: omit long description text."""
+    """List projection for case inventory."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     case_number: str
     title: str
+    description: str | None = None
     status: CaseStatus
     created_by: uuid.UUID
     created_at: datetime

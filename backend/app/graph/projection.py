@@ -186,6 +186,8 @@ def project_case_graph(case_id: UUID, db: Session, driver=None) -> dict[str, int
             case_id=str(case_id),
             active_rel_ids=active_rel_ids,
         )
+        # Prune any orphaned disconnected nodes left behind after deduplication
+        s.run("MATCH (n) WHERE NOT (n)--() AND NOT n:Case AND NOT n:Document DELETE n")
 
     projected = 0
     skipped = 0

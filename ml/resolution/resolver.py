@@ -39,8 +39,9 @@ def normalize_vehicle(veh_str: str) -> str:
 
 
 def normalize_org(org_str: str) -> str:
-    """Normalize organization name by stripping corporate suffixes and punctuation."""
-    cleaned = re.sub(r"(?i)\b(?:pvt\s+ltd|ltd|llc|llp|inc|corp|corporation)\b", "", org_str)
+    """Normalize organization name by standardizing police stations, corporate suffixes, and punctuation."""
+    cleaned = re.sub(r"(?i)\bp\.?\s*s\.?|\bps\b", "police station", org_str)
+    cleaned = re.sub(r"(?i)\b(?:pvt\s+ltd|ltd|llc|llp|inc|corp|corporation)\b", "", cleaned)
     cleaned = re.sub(r"[^\w\s]", "", cleaned).strip().lower()
     return re.sub(r"\s+", " ", cleaned)
 
@@ -54,13 +55,22 @@ def normalize_location(loc_str: str) -> str:
 def normalize_person_name(name_str: str) -> str:
     """Normalize person name by removing titles/honorifics and standardizing spaces."""
     cleaned = re.sub(
-        r"\b(?:Mr\.|Mrs\.|Ms\.|Shri|Smt\.|Dr\.|Insp\.|Inspector|Sub-Inspector|SI|Constable)\s+",
+        r"\b(?:Mr\.|Mrs\.|Ms\.|Shri|Smt\.|Dr\.|Prof\.|Professor|Advocate|Adv\.|Insp\.|Inspector|Sub-Inspector|SI|ASI|Constable)\s+",
         "",
         name_str,
         flags=re.IGNORECASE,
     )
     cleaned = re.sub(r"[^\w\s.]", "", cleaned).strip().lower()
     return re.sub(r"\s+", " ", cleaned)
+
+
+def extract_alias_names(name_str: str) -> list[str]:
+    """Extract candidate alias names from strings like 'Sanju @ Sanjib Sahu', 'X alias Y', 'X a.k.a. Y'."""
+    if not name_str:
+        return []
+    parts = re.split(r"\s+(?:@|alias|a\.k\.a\.?|aka)\s+", name_str.strip(), flags=re.IGNORECASE)
+    cleaned_parts = [p.strip() for p in parts if p.strip()]
+    return cleaned_parts if len(cleaned_parts) > 1 else [name_str.strip()]
 
 
 def is_name_fuzzy_match(norm_a: str, norm_b: str) -> bool:
@@ -256,11 +266,27 @@ def compare_mentions(
         norm_b = normalize_person_name(mention_b.name)
 
         is_exact_name = (norm_a == norm_b)
+
+        # Check alias match (e.g. "Sanju @ Sanjib Sahu" vs "Sanjib Sahu")
+        aliases_a = extract_alias_names(mention_a.name)
+        aliases_b = extract_alias_names(mention_b.name)
+        has_alias_match = False
+        if len(aliases_a) > 1 or len(aliases_b) > 1:
+            for a in aliases_a:
+                na = normalize_person_name(a)
+                for b in aliases_b:
+                    nb = normalize_person_name(b)
+                    if na == nb or (len(na.split()) >= 2 and len(nb.split()) >= 2 and is_name_fuzzy_match(na, nb)):
+                        has_alias_match = True
+                        break
+                if has_alias_match:
+                    break
+
         is_fuzzy = False
-        if not is_exact_name and allow_fuzzy_name:
+        if not is_exact_name and not has_alias_match and allow_fuzzy_name:
             is_fuzzy = is_name_fuzzy_match(norm_a, norm_b)
 
-        if not is_exact_name and not is_fuzzy:
+        if not is_exact_name and not has_alias_match and not is_fuzzy:
             return None
 
         signals: list[ResolutionSignal] = [ResolutionSignal.NAME_SIMILARITY]
@@ -284,11 +310,13 @@ def compare_mentions(
             signals.append(ResolutionSignal.LOCATION_MATCH)
 
         # Scoring hierarchy
-        if is_exact_name:
+        if is_exact_name or has_alias_match:
             if has_phone_match or has_account_match:
                 confidence = 0.98  # Multi-signal strong match
             elif has_vehicle_match or has_org_match or has_loc_match:
                 confidence = 0.92
+            elif has_alias_match:
+                confidence = 0.88  # Documented alias match
             else:
                 confidence = 0.80  # Exact name only
         else:

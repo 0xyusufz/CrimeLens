@@ -1,23 +1,72 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { apiClient } from "../lib/apiClient";
 
 function TabIcon({ name }) {
   if (name === "matrix") {
-    return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>;
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </svg>
+    );
   }
   if (name === "brief") {
-    return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M8 13h8M8 17h6" /></svg>;
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <path d="M14 2v6h6M8 13h8M8 17h6" />
+      </svg>
+    );
   }
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" /><path d="M8 11h.01M12 11h.01M16 11h.01" strokeWidth="2.5" strokeLinecap="round" /></svg>;
+  if (name === "path") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+      <path d="M8 11h.01M12 11h.01M16 11h.01" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
 }
 
 function RefreshIcon() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M21 12a9 9 0 0 1-15.4 6.3L3 16M3 12A9 9 0 0 1 18.4 5.7L21 8" /><path d="M3 21v-5h5M21 3v5h-5" /></svg>;
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+      <path d="M21 12a9 9 0 0 1-15.4 6.3L3 16M3 12A9 9 0 0 1 18.4 5.7L21 8" />
+      <path d="M3 21v-5h5M21 3v5h-5" />
+    </svg>
+  );
 }
 
-export default function CaseCopilotView({ caseId }) {
+// Helper to parse markdown tables into structured records
+function parseMarkdownTable(md) {
+  if (!md || typeof md !== "string") return [];
+  const lines = md.trim().split("\n").filter((l) => l.trim().startsWith("|"));
+  if (lines.length < 3) return [];
+  const headers = lines[0].split("|").slice(1, -1).map((h) => h.trim());
+  const rows = [];
+  for (let i = 2; i < lines.length; i++) {
+    const cols = lines[i].split("|").slice(1, -1).map((c) => c.trim());
+    if (cols.length === headers.length) {
+      const rowObj = {};
+      headers.forEach((h, idx) => {
+        rowObj[h] = cols[idx];
+      });
+      rows.push(rowObj);
+    }
+  }
+  return rows;
+}
+
+export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
   const [networkTables, setNetworkTables] = useState(null);
   const [loadingTables, setLoadingTables] = useState(true);
   const [brief, setBrief] = useState(null);
@@ -25,15 +74,23 @@ export default function CaseCopilotView({ caseId }) {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: "I can help you review verified case connections, extracted entities, and evidence context. Ask about a person, relationship, financial trail, or document finding.",
+      content: "I am your Case Intelligence Copilot. I analyze verified relationships, extracted entities, and evidence trails for this investigation. How can I assist your review?",
     },
   ]);
   const [inputQuery, setInputQuery] = useState("");
   const [isQuerying, setIsQuerying] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState("chat");
+  const [relationFilter, setRelationFilter] = useState("");
   const chatEndRef = useRef(null);
 
-  // Existing API contracts deliberately remain unchanged.
+  // Quick Path finder state inside sidebar
+  const [pathEntities, setPathEntities] = useState([]);
+  const [pathSourceId, setPathSourceId] = useState("");
+  const [pathTargetId, setPathTargetId] = useState("");
+  const [pathQuerying, setPathQuerying] = useState(false);
+  const [pathResult, setPathResult] = useState(null);
+  const [pathError, setPathError] = useState(null);
+
   const fetchTables = useCallback(async () => {
     if (!caseId) return;
     setLoadingTables(true);
@@ -61,19 +118,34 @@ export default function CaseCopilotView({ caseId }) {
     }
   }, [caseId]);
 
+  // Load graph entities for quick path finder
+  const loadPathEntities = useCallback(async () => {
+    if (!caseId) return;
+    try {
+      const data = await apiClient(`/api/cases/${caseId}/graph`);
+      const nodes = data?.nodes || [];
+      setPathEntities(nodes.map((n) => ({ id: n.entity_id, name: n.name, type: n.type })));
+    } catch {
+      // silent fallback
+    }
+  }, [caseId]);
+
   useEffect(() => {
     fetchTables();
-  }, [fetchTables]);
+    loadPathEntities();
+  }, [fetchTables, loadPathEntities]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isQuerying]);
+    if (activeSubTab === "chat") {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isQuerying, activeSubTab]);
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputQuery.trim() || isQuerying) return;
+  const handleSendMessage = async (e, customPrompt = null) => {
+    if (e) e.preventDefault();
+    const userText = (customPrompt || inputQuery).trim();
+    if (!userText || isQuerying) return;
 
-    const userText = inputQuery.trim();
     setInputQuery("");
     const newHistory = [...messages, { role: "user", content: userText }];
     setMessages(newHistory);
@@ -87,10 +159,19 @@ export default function CaseCopilotView({ caseId }) {
           history: newHistory.map((m) => ({ role: m.role, content: m.content })),
         }),
       });
-      setMessages((prev) => [...prev, { role: "assistant", content: response.answer || "No response received." }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: response.answer || "No response received." },
+      ]);
     } catch (err) {
       console.error("Copilot query failed:", err);
-      setMessages((prev) => [...prev, { role: "assistant", content: "The case intelligence service could not complete that request. Please verify connectivity and try again." }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "The case intelligence service could not complete that request. Please verify connectivity and try again.",
+        },
+      ]);
     } finally {
       setIsQuerying(false);
     }
@@ -101,129 +182,1202 @@ export default function CaseCopilotView({ caseId }) {
     if (tab === "brief" && !brief && !loadingBrief) generateBrief();
   };
 
+  // Structured relations parsed from backend markdown
+  const parsedRelationships = useMemo(() => {
+    if (!networkTables?.relationships_table_md) return [];
+    return parseMarkdownTable(networkTables.relationships_table_md);
+  }, [networkTables]);
+
+  const filteredRelationships = useMemo(() => {
+    if (!relationFilter.trim()) return parsedRelationships;
+    const q = relationFilter.toLowerCase();
+    return parsedRelationships.filter((r) =>
+      Object.values(r).some((v) => String(v).toLowerCase().includes(q))
+    );
+  }, [parsedRelationships, relationFilter]);
+
+  // Quick path query
+  const handleQuickPathQuery = async (e) => {
+    if (e) e.preventDefault();
+    if (!pathSourceId || !pathTargetId || pathSourceId === pathTargetId || pathQuerying) return;
+    setPathQuerying(true);
+    setPathError(null);
+    setPathResult(null);
+    try {
+      const params = new URLSearchParams({
+        case_id: caseId,
+        source_entity_id: pathSourceId,
+        target_entity_id: pathTargetId,
+        max_hops: 5,
+      });
+      const result = await apiClient(`/api/investigation/path?${params.toString()}`);
+      setPathResult(result);
+    } catch (err) {
+      if (err?.status === 404) setPathError("One or both entities not found.");
+      else setPathError("Failed to trace path. Please retry.");
+    } finally {
+      setPathQuerying(false);
+    }
+  };
+
   return (
-    <div className="copilot-root">
-      <header className="copilot-header">
-        <div className="copilot-heading">
-          <div className="copilot-heading-mark" aria-hidden="true"><TabIcon name="chat" /></div>
-          <div>
-            <span className="copilot-eyebrow"><span className="copilot-live-dot" /> CASE INTELLIGENCE</span>
-            <h3>Investigator Copilot</h3>
-            <p>Grounded responses from the case network and registered evidence.</p>
+    <div className={`copilot-sidebar-root ${isSidebar ? "is-sidebar-mode" : ""}`}>
+      {/* 1. SIDEBAR HEADER */}
+      <header className="copilot-sidebar-header">
+        <div className="copilot-header-info">
+          <div className="copilot-badge-row">
+            <span className="copilot-live-dot" />
+            <span className="copilot-badge-text">CASE INTELLIGENCE</span>
           </div>
+          <h3 className="copilot-title">Investigator Copilot</h3>
+          <p className="copilot-subtitle">Evidence-grounded network assistant</p>
         </div>
 
-        <nav className="copilot-tabs" aria-label="Copilot workspace views">
-          <button className={activeSubTab === "chat" ? "copilot-tab is-active" : "copilot-tab"} onClick={() => selectTab("chat")}>
-            <TabIcon name="chat" /> <span>Ask Copilot</span>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="copilot-close-btn"
+            title="Close Copilot Sidebar"
+            aria-label="Close"
+          >
+            ✕
           </button>
-          <button className={activeSubTab === "table" ? "copilot-tab is-active" : "copilot-tab"} onClick={() => selectTab("table")}>
-            <TabIcon name="matrix" /> <span>Relations</span><b>{networkTables?.relationships_count ?? 0}</b>
-          </button>
-          <button className={activeSubTab === "brief" ? "copilot-tab is-active" : "copilot-tab"} onClick={() => selectTab("brief")}>
-            <TabIcon name="brief" /> <span>Brief</span>
-          </button>
-        </nav>
+        )}
       </header>
 
-      {activeSubTab === "chat" && (
-        <section className="copilot-chat-panel" aria-label="Case intelligence conversation">
-          <div className="copilot-chat-topline">
-            <span>Verified case context</span>
-            <span>Responses require investigator review</span>
-          </div>
-          <div className="copilot-messages">
-            {messages.map((message, index) => {
-              const isUser = message.role === "user";
-              return (
-                <article className={isUser ? "copilot-message is-user" : "copilot-message"} key={`${message.role}-${index}`}>
-                  <span className="copilot-message-author">{isUser ? "INVESTIGATOR" : "CRIMELENS COPILOT"}</span>
-                  <p>{message.content}</p>
-                </article>
-              );
-            })}
-            {isQuerying && (
-              <div className="copilot-thinking" aria-live="polite"><span /><span /><span /> Reviewing the case network…</div>
+      {/* 2. TAB NAVIGATION PILLS */}
+      <nav className="copilot-nav-pills" aria-label="Copilot Modes">
+        <button
+          className={`nav-pill-btn ${activeSubTab === "chat" ? "is-active" : ""}`}
+          onClick={() => selectTab("chat")}
+        >
+          <TabIcon name="chat" />
+          <span>Chat</span>
+        </button>
+
+        <button
+          className={`nav-pill-btn ${activeSubTab === "brief" ? "is-active" : ""}`}
+          onClick={() => selectTab("brief")}
+        >
+          <TabIcon name="brief" />
+          <span>Brief</span>
+        </button>
+
+        <button
+          className={`nav-pill-btn ${activeSubTab === "table" ? "is-active" : ""}`}
+          onClick={() => selectTab("table")}
+        >
+          <TabIcon name="matrix" />
+          <span>Relations</span>
+          <span className="count-pill">{networkTables?.relationships_count ?? 0}</span>
+        </button>
+
+        <button
+          className={`nav-pill-btn ${activeSubTab === "path" ? "is-active" : ""}`}
+          onClick={() => selectTab("path")}
+        >
+          <TabIcon name="path" />
+          <span>Path</span>
+        </button>
+      </nav>
+
+      {/* 3. SUB-TAB CONTENT PANELS */}
+      <div className="copilot-tab-body">
+        {/* SUBTAB A: COPILOT CHAT */}
+        {activeSubTab === "chat" && (
+          <section className="copilot-chat-container">
+            <div className="copilot-context-status">
+              <span className="status-indicator-dot" />
+              <span>Verified Case Context Active • Grounded in Evidence</span>
+            </div>
+
+            {/* Quick Prompt Chips */}
+            {messages.length <= 2 && (
+              <div className="quick-suggestions-block">
+                <span className="suggestions-title">SUGGESTED INQUIRIES</span>
+                <div className="suggestions-chips">
+                  <button
+                    className="suggestion-chip"
+                    onClick={(e) => handleSendMessage(e, "Summarize the primary suspects and key entities in this case.")}
+                  >
+                    🔍 Key suspects summary
+                  </button>
+                  <button
+                    className="suggestion-chip"
+                    onClick={(e) => handleSendMessage(e, "What are the suspicious financial or transaction links discovered?")}
+                  >
+                    💳 Financial connections
+                  </button>
+                  <button
+                    className="suggestion-chip"
+                    onClick={(e) => handleSendMessage(e, "Show chronological timeline of critical evidence events.")}
+                  >
+                    ⏱️ Evidence timeline
+                  </button>
+                </div>
+              </div>
             )}
-            <div ref={chatEndRef} />
-          </div>
-          <form onSubmit={handleSendMessage} className="copilot-composer">
-            <label className="sr-only" htmlFor="copilot-query">Ask the investigator copilot</label>
-            <input
-              id="copilot-query"
-              type="text"
-              value={inputQuery}
-              onChange={(e) => setInputQuery(e.target.value)}
-              placeholder="Ask about a person, account, relationship, or source document…"
-              disabled={isQuerying}
-            />
-            <button type="submit" disabled={isQuerying || !inputQuery.trim()}>
-              <span>Send inquiry</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>
-            </button>
-          </form>
-        </section>
-      )}
 
-      {activeSubTab === "table" && (
-        <section className="copilot-data-panel">
-          <div className="copilot-panel-heading">
-            <div>
-              <span className="copilot-eyebrow">NETWORK REGISTER</span>
-              <h4>Relations matrix</h4>
-              <p>A read-only view of extracted connections and their cited case context.</p>
+            {/* Message Feed */}
+            <div className="copilot-messages-feed">
+              {messages.map((message, index) => {
+                const isUser = message.role === "user";
+                return (
+                  <article
+                    className={`copilot-bubble ${isUser ? "bubble-user" : "bubble-copilot"}`}
+                    key={`${message.role}-${index}`}
+                  >
+                    <div className="bubble-header">
+                      <span className="bubble-author">
+                        {isUser ? "INVESTIGATOR" : "CRIMELENS COPILOT"}
+                      </span>
+                    </div>
+                    <div className="bubble-text">{message.content}</div>
+                  </article>
+                );
+              })}
+              {isQuerying && (
+                <div className="copilot-thinking-pill" aria-live="polite">
+                  <span className="dot" />
+                  <span className="dot" />
+                  <span className="dot" />
+                  <span>Reviewing case network & documents…</span>
+                </div>
+              )}
+              <div ref={chatEndRef} />
             </div>
-            <button className="copilot-secondary-action" onClick={fetchTables} disabled={loadingTables}><RefreshIcon /> Refresh</button>
-          </div>
-          {loadingTables ? (
-            <div className="copilot-empty-state"><i className="copilot-spinner" /> Loading the relations register…</div>
-          ) : (
-            <div className="copilot-registers">
-              <article className="copilot-register">
-                <h5>Relationships</h5>
-                <pre>{networkTables?.relationships_table_md || "No relationships are available for this case."}</pre>
-              </article>
-              <article className="copilot-register">
-                <h5>Entity inventory</h5>
-                <pre>{networkTables?.entities_table_md || "No entities are available for this case."}</pre>
-              </article>
-            </div>
-          )}
-        </section>
-      )}
 
-      {activeSubTab === "brief" && (
-        <section className="copilot-data-panel copilot-brief-panel">
-          <div className="copilot-panel-heading">
-            <div>
-              <span className="copilot-eyebrow">INVESTIGATIVE SUMMARY</span>
-              <h4>Network intelligence brief</h4>
-              <p>A concise synthesis of the available relationship graph and evidence context.</p>
+            {/* Input Composer */}
+            <form onSubmit={handleSendMessage} className="copilot-composer-form">
+              <input
+                id="copilot-sidebar-input"
+                type="text"
+                value={inputQuery}
+                onChange={(e) => setInputQuery(e.target.value)}
+                placeholder="Ask about a person, entity, or link…"
+                disabled={isQuerying}
+                className="copilot-input-field"
+              />
+              <button
+                type="submit"
+                disabled={isQuerying || !inputQuery.trim()}
+                className="copilot-send-action-btn"
+                title="Send inquiry"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="m22 2-7 20-4-9-9-4Z" />
+                  <path d="M22 2 11 13" />
+                </svg>
+              </button>
+            </form>
+          </section>
+        )}
+
+        {/* SUBTAB B: NETWORK BRIEF */}
+        {activeSubTab === "brief" && (
+          <section className="copilot-brief-container">
+            <div className="brief-action-bar">
+              <div>
+                <span className="section-eyebrow">EXECUTIVE BRIEF</span>
+                <h4 className="section-heading">Case Network Dossier</h4>
+              </div>
+              <button
+                className="brief-refresh-btn"
+                onClick={generateBrief}
+                disabled={loadingBrief}
+              >
+                <RefreshIcon />
+                <span>{loadingBrief ? "Generating…" : "Refresh"}</span>
+              </button>
             </div>
-            <button className="copilot-primary-action" onClick={generateBrief} disabled={loadingBrief}><RefreshIcon /> {loadingBrief ? "Preparing brief" : "Refresh brief"}</button>
-          </div>
-          {loadingBrief ? (
-            <div className="copilot-empty-state"><i className="copilot-spinner" /> Preparing an evidence-aware summary…</div>
-          ) : (
-            <article className="copilot-brief-content">{brief || "Select “Refresh brief” to generate an investigator-ready network summary."}</article>
-          )}
-        </section>
-      )}
+
+            {loadingBrief ? (
+              <div className="copilot-loading-state">
+                <span className="loading-spinner" />
+                <p>Generating evidence-grounded intelligence brief…</p>
+              </div>
+            ) : brief ? (
+              <div className="brief-card-content">
+                <p className="brief-paragraph">{brief}</p>
+              </div>
+            ) : (
+              <div className="brief-empty-card">
+                <p>Click "Refresh" to synthesize the case network with Gemini AI.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* SUBTAB C: RELATIONS MATRIX */}
+        {activeSubTab === "table" && (
+          <section className="copilot-matrix-container">
+            <div className="matrix-action-bar">
+              <div>
+                <span className="section-eyebrow">NETWORK REGISTER</span>
+                <h4 className="section-heading">Extracted Relationships</h4>
+              </div>
+              <button
+                className="matrix-refresh-btn"
+                onClick={fetchTables}
+                disabled={loadingTables}
+              >
+                <RefreshIcon />
+              </button>
+            </div>
+
+            {/* Filter Input */}
+            <div className="matrix-search-box">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Filter by person, type, or entity…"
+                value={relationFilter}
+                onChange={(e) => setRelationFilter(e.target.value)}
+                className="matrix-search-input"
+              />
+              {relationFilter && (
+                <button className="matrix-clear-btn" onClick={() => setRelationFilter("")}>
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {loadingTables ? (
+              <div className="copilot-loading-state">
+                <span className="loading-spinner" />
+                <p>Loading case relationships…</p>
+              </div>
+            ) : filteredRelationships.length > 0 ? (
+              <div className="matrix-cards-list">
+                {filteredRelationships.map((row, idx) => {
+                  const src = row["Source Entity"] || "Unknown";
+                  const tgt = row["Target Entity"] || "Unknown";
+                  const rel = row["Relationship"] || "CONNECTED_TO";
+                  const conf = row["Confidence"] ? `${Math.round(parseFloat(row["Confidence"]) * 100)}%` : null;
+                  const snippet = row["Evidence Snippet"];
+
+                  return (
+                    <div key={idx} className="matrix-rel-card">
+                      <div className="rel-card-header">
+                        <span className="rel-type-pill">{rel}</span>
+                        {conf && <span className="rel-conf-pill">{conf}</span>}
+                      </div>
+
+                      <div className="rel-card-entities">
+                        <div className="entity-box entity-src" title={src}>
+                          <span className="entity-dot" />
+                          <span className="entity-label">{src}</span>
+                        </div>
+                        <div className="rel-arrow-connector">➔</div>
+                        <div className="entity-box entity-tgt" title={tgt}>
+                          <span className="entity-dot dot-tgt" />
+                          <span className="entity-label">{tgt}</span>
+                        </div>
+                      </div>
+
+                      {snippet && (
+                        <div className="rel-card-snippet">
+                          <span className="snippet-quote">“{snippet}”</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="matrix-empty-state">
+                <p>No matching relationships found.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* SUBTAB D: QUICK PATH FINDER */}
+        {activeSubTab === "path" && (
+          <section className="copilot-path-container">
+            <div className="path-intro-header">
+              <span className="section-eyebrow">CONNECTION FINDER</span>
+              <h4 className="section-heading">Trace Entity Link</h4>
+              <p className="path-subtext">Pick two entities to discover how they connect.</p>
+            </div>
+
+            <form onSubmit={handleQuickPathQuery} className="path-quick-form">
+              <div className="form-group-compact">
+                <label className="compact-label">FROM (SOURCE)</label>
+                <select
+                  value={pathSourceId}
+                  onChange={(e) => setPathSourceId(e.target.value)}
+                  className="compact-select"
+                >
+                  <option value="">Select starting entity…</option>
+                  {pathEntities.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name} ({e.type})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group-compact">
+                <label className="compact-label">TO (TARGET)</label>
+                <select
+                  value={pathTargetId}
+                  onChange={(e) => setPathTargetId(e.target.value)}
+                  className="compact-select"
+                >
+                  <option value="">Select target entity…</option>
+                  {pathEntities.map((e) => (
+                    <option key={e.id} value={e.id} disabled={e.id === pathSourceId}>
+                      {e.name} ({e.type})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!pathSourceId || !pathTargetId || pathSourceId === pathTargetId || pathQuerying}
+                className="path-trace-btn"
+              >
+                {pathQuerying ? "Tracing Connection…" : "Trace Path"}
+              </button>
+            </form>
+
+            {pathError && <div className="path-inline-error">{pathError}</div>}
+
+            {pathResult && pathResult.found && pathResult.nodes && (
+              <div className="quick-path-chain-results">
+                <div className="path-found-banner">
+                  <span>✓ Connection established ({pathResult.hops} hops)</span>
+                </div>
+                <div className="quick-chain-vertical">
+                  {pathResult.nodes.map((node, i) => {
+                    const rel = pathResult.relationships?.[i];
+                    return (
+                      <div key={node.entity_id || i} className="chain-step-group">
+                        <div className={`chain-node-box ${i === 0 ? "is-start" : i === pathResult.nodes.length - 1 ? "is-end" : ""}`}>
+                          <span className="node-type-micro">{node.type}</span>
+                          <span className="node-name-text">{node.name}</span>
+                        </div>
+                        {rel && (
+                          <div className="chain-rel-connector">
+                            <span className="chain-rel-pill">{rel.relationship}</span>
+                            <div className="chain-rel-line" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {pathResult && !pathResult.found && (
+              <div className="path-none-found">
+                <span>No direct or multi-hop path found between selected entities.</span>
+              </div>
+            )}
+          </section>
+        )}
+      </div>
 
       <style jsx>{`
-        .copilot-root { display:flex; flex-direction:column; min-height:620px; background:#fff; color:#1e3048; }
-        .copilot-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1.2rem 1.35rem; border-bottom:1px solid #e0eaf2; background:linear-gradient(110deg,#fff 0%,#f4fbff 100%); }
-        .copilot-heading { display:flex; align-items:center; gap:.85rem; min-width:0; }.copilot-heading-mark { width:38px; height:38px; display:grid; place-items:center; color:#087ec2; background:#e5f5ff; border:1px solid #c0e7fb; border-radius:10px; }.copilot-heading-mark :global(svg) { width:19px; height:19px; }
-        .copilot-eyebrow { display:flex; align-items:center; gap:.38rem; color:#71839b; font-size:.64rem; font-weight:800; letter-spacing:.075em; }.copilot-live-dot { width:6px; height:6px; border-radius:50%; background:#0aae7a; box-shadow:0 0 0 3px rgba(12,170,120,.12); }.copilot-heading h3, .copilot-panel-heading h4 { margin:.12rem 0 .2rem; color:#1c2d44; font-size:1rem; letter-spacing:-.015em; }.copilot-heading p, .copilot-panel-heading p { margin:0; color:#73859b; font-size:.76rem; line-height:1.45; }
-        .copilot-tabs { display:flex; align-items:center; gap:.35rem; padding:.28rem; background:#fff; border:1px solid #dce7f1; border-radius:10px; }.copilot-tab { display:inline-flex; align-items:center; gap:.38rem; padding:.48rem .62rem; color:#64778f; background:transparent; border:1px solid transparent; border-radius:7px; font-size:.74rem; font-weight:650; transition:.16s ease; }.copilot-tab :global(svg) { width:15px; height:15px; }.copilot-tab b { min-width:16px; padding:0 .26rem; border-radius:9px; color:#6c7e94; background:#edf3f7; font-size:.62rem; line-height:1.35rem; }.copilot-tab:hover { color:#087ec2; background:#f4fbff; }.copilot-tab.is-active { color:#087ec2; background:#e7f5ff; border-color:#c2e9fb; }.copilot-tab.is-active b { color:#087ec2; background:#d4effc; }
-        .copilot-chat-panel { display:flex; flex:1; flex-direction:column; min-height:540px; }.copilot-chat-topline { display:flex; justify-content:space-between; padding:.55rem 1.35rem; color:#8091a5; background:#fbfdff; border-bottom:1px solid #e7eef4; font-size:.68rem; font-weight:600; }.copilot-messages { display:flex; flex:1; flex-direction:column; gap:.85rem; min-height:400px; max-height:520px; overflow-y:auto; padding:1.3rem; background:radial-gradient(circle at 5% 0,rgba(78,183,236,.08),transparent 18rem),#fff; }
-        .copilot-message { align-self:flex-start; max-width:min(80%,680px); padding:.8rem .9rem; background:#f7fbfe; border:1px solid #dce8f1; border-radius:4px 12px 12px 12px; box-shadow:0 4px 12px rgba(38,75,105,.035); }.copilot-message.is-user { align-self:flex-end; background:#087ec2; border-color:#087ec2; border-radius:12px 4px 12px 12px; box-shadow:0 6px 15px rgba(7,126,194,.15); }.copilot-message-author { display:block; margin-bottom:.35rem; color:#087ec2; font-size:.61rem; font-weight:800; letter-spacing:.075em; }.is-user .copilot-message-author { color:#d7f2ff; }.copilot-message p { margin:0; color:#475d74; font-size:.84rem; line-height:1.6; white-space:pre-wrap; }.is-user p { color:#fff; }
-        .copilot-thinking { display:flex; align-items:center; align-self:flex-start; gap:.3rem; padding:.65rem .8rem; color:#7690a6; background:#f8fbfd; border:1px solid #e0eaf2; border-radius:8px; font-size:.75rem; }.copilot-thinking span { width:5px; height:5px; background:#0a93db; border-radius:50%; animation:dotPulse 1s infinite alternate; }.copilot-thinking span:nth-child(2) { animation-delay:.2s; }.copilot-thinking span:nth-child(3) { animation-delay:.4s; } @keyframes dotPulse { to { opacity:.3; transform:translateY(-2px); } }
-        .copilot-composer { display:flex; gap:.6rem; padding:.9rem 1.1rem; background:#fff; border-top:1px solid #e0eaf2; }.copilot-composer input { flex:1; min-width:0; height:42px; padding:0 .85rem; color:#26384f; background:#fbfdff; border:1px solid #d7e3ed; border-radius:8px; font-size:.82rem; }.copilot-composer input::placeholder { color:#9aaaba; }.copilot-composer input:focus { outline:0; border-color:#0787d1; box-shadow:0 0 0 3px rgba(7,135,209,.11); }.copilot-composer button, .copilot-primary-action, .copilot-secondary-action { display:inline-flex; align-items:center; justify-content:center; gap:.42rem; height:42px; padding:0 .85rem; border-radius:8px; font-size:.76rem; font-weight:700; transition:.16s ease; }.copilot-composer button, .copilot-primary-action { color:#fff; background:#0787d1; border:1px solid #0787d1; }.copilot-composer button:hover:not(:disabled), .copilot-primary-action:hover:not(:disabled) { background:#056eaf; }.copilot-composer button:disabled, .copilot-primary-action:disabled, .copilot-secondary-action:disabled { opacity:.55; cursor:not-allowed; }.copilot-composer :global(svg), .copilot-primary-action :global(svg), .copilot-secondary-action :global(svg) { width:15px; height:15px; }
-        .copilot-data-panel { flex:1; padding:1.45rem; background:#fff; }.copilot-panel-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding-bottom:1.2rem; border-bottom:1px solid #e0eaf2; }.copilot-panel-heading h4 { font-size:1.05rem; }.copilot-secondary-action { color:#52677e; background:#fff; border:1px solid #d7e2ec; }.copilot-secondary-action:hover:not(:disabled) { color:#087ec2; border-color:#aadcf2; background:#f4fbff; }.copilot-registers { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1.2rem; }.copilot-register { overflow:hidden; border:1px solid #dce7f1; border-radius:10px; }.copilot-register h5 { margin:0; padding:.72rem .85rem; color:#40536b; background:#f6fbfe; border-bottom:1px solid #e0eaf2; font-size:.73rem; font-weight:750; letter-spacing:.02em; }.copilot-register pre { min-height:250px; max-height:440px; overflow:auto; margin:0; padding:.9rem; color:#4e627a; background:#fff; font: .72rem/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space:pre-wrap; }
-        .copilot-empty-state { display:flex; align-items:center; justify-content:center; gap:.65rem; min-height:270px; color:#74889e; font-size:.82rem; }.copilot-spinner { width:18px; height:18px; border:2px solid #d5e8f3; border-top-color:#0787d1; border-radius:50%; animation:spin .8s linear infinite; } @keyframes spin { to { transform:rotate(360deg); } }
-        .copilot-brief-content { min-height:250px; margin-top:1.2rem; padding:1.15rem; color:#465b73; background:#f8fbfe; border:1px solid #e0eaf2; border-radius:10px; font-size:.86rem; line-height:1.75; white-space:pre-wrap; }.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
-        @media (max-width: 780px) { .copilot-header, .copilot-panel-heading { align-items:stretch; flex-direction:column; }.copilot-tabs { align-self:flex-start; max-width:100%; overflow-x:auto; }.copilot-registers { grid-template-columns:1fr; }.copilot-message { max-width:92%; }.copilot-chat-topline { gap:.75rem; flex-direction:column; }.copilot-composer button span { display:none; } }
+        .copilot-sidebar-root {
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          height: 100%;
+          background: #ffffff;
+          border-radius: 12px;
+          overflow: hidden;
+          font-family: inherit;
+        }
+
+        .is-sidebar-mode {
+          min-height: 540px;
+          height: 100%;
+        }
+
+        /* 1. HEADER */
+        .copilot-sidebar-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          padding: 1rem 1.15rem;
+          background: #f8fbfe;
+          border-bottom: 1px solid #dce7f1;
+        }
+
+        .copilot-header-info {
+          min-width: 0;
+        }
+
+        .copilot-badge-row {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          margin-bottom: 0.2rem;
+        }
+
+        .copilot-live-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #0caa78;
+          box-shadow: 0 0 0 3px rgba(12, 170, 120, 0.18);
+        }
+
+        .copilot-badge-text {
+          font-size: 0.65rem;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          color: #0787d1;
+        }
+
+        .copilot-title {
+          font-size: 1rem;
+          font-weight: 750;
+          color: #162033;
+          margin: 0;
+          line-height: 1.25;
+        }
+
+        .copilot-subtitle {
+          font-size: 0.73rem;
+          color: #71829b;
+          margin: 0.15rem 0 0;
+        }
+
+        .copilot-close-btn {
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 6px;
+          border: 1px solid #dce7f1;
+          background: #ffffff;
+          color: #64778f;
+          cursor: pointer;
+          font-size: 0.85rem;
+          transition: all 0.16s ease;
+        }
+
+        .copilot-close-btn:hover {
+          background: #fef2f2;
+          color: #ef4444;
+          border-color: #fca5a5;
+        }
+
+        /* 2. SUB-NAVIGATION PILLS */
+        .copilot-nav-pills {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.45rem 0.65rem;
+          background: #f1f6fa;
+          border-bottom: 1px solid #dce7f1;
+        }
+
+        .nav-pill-btn {
+          flex: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.35rem;
+          padding: 0.42rem 0.5rem;
+          border-radius: 7px;
+          border: 1px solid transparent;
+          background: transparent;
+          color: #64778f;
+          font-size: 0.74rem;
+          font-weight: 650;
+          cursor: pointer;
+          transition: all 0.16s ease;
+        }
+
+        .nav-pill-btn :global(svg) {
+          width: 14px;
+          height: 14px;
+        }
+
+        .nav-pill-btn:hover {
+          color: #0787d1;
+          background: #eaf5fd;
+        }
+
+        .nav-pill-btn.is-active {
+          color: #0787d1;
+          background: #ffffff;
+          border-color: #cde4f3;
+          box-shadow: 0 2px 6px rgba(34, 72, 104, 0.05);
+        }
+
+        .count-pill {
+          padding: 0 0.28rem;
+          border-radius: 10px;
+          font-size: 0.62rem;
+          background: #e2edf6;
+          color: #556c86;
+        }
+
+        .is-active .count-pill {
+          background: #e1f2fc;
+          color: #0787d1;
+        }
+
+        /* 3. TAB BODY */
+        .copilot-tab-body {
+          flex: 1;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+        }
+
+        /* CHAT SECTION */
+        .copilot-chat-container {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          min-height: 0;
+        }
+
+        .copilot-context-status {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.45rem 0.85rem;
+          background: #f8fcff;
+          border-bottom: 1px solid #e5eef5;
+          font-size: 0.68rem;
+          font-weight: 600;
+          color: #667c94;
+        }
+
+        .status-indicator-dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: #0caa78;
+        }
+
+        .quick-suggestions-block {
+          padding: 0.75rem 0.85rem;
+          background: #fbfdff;
+          border-bottom: 1px solid #edf3f8;
+        }
+
+        .suggestions-title {
+          font-size: 0.61rem;
+          font-weight: 800;
+          letter-spacing: 0.06em;
+          color: #8c9eb2;
+          display: block;
+          margin-bottom: 0.4rem;
+        }
+
+        .suggestions-chips {
+          display: flex;
+          flex-direction: column;
+          gap: 0.35rem;
+        }
+
+        .suggestion-chip {
+          display: block;
+          text-align: left;
+          padding: 0.38rem 0.65rem;
+          border-radius: 6px;
+          border: 1px solid #dce8f2;
+          background: #ffffff;
+          color: #384d66;
+          font-size: 0.72rem;
+          font-weight: 550;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .suggestion-chip:hover {
+          background: #edf6fd;
+          border-color: #bce1f7;
+          color: #0787d1;
+        }
+
+        .copilot-messages-feed {
+          flex: 1;
+          overflow-y: auto;
+          padding: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+          min-height: 260px;
+          max-height: 480px;
+        }
+
+        .copilot-bubble {
+          max-width: 90%;
+          padding: 0.65rem 0.85rem;
+          border-radius: 8px;
+          box-shadow: 0 2px 6px rgba(34, 72, 104, 0.03);
+        }
+
+        .bubble-copilot {
+          align-self: flex-start;
+          background: #f8fbfd;
+          border: 1px solid #dce7f1;
+        }
+
+        .bubble-user {
+          align-self: flex-end;
+          background: #0787d1;
+          border: 1px solid #0787d1;
+          color: #ffffff;
+        }
+
+        .bubble-header {
+          margin-bottom: 0.25rem;
+        }
+
+        .bubble-author {
+          font-size: 0.58rem;
+          font-weight: 800;
+          letter-spacing: 0.07em;
+          color: #0787d1;
+        }
+
+        .bubble-user .bubble-author {
+          color: #e0f2fe;
+        }
+
+        .bubble-text {
+          font-size: 0.8rem;
+          line-height: 1.5;
+          color: #27384f;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+
+        .bubble-user .bubble-text {
+          color: #ffffff;
+        }
+
+        .copilot-thinking-pill {
+          align-self: flex-start;
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.45rem 0.75rem;
+          background: #f4fbfe;
+          border: 1px solid #cce8f8;
+          border-radius: 7px;
+          font-size: 0.72rem;
+          color: #087ec2;
+        }
+
+        .copilot-thinking-pill .dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: #0787d1;
+          animation: dot-pulse 1s infinite alternate;
+        }
+
+        .copilot-thinking-pill .dot:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+        .copilot-thinking-pill .dot:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+
+        @keyframes dot-pulse {
+          to {
+            opacity: 0.25;
+            transform: translateY(-2px);
+          }
+        }
+
+        .copilot-composer-form {
+          display: flex;
+          gap: 0.45rem;
+          padding: 0.75rem 0.85rem;
+          background: #ffffff;
+          border-top: 1px solid #dce7f1;
+        }
+
+        .copilot-input-field {
+          flex: 1;
+          min-width: 0;
+          height: 38px;
+          padding: 0 0.75rem;
+          background: #fbfdff;
+          border: 1px solid #d4e1ec;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          color: #1e2c3f;
+          outline: none;
+        }
+
+        .copilot-input-field:focus {
+          border-color: #0787d1;
+          box-shadow: 0 0 0 2px rgba(7, 135, 209, 0.12);
+        }
+
+        .copilot-send-action-btn {
+          width: 38px;
+          height: 38px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 8px;
+          border: 1px solid #0787d1;
+          background: #0787d1;
+          color: #ffffff;
+          cursor: pointer;
+          transition: all 0.16s ease;
+        }
+
+        .copilot-send-action-btn:hover:not(:disabled) {
+          background: #056eaf;
+        }
+
+        .copilot-send-action-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        /* BRIEF SECTION */
+        .copilot-brief-container {
+          padding: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.85rem;
+        }
+
+        .brief-action-bar,
+        .matrix-action-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding-bottom: 0.65rem;
+          border-bottom: 1px solid #e0eaf2;
+        }
+
+        .section-eyebrow {
+          font-size: 0.6rem;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          color: #0787d1;
+        }
+
+        .section-heading {
+          margin: 0.1rem 0 0;
+          font-size: 0.88rem;
+          font-weight: 700;
+          color: #162033;
+        }
+
+        .brief-refresh-btn,
+        .matrix-refresh-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.35rem 0.65rem;
+          border-radius: 6px;
+          border: 1px solid #d4e1ec;
+          background: #ffffff;
+          color: #556c86;
+          font-size: 0.72rem;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .brief-refresh-btn:hover,
+        .matrix-refresh-btn:hover {
+          background: #edf6fc;
+          color: #0787d1;
+          border-color: #bde0f6;
+        }
+
+        .brief-refresh-btn :global(svg),
+        .matrix-refresh-btn :global(svg) {
+          width: 13px;
+          height: 13px;
+        }
+
+        .brief-card-content {
+          padding: 1rem;
+          border-radius: 8px;
+          border: 1px solid #dce7f1;
+          background: #f8fbfd;
+        }
+
+        .brief-paragraph {
+          margin: 0;
+          font-size: 0.8rem;
+          line-height: 1.65;
+          color: #37485e;
+          white-space: pre-wrap;
+        }
+
+        .brief-empty-card,
+        .matrix-empty-state,
+        .copilot-loading-state {
+          padding: 1.5rem;
+          text-align: center;
+          font-size: 0.78rem;
+          color: #71829b;
+          border: 1px dashed #dce7f1;
+          border-radius: 8px;
+          background: #fbfdff;
+        }
+
+        .loading-spinner {
+          display: inline-block;
+          width: 20px;
+          height: 20px;
+          border: 2px solid #e1ecf4;
+          border-top-color: #0787d1;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+          margin-bottom: 0.5rem;
+        }
+
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        /* MATRIX SECTION */
+        .copilot-matrix-container {
+          padding: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+
+        .matrix-search-box {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+
+        .matrix-search-box svg {
+          position: absolute;
+          left: 0.65rem;
+          color: #8c9eb2;
+          pointer-events: none;
+        }
+
+        .matrix-search-input {
+          width: 100%;
+          height: 34px;
+          padding: 0 1.8rem 0 2rem;
+          border-radius: 6px;
+          border: 1px solid #d4e1ec;
+          background: #fbfdff;
+          font-size: 0.75rem;
+          color: #27384f;
+          outline: none;
+        }
+
+        .matrix-search-input:focus {
+          border-color: #0787d1;
+        }
+
+        .matrix-clear-btn {
+          position: absolute;
+          right: 0.5rem;
+          background: none;
+          border: none;
+          color: #8c9eb2;
+          font-size: 0.75rem;
+          cursor: pointer;
+        }
+
+        .matrix-cards-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.6rem;
+          max-height: 480px;
+          overflow-y: auto;
+        }
+
+        .matrix-rel-card {
+          padding: 0.7rem 0.8rem;
+          border-radius: 8px;
+          border: 1px solid #dce7f1;
+          background: #ffffff;
+          box-shadow: 0 2px 6px rgba(34, 72, 104, 0.025);
+        }
+
+        .rel-card-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 0.4rem;
+        }
+
+        .rel-type-pill {
+          font-size: 0.64rem;
+          font-weight: 800;
+          letter-spacing: 0.05em;
+          padding: 0.15rem 0.4rem;
+          border-radius: 4px;
+          background: #e7f5ff;
+          color: #0787d1;
+          font-family: ui-monospace, monospace;
+        }
+
+        .rel-conf-pill {
+          font-size: 0.62rem;
+          font-weight: 700;
+          color: #0caa78;
+          font-family: ui-monospace, monospace;
+        }
+
+        .rel-card-entities {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .entity-box {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.35rem 0.5rem;
+          background: #f8fbfd;
+          border: 1px solid #e1ebf4;
+          border-radius: 6px;
+        }
+
+        .entity-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #0284c7;
+          flex-shrink: 0;
+        }
+
+        .dot-tgt {
+          background: #16a34a;
+        }
+
+        .entity-label {
+          font-size: 0.74rem;
+          font-weight: 650;
+          color: #1e2c3e;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .rel-arrow-connector {
+          font-size: 0.8rem;
+          color: #8c9eb2;
+          flex-shrink: 0;
+        }
+
+        .rel-card-snippet {
+          margin-top: 0.45rem;
+          padding-top: 0.4rem;
+          border-top: 1px dashed #e8f0f5;
+        }
+
+        .snippet-quote {
+          font-size: 0.68rem;
+          line-height: 1.4;
+          color: #64778f;
+          font-style: italic;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        /* PATH SECTION */
+        .copilot-path-container {
+          padding: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.85rem;
+        }
+
+        .path-intro-header {
+          border-bottom: 1px solid #e0eaf2;
+          padding-bottom: 0.65rem;
+        }
+
+        .path-subtext {
+          font-size: 0.72rem;
+          color: #71829b;
+          margin: 0.15rem 0 0;
+        }
+
+        .path-quick-form {
+          display: flex;
+          flex-direction: column;
+          gap: 0.65rem;
+        }
+
+        .form-group-compact {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .compact-label {
+          font-size: 0.62rem;
+          font-weight: 800;
+          letter-spacing: 0.05em;
+          color: #71829b;
+        }
+
+        .compact-select {
+          width: 100%;
+          height: 36px;
+          padding: 0 0.65rem;
+          border-radius: 6px;
+          border: 1px solid #d4e1ec;
+          background: #ffffff;
+          font-size: 0.76rem;
+          color: #27384f;
+          outline: none;
+        }
+
+        .compact-select:focus {
+          border-color: #0787d1;
+        }
+
+        .path-trace-btn {
+          width: 100%;
+          height: 38px;
+          border-radius: 6px;
+          border: 1px solid #0787d1;
+          background: #e7f5ff;
+          color: #0787d1;
+          font-size: 0.78rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.16s ease;
+          margin-top: 0.25rem;
+        }
+
+        .path-trace-btn:hover:not(:disabled) {
+          background: #0787d1;
+          color: #ffffff;
+        }
+
+        .path-trace-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .path-inline-error {
+          padding: 0.5rem 0.65rem;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          border-radius: 6px;
+          color: #dc2626;
+          font-size: 0.72rem;
+        }
+
+        .path-found-banner {
+          padding: 0.45rem 0.65rem;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          border-radius: 6px;
+          color: #16a34a;
+          font-size: 0.72rem;
+          font-weight: 650;
+          margin-bottom: 0.65rem;
+        }
+
+        .quick-chain-vertical {
+          display: flex;
+          flex-direction: column;
+          gap: 0.35rem;
+        }
+
+        .chain-step-group {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .chain-node-box {
+          width: 100%;
+          padding: 0.55rem 0.75rem;
+          border-radius: 6px;
+          border: 1px solid #dce7f1;
+          background: #ffffff;
+          display: flex;
+          flex-direction: column;
+          gap: 0.15rem;
+        }
+
+        .chain-node-box.is-start {
+          border-color: #0787d1;
+          background: #f0f9ff;
+        }
+
+        .chain-node-box.is-end {
+          border-color: #16a34a;
+          background: #f0fdf4;
+        }
+
+        .node-type-micro {
+          font-size: 0.58rem;
+          font-weight: 800;
+          color: #0787d1;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+
+        .node-name-text {
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: #1e2c3e;
+        }
+
+        .chain-rel-connector {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 0.35rem 0;
+        }
+
+        .chain-rel-pill {
+          font-size: 0.62rem;
+          font-weight: 800;
+          padding: 0.12rem 0.45rem;
+          border-radius: 4px;
+          background: #f1f5f9;
+          color: #475569;
+          font-family: ui-monospace, monospace;
+        }
+
+        .chain-rel-line {
+          width: 2px;
+          height: 12px;
+          background: #cbd5e1;
+        }
+
+        .path-none-found {
+          padding: 1rem;
+          border-radius: 6px;
+          background: #f8fafc;
+          border: 1px dashed #cbd5e1;
+          font-size: 0.74rem;
+          color: #64748b;
+          text-align: center;
+        }
       `}</style>
     </div>
   );

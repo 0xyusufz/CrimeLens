@@ -403,7 +403,7 @@ export default function CaseInsightsView({ caseId }) {
           <h3 className="insights-empty-title">No Intelligence Generated</h3>
           <p className="insights-empty-sub">
             No intelligence patterns or leads have been generated for this case yet.
-            Intelligence is derived from evidence processing — upload and process documents
+            Intelligence is derived from evidence processing: upload and process documents
             to enable pattern detection.
           </p>
         </div>
@@ -448,7 +448,7 @@ export default function CaseInsightsView({ caseId }) {
             <span>
               <strong style={{ color: "#64748b" }}>Investigator Responsibility: </strong>
               AI discovers. Graph connects. Evidence supports. Investigator decides.
-              Patterns and leads are algorithmic hypotheses — not determinations of fact or culpability.
+              Patterns and leads are algorithmic hypotheses, not determinations of fact or culpability.
               All intelligence must be independently verified before any operational action.
             </span>
           </div>

@@ -50,6 +50,57 @@ def create_case(
     return case
 
 
+def update_case(
+    session: Session,
+    case_id: uuid.UUID,
+    *,
+    title: str | None = None,
+    description: str | None = None,
+    status: CaseStatus | None = None,
+) -> Case:
+    case = session.get(Case, case_id)
+    if case is None:
+        raise CaseNotFoundError(case_id)
+    if title is not None:
+        case.title = title
+    if description is not None:
+        case.description = description
+    if status is not None:
+        case.status = status
+    session.commit()
+    session.refresh(case)
+    return case
+
+
+def delete_case(
+    session: Session,
+    case_id: uuid.UUID,
+) -> None:
+    case = session.get(Case, case_id)
+    if case is None:
+        raise CaseNotFoundError(case_id)
+
+    # Optional Neo4j graph cleanup for this case
+    try:
+        from app.graph.driver import get_driver
+        driver = get_driver()
+        with driver.session() as neo_session:
+            neo_session.run(
+                "MATCH ()-[r {case_id: $case_id}]->() DELETE r",
+                case_id=str(case_id),
+            )
+            neo_session.run(
+                "MATCH (c:Case {case_id: $case_id}) DETACH DELETE c",
+                case_id=str(case_id),
+            )
+    except Exception:
+        # Neo4j is derived cache layer; do not block deletion if offline
+        pass
+
+    session.delete(case)
+    session.commit()
+
+
 def list_cases(session: Session) -> list[Case]:
     stmt = select(Case).order_by(Case.created_at.desc(), Case.id.desc())
     return list(session.scalars(stmt).all())

@@ -15,8 +15,9 @@ export default function CaseDetailsPage() {
   const router = useRouter();
   const fileInputRef = useRef(null);
 
-  // Workspace Tab: "graph" | "documents"
+  // Workspace Tab: "graph" | "documents" | "path" | "insights"
   const [activeTab, setActiveTab] = useState("graph");
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
 
   // Case data states
   const [caseData, setCaseData] = useState(null);
@@ -32,7 +33,7 @@ export default function CaseDetailsPage() {
   const [uploadSuccess, setUploadSuccess] = useState(null);
   const [uploadError, setUploadError] = useState(null);
 
-  // Process document states — keyed by document ID
+  // Process document states: keyed by document ID
   // processStates[id] = { status: 'idle'|'processing'|'success'|'error', message: string|null }
   const [processStates, setProcessStates] = useState({});
 
@@ -199,7 +200,7 @@ export default function CaseDetailsPage() {
       } else if (err?.status >= 500) {
         msg = "A server error occurred during processing. Please try again.";
       } else if (err?.message?.includes("Network")) {
-        msg = "Network error — please ensure the backend is running.";
+        msg = "Network error. Please ensure the backend is running.";
       } else {
         msg = err.message || "Processing failed. Please try again.";
       }
@@ -284,7 +285,7 @@ export default function CaseDetailsPage() {
 
   // Formatting helpers
   const formatDate = (dateString) => {
-    if (!dateString) return "—";
+    if (!dateString) return "N/A";
     try {
       const d = new Date(dateString);
       return d.toLocaleDateString("en-US", {
@@ -441,97 +442,102 @@ export default function CaseDetailsPage() {
 
             {/* WORKSPACE NAVIGATION TABS */}
             <div className="workspace-tabs-bar">
-              <button
-                onClick={() => setActiveTab("graph")}
-                className={`workspace-tab-btn ${activeTab === "graph" ? "tab-btn-active" : ""}`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="6" cy="6" r="3" />
-                  <circle cx="18" cy="18" r="3" />
-                  <circle cx="18" cy="6" r="3" />
-                  <line x1="8.5" y1="7.5" x2="15.5" y2="16.5" />
-                  <line x1="9" y1="6" x2="15" y2="6" />
-                </svg>
-                <span>Network Graph</span>
-              </button>
+              <div className="tabs-primary-row">
+                <button
+                  onClick={() => setActiveTab("graph")}
+                  className={`workspace-tab-btn ${activeTab === "graph" ? "tab-btn-active" : ""}`}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="6" cy="6" r="3" />
+                    <circle cx="18" cy="18" r="3" />
+                    <circle cx="18" cy="6" r="3" />
+                    <line x1="8.5" y1="7.5" x2="15.5" y2="16.5" />
+                    <line x1="9" y1="6" x2="15" y2="6" />
+                  </svg>
+                  <span>Network Graph</span>
+                </button>
 
-              <button
-                onClick={() => setActiveTab("documents")}
-                className={`workspace-tab-btn ${activeTab === "documents" ? "tab-btn-active" : ""}`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                </svg>
-                <span>Evidence & Documents ({documents.length})</span>
-              </button>
+                <button
+                  onClick={() => setActiveTab("documents")}
+                  className={`workspace-tab-btn ${activeTab === "documents" ? "tab-btn-active" : ""}`}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                  <span>Evidence & Documents ({documents.length})</span>
+                </button>
 
-              <button
-                onClick={() => setActiveTab("path")}
-                className={`workspace-tab-btn ${activeTab === "path" ? "tab-btn-active" : ""}`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                </svg>
-                <span>Investigation Path</span>
-              </button>
+                <button
+                  onClick={() => setActiveTab("path")}
+                  className={`workspace-tab-btn ${activeTab === "path" ? "tab-btn-active" : ""}`}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                  </svg>
+                  <span>Investigation Path</span>
+                </button>
 
-              <button
-                onClick={() => setActiveTab("insights")}
-                className={`workspace-tab-btn ${activeTab === "insights" ? "tab-btn-active" : ""}`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                </svg>
-                <span>Intelligence</span>
-              </button>
+                <button
+                  onClick={() => setActiveTab("insights")}
+                  className={`workspace-tab-btn ${activeTab === "insights" ? "tab-btn-active" : ""}`}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                  <span>Intelligence</span>
+                </button>
+              </div>
 
-              <button
-                onClick={() => setActiveTab("copilot")}
-                className={`workspace-tab-btn ${activeTab === "copilot" ? "tab-btn-active" : ""}`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-                <span>AI Copilot & Network</span>
-              </button>
+              <div className="tabs-secondary-row">
+                <button
+                  onClick={() => setIsCopilotOpen((prev) => !prev)}
+                  className={`workspace-tab-btn copilot-toggle-btn ${isCopilotOpen ? "tab-btn-active" : ""}`}
+                  title={isCopilotOpen ? "Close AI Copilot Sidebar" : "Open AI Copilot Sidebar"}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span>AI Copilot & Network</span>
+                  <span className="copilot-sidebar-indicator">
+                    <span className="live-dot-pulse" />
+                    {isCopilotOpen ? "OPEN" : "SIDEBAR"}
+                  </span>
+                </button>
+              </div>
             </div>
 
-            {/* TAB 1: NETWORK GRAPH INVESTIGATION */}
-            {activeTab === "graph" && (
-              <section className="graph-workspace-section">
-                <CaseGraphView key={graphRefreshKey} caseId={caseId} />
-              </section>
-            )}
+            {/* WORKSPACE LAYOUT WITH DOCKED/SLIDE-OUT COPILOT SIDEBAR */}
+            <div className={`case-workspace-layout ${isCopilotOpen ? "has-copilot-open" : ""}`}>
+              <div className="workspace-main-column">
+                {/* TAB 1: NETWORK GRAPH INVESTIGATION */}
+                {(activeTab === "graph" || activeTab === "copilot") && (
+                  <section className="graph-workspace-section">
+                    <CaseGraphView key={graphRefreshKey} caseId={caseId} />
+                  </section>
+                )}
 
-            {/* TAB 3: INVESTIGATION PATH */}
-            {activeTab === "path" && (
-              <section className="graph-workspace-section">
-                <InvestigationPathView caseId={caseId} />
-              </section>
-            )}
+                {/* TAB 3: INVESTIGATION PATH */}
+                {activeTab === "path" && (
+                  <section className="graph-workspace-section">
+                    <InvestigationPathView caseId={caseId} />
+                  </section>
+                )}
 
-            {/* TAB 4: INTELLIGENCE / INSIGHTS */}
-            {activeTab === "insights" && (
-              <section className="graph-workspace-section">
-                <CaseInsightsView key={graphRefreshKey} caseId={caseId} />
-              </section>
-            )}
+                {/* TAB 4: INTELLIGENCE / INSIGHTS */}
+                {activeTab === "insights" && (
+                  <section className="graph-workspace-section">
+                    <CaseInsightsView key={graphRefreshKey} caseId={caseId} />
+                  </section>
+                )}
 
-            {/* TAB 5: AI COPILOT & NETWORK */}
-            {activeTab === "copilot" && (
-              <section className="graph-workspace-section">
-                <CaseCopilotView caseId={caseId} />
-              </section>
-            )}
-
-            {/* TAB 2: DOCUMENTS MANAGEMENT SECTION */}
-            {activeTab === "documents" && (
-              <section className="documents-section">
-                <div className="section-header-bar">
-                  <div className="section-title-group">
-                    <div className="title-with-count">
-                      <h2 className="section-title">Evidence & Documents</h2>
+                {/* TAB 2: DOCUMENTS MANAGEMENT SECTION */}
+                {activeTab === "documents" && (
+                  <section className="documents-section">
+                    <div className="section-header-bar">
+                      <div className="section-title-group">
+                        <div className="title-with-count">
+                          <h2 className="section-title">Evidence & Documents</h2>
                       {!loadingDocs && (
                         <span className="doc-count-badge">
                           {documents.length} {documents.length === 1 ? "document" : "documents"}
@@ -798,7 +804,7 @@ export default function CaseDetailsPage() {
                             <div className="doc-actions-group">
                               {/* PROCESS DOCUMENT BUTTON */}
                               {isSuccess ? (
-                                <div className="doc-process-success" title="ML pipeline ran — graph and intelligence updated">
+                                <div className="doc-process-success" title="ML pipeline ran: graph and intelligence updated">
                                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                     <polyline points="20 6 9 17 4 12" />
                                   </svg>
@@ -845,9 +851,44 @@ export default function CaseDetailsPage() {
               </div>
             </section>
           )}
-          </div>
+        </div>
+
+        {/* COPILOT SIDEBAR DRAWER */}
+        {isCopilotOpen && (
+          <>
+            <div
+              className="copilot-mobile-backdrop"
+              onClick={() => setIsCopilotOpen(false)}
+              aria-hidden="true"
+            />
+            <aside className="workspace-copilot-sidebar">
+              <CaseCopilotView
+                caseId={caseId}
+                onClose={() => setIsCopilotOpen(false)}
+                isSidebar={true}
+              />
+            </aside>
+          </>
         )}
       </div>
+
+      {/* FLOATING QUICK-ACCESS TRIGGER */}
+      {!isCopilotOpen && (
+        <button
+          onClick={() => setIsCopilotOpen(true)}
+          className="floating-copilot-bubble-btn"
+          title="Open AI Copilot & Network Sidebar"
+        >
+          <span className="bubble-live-dot" />
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          <span>AI Copilot</span>
+        </button>
+      )}
+    </div>
+  )}
+</div>
 
       <style>{`
         .case-details-container {
@@ -859,10 +900,24 @@ export default function CaseDetailsPage() {
         .workspace-tabs-bar {
           display: flex;
           align-items: center;
+          justify-content: space-between;
           gap: 0.75rem;
           margin-bottom: 1.75rem;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           padding-bottom: 0.85rem;
+          flex-wrap: wrap;
+        }
+
+        .tabs-primary-row {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+        }
+
+        .tabs-secondary-row {
+          display: flex;
+          align-items: center;
         }
 
         .workspace-tab-btn {
@@ -891,6 +946,125 @@ export default function CaseDetailsPage() {
           border-color: rgba(56, 189, 248, 0.45);
           color: #38bdf8;
           box-shadow: 0 0 14px rgba(14, 165, 233, 0.18);
+        }
+
+        .copilot-toggle-btn {
+          border-color: rgba(14, 165, 233, 0.3) !important;
+          background: rgba(14, 165, 233, 0.08) !important;
+          color: #0284c7 !important;
+        }
+
+        .copilot-toggle-btn:hover {
+          background: rgba(14, 165, 233, 0.16) !important;
+          border-color: #0284c7 !important;
+        }
+
+        .copilot-sidebar-indicator {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.3rem;
+          padding: 0.1rem 0.4rem;
+          border-radius: 4px;
+          background: rgba(14, 165, 233, 0.12);
+          font-size: 0.62rem;
+          font-weight: 800;
+          letter-spacing: 0.04em;
+        }
+
+        .live-dot-pulse {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: #0caa78;
+        }
+
+        .case-workspace-layout {
+          display: flex;
+          width: 100%;
+          gap: 1.25rem;
+          align-items: flex-start;
+          position: relative;
+        }
+
+        .workspace-main-column {
+          flex: 1;
+          min-width: 0;
+          width: 100%;
+        }
+
+        .workspace-copilot-sidebar {
+          width: 420px;
+          flex-shrink: 0;
+          position: sticky;
+          top: 85px;
+          max-height: calc(100vh - 110px);
+          overflow: hidden;
+          border-radius: 12px;
+          border: 1px solid #dce7f1;
+          background: #ffffff;
+          box-shadow: 0 12px 35px rgba(34, 72, 104, 0.08);
+          display: flex;
+          flex-direction: column;
+          z-index: 40;
+        }
+
+        @media (max-width: 1180px) {
+          .workspace-copilot-sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: min(440px, 94vw);
+            max-height: 100vh;
+            border-radius: 0;
+            z-index: 1000;
+            box-shadow: -10px 0 35px rgba(22, 32, 51, 0.25);
+          }
+
+          .copilot-mobile-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(22, 32, 51, 0.4);
+            backdrop-filter: blur(3px);
+            z-index: 999;
+          }
+        }
+
+        .floating-copilot-bubble-btn {
+          position: fixed;
+          right: 1.75rem;
+          bottom: 1.75rem;
+          z-index: 80;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.65rem 1.1rem;
+          border-radius: 30px;
+          background: #0787d1;
+          color: #ffffff;
+          border: 1px solid rgba(255, 255, 255, 0.35);
+          box-shadow: 0 8px 24px rgba(7, 135, 209, 0.35);
+          font-size: 0.82rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .floating-copilot-bubble-btn:hover {
+          background: #056eaf;
+          transform: translateY(-2px);
+          box-shadow: 0 12px 28px rgba(7, 135, 209, 0.45);
+        }
+
+        .bubble-live-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #34d399;
+          box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.3);
         }
 
         .graph-workspace-section {
