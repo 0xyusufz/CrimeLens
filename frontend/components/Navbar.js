@@ -24,9 +24,10 @@ export default function Navbar() {
             <CrimeLensLogo size={36} iconSize={20} withBadge={true} />
             <div className="header-titles">
               <span className="brand-name">
-                Crime<span className="brand-name-accent">Lens</span>
+                <span className="brand-text-crime">Crime</span>
+                <span className="brand-text-lens">Lens<span className="brand-optic-dot"></span></span>
               </span>
-              <span className="system-subtitle">Investigation Dashboard</span>
+              <span className="system-subtitle">FORENSIC INTELLIGENCE</span>
             </div>
           </Link>
         </div>
@@ -34,11 +35,12 @@ export default function Navbar() {
         {/* USER PROFILE & LOGOUT */}
         <div className="header-actions-group">
           <div className="user-profile-card">
-            <div className="user-avatar-indicator" title="Officer Profile">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="user-avatar-indicator" title="Officer Active Session">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                 <circle cx="12" cy="7" r="4"/>
               </svg>
+              <span className="user-status-dot" title="Session Active"></span>
             </div>
             <div className="user-details">
               <div className="user-name-role">
@@ -51,16 +53,16 @@ export default function Navbar() {
           <button
             onClick={logout}
             className="logout-button"
-            title="Logout"
+            title="Sign out of CrimeLens"
             aria-label="Logout"
           >
             <svg
-              width="18"
-              height="18"
+              width="17"
+              height="17"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="2.2"
               strokeLinecap="round"
               strokeLinejoin="round"
               className="logout-icon"
@@ -75,19 +77,21 @@ export default function Navbar() {
 
       <style>{`
         .investigation-header {
-          background-color: rgba(11, 16, 27, 0.92);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border-bottom: 1px solid rgba(56, 189, 248, 0.12);
+          background-color: #ffffff;
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-bottom: 1px solid #e2e8f0;
           position: sticky;
           top: 0;
           z-index: 50;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+          transition: all 0.2s ease;
         }
 
         .header-container {
-          max-width: 1280px;
+          max-width: 1440px;
           margin: 0 auto;
-          padding: 0.85rem 1.5rem;
+          padding: 0.75rem clamp(1.25rem, 3.5vw, 2.5rem);
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -109,62 +113,135 @@ export default function Navbar() {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 36px;
-          height: 36px;
-          background: rgba(14, 165, 233, 0.08);
-          border: 1px solid rgba(56, 189, 248, 0.25);
-          border-radius: 9px;
-          box-shadow: 0 0 12px rgba(14, 165, 233, 0.2);
+          width: 38px;
+          height: 38px;
+          border-radius: 11px;
+          background: #0f172a;
+          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
         }
 
         .header-titles {
           display: flex;
           flex-direction: column;
-          gap: 0.1rem;
+          justify-content: center;
+          gap: 1.5px;
         }
 
         .brand-name {
-          font-size: 1.15rem;
-          font-weight: 700;
-          letter-spacing: -0.02em;
-          color: #f8fafc;
-          line-height: 1.1;
+          font-family: 'Plus Jakarta Sans', var(--font-sans);
+          font-size: 1.40rem;
+          font-weight: 850;
+          letter-spacing: -0.04em;
+          display: inline-flex;
+          align-items: baseline;
+          line-height: 1.15;
+          user-select: none;
+          position: relative;
+        }
+
+        .brand-text-crime {
+          color: #0b0f19;
+          font-weight: 850;
+          letter-spacing: -0.04em;
+          transition: color 0.2s ease;
+        }
+
+        .brand-text-lens {
+          position: relative;
+          font-weight: 850;
+          letter-spacing: -0.04em;
+          background: linear-gradient(135deg, #1e293b 0%, #1e40af 40%, #2563eb 72%, #0284c7 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          display: inline-flex;
+          align-items: baseline;
+          margin-left: 0.5px;
+          transition: all 0.25s ease;
+        }
+
+        .brand-optic-dot {
+          display: inline-block;
+          width: 4.5px;
+          height: 4.5px;
+          border-radius: 50%;
+          background: #0284c7;
+          margin-left: 2.5px;
+          transform: translateY(-3px);
+          box-shadow: 0 0 7px rgba(2, 132, 199, 0.7);
+        }
+
+        .header-logo-link:hover .brand-text-lens {
+          background: linear-gradient(135deg, #0f172a 0%, #2563eb 42%, #38bdf8 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+
+        .header-logo-link:hover .brand-optic-dot {
+          background: #38bdf8;
+          box-shadow: 0 0 9px rgba(56, 189, 248, 0.9);
         }
 
         .system-subtitle {
-          font-size: 0.72rem;
-          font-weight: 500;
-          letter-spacing: 0.04em;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.58rem;
+          font-weight: 700;
+          letter-spacing: 0.16em;
           text-transform: uppercase;
-          color: #38bdf8;
-          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          color: #64748b;
+          line-height: 1.2;
+          user-select: none;
+          margin-top: 1px;
         }
 
         .header-actions-group {
           display: flex;
           align-items: center;
-          gap: 1.25rem;
+          gap: 1rem;
         }
 
         .user-profile-card {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
-          padding: 0.4rem 0.85rem;
-          background: rgba(15, 23, 42, 0.65);
-          border: 1px solid rgba(255, 255, 255, 0.07);
-          border-radius: 8px;
+          gap: 0.85rem;
+          padding: 0.42rem 1.05rem 0.42rem 0.55rem;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+          transition: all 0.2s ease;
+        }
+
+        .user-profile-card:hover {
+          border-color: #cbd5e1;
+          box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+          background: #fbfcfe;
         }
 
         .user-avatar-indicator {
+          position: relative;
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 32px;
-          height: 32px;
-          background: rgba(56, 189, 248, 0.15);
-          color: #38bdf8;
+          width: 36px;
+          height: 36px;
+          background: #0f172a;
+          color: #ffffff;
+          border: 1px solid rgba(53, 167, 255, 0.32);
+          border-radius: 10px;
+          flex-shrink: 0;
+          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+        }
+
+        .user-status-dot {
+          position: absolute;
+          bottom: -1px;
+          right: -1px;
+          width: 8.5px;
+          height: 8.5px;
           border-radius: 50%;
+          background: #10b981;
+          border: 2px solid #ffffff;
+          box-shadow: 0 0 5px rgba(16, 185, 129, 0.7);
         }
 
         .user-details {
@@ -178,21 +255,25 @@ export default function Navbar() {
           flex-direction: column;
           align-items: flex-start;
           justify-content: center;
-          gap: 1px;
+          gap: 2px;
           line-height: 1.15;
         }
 
         .user-name {
-          font-size: 0.96rem;
-          font-weight: 700;
-          color: #1e293b;
-          line-height: 1.15;
+          font-family: 'Plus Jakarta Sans', var(--font-sans);
+          font-size: 0.90rem;
+          font-weight: 750;
+          color: #0b0f19;
+          letter-spacing: -0.015em;
+          line-height: 1.2;
           margin: 0;
           padding: 0;
         }
 
         .role-badge {
-          font-size: 0.78rem;
+          display: block;
+          font-family: 'Plus Jakarta Sans', var(--font-sans);
+          font-size: 0.73rem;
           font-weight: 500;
           letter-spacing: 0.01em;
           color: #64748b;
@@ -201,49 +282,61 @@ export default function Navbar() {
           border-radius: 0;
           padding: 0;
           margin: 0;
+          line-height: 1.2;
           text-transform: capitalize;
-          font-family: inherit;
-          line-height: 1.15;
         }
 
         .logout-button {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          width: 38px;
-          height: 38px;
+          width: 40px;
+          height: 40px;
           padding: 0;
           background: #ffffff;
-          border: 1px solid #dce7f1;
-          border-radius: 10px;
-          color: #64748b;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          color: #475569;
           cursor: pointer;
-          transition: all 0.2s ease;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+          cursor: pointer;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .logout-button:hover {
           background: #fef2f2;
-          border-color: #fca5a5;
-          color: #ef4444;
+          border-color: #fecaca;
+          color: #dc2626;
+          box-shadow: 0 3px 10px rgba(220, 38, 38, 0.15);
+          transform: translateY(-1px);
+        }
+
+        .logout-button:hover .logout-icon {
+          transform: translateX(2px);
         }
 
         .logout-button:active {
           transform: translateY(1px);
+          box-shadow: none;
         }
 
         .logout-icon {
           flex-shrink: 0;
+          transition: transform 0.2s ease;
         }
 
         @media (max-width: 640px) {
           .system-subtitle {
             display: none;
           }
-          .user-email {
+          .user-details {
             display: none;
           }
           .header-container {
-            padding: 0.75rem 1rem;
+            padding: 0.65rem 1rem;
           }
         }
       `}</style>

@@ -4,19 +4,19 @@ import { useEffect, useState, useCallback } from "react";
 import { apiClient } from "../lib/apiClient";
 
 const ENTITY_CONFIG = {
-  PERSON: { color: "#38bdf8", bg: "rgba(14,165,233,0.12)", label: "Person" },
-  PHONE: { color: "#34d399", bg: "rgba(16,185,129,0.12)", label: "Phone" },
-  BANK_ACCOUNT: { color: "#fbbf24", bg: "rgba(245,158,11,0.12)", label: "Bank Account" },
-  VEHICLE: { color: "#818cf8", bg: "rgba(99,102,241,0.12)", label: "Vehicle" },
-  ORGANIZATION: { color: "#2dd4bf", bg: "rgba(20,184,166,0.12)", label: "Organization" },
-  LOCATION: { color: "#fb923c", bg: "rgba(249,115,22,0.12)", label: "Location" },
-  EVENT: { color: "#f472b6", bg: "rgba(236,72,153,0.12)", label: "Event" },
+  PERSON: { color: "#35A7FF", bg: "rgba(53, 167, 255, 0.15)", label: "Person" },
+  PHONE: { color: "#FCBA04", bg: "rgba(252, 186, 4, 0.15)", label: "Phone" },
+  BANK_ACCOUNT: { color: "#FCBA04", bg: "rgba(252, 186, 4, 0.15)", label: "Bank Account" },
+  VEHICLE: { color: "#35A7FF", bg: "rgba(53, 167, 255, 0.15)", label: "Vehicle" },
+  ORGANIZATION: { color: "#F2F7F2", bg: "rgba(242, 247, 242, 0.12)", label: "Organization" },
+  LOCATION: { color: "#FCBA04", bg: "rgba(252, 186, 4, 0.15)", label: "Location" },
+  EVENT: { color: "#35A7FF", bg: "rgba(53, 167, 255, 0.15)", label: "Event" },
 };
 
 const RELATIONSHIP_COLORS = {
-  CONFIRMED: { stroke: "#38bdf8", label: "CONFIRMED", dot: "#38bdf8" },
-  INFERRED: { stroke: "#818cf8", label: "INFERRED", dot: "#818cf8" },
-  PREDICTED: { stroke: "#f59e0b", label: "PREDICTED", dot: "#f59e0b" },
+  CONFIRMED: { stroke: "#35A7FF", label: "CONFIRMED", dot: "#35A7FF" },
+  INFERRED: { stroke: "#FCBA04", label: "INFERRED", dot: "#FCBA04" },
+  PREDICTED: { stroke: "#FCBA04", label: "PREDICTED", dot: "#FCBA04" },
 };
 
 function EntityTypeTag({ type }) {
@@ -43,17 +43,12 @@ function EntityTypeTag({ type }) {
 }
 
 function PathNodeCard({ node, isSource, isTarget, stepIndex }) {
-  const borderColor = isSource ? "#38bdf8" : isTarget ? "#22c55e" : "rgba(148, 163, 184, 0.25)";
+  const borderColor = isSource ? "#35A7FF" : isTarget ? "#FCBA04" : "rgba(242, 247, 242, 0.15)";
   const bgGradient = isSource
-    ? "linear-gradient(180deg, rgba(14,165,233,0.12) 0%, rgba(10,15,30,0.92) 100%)"
+    ? "linear-gradient(180deg, rgba(53, 167, 255, 0.18) 0%, #141a22 100%)"
     : isTarget
-    ? "linear-gradient(180deg, rgba(34,197,94,0.12) 0%, rgba(10,15,30,0.92) 100%)"
-    : "linear-gradient(180deg, rgba(30,41,59,0.5) 0%, rgba(10,15,30,0.92) 100%)";
-  const glowColor = isSource
-    ? "rgba(56,189,248,0.2)"
-    : isTarget
-    ? "rgba(34,197,94,0.2)"
-    : "transparent";
+    ? "linear-gradient(180deg, rgba(252, 186, 4, 0.18) 0%, #141a22 100%)"
+    : "linear-gradient(180deg, #18202b 0%, #10151d 100%)";
 
   return (
     <div
@@ -61,7 +56,7 @@ function PathNodeCard({ node, isSource, isTarget, stepIndex }) {
       style={{
         border: `1.5px solid ${borderColor}`,
         background: bgGradient,
-        boxShadow: `0 4px 16px ${glowColor}`,
+        boxShadow: "0 6px 18px rgba(0, 0, 0, 0.5)",
       }}
     >
       <div className="path-node-top">
@@ -69,14 +64,14 @@ function PathNodeCard({ node, isSource, isTarget, stepIndex }) {
         <span
           className="path-node-badge"
           style={{
-            color: isSource ? "#38bdf8" : isTarget ? "#22c55e" : "#94a3b8",
-            borderColor: isSource ? "rgba(56,189,248,0.3)" : isTarget ? "rgba(34,197,94,0.3)" : "rgba(148,163,184,0.2)",
+            color: isSource ? "#35A7FF" : isTarget ? "#FCBA04" : "#c8d4cf",
+            borderColor: isSource ? "rgba(53, 167, 255, 0.4)" : isTarget ? "rgba(252, 186, 4, 0.4)" : "rgba(242, 247, 242, 0.15)",
           }}
         >
           {isSource ? "SOURCE" : isTarget ? "TARGET" : `STEP ${stepIndex}`}
         </span>
       </div>
-      <div className="path-node-name" title={node.name}>
+      <div className="path-node-name" title={node.name} style={{ color: "#F2F7F2", fontWeight: 700 }}>
         {node.name}
       </div>
     </div>
@@ -226,8 +221,8 @@ export default function InvestigationPathView({ caseId }) {
         .path-form-panel {
           width: 300px;
           flex-shrink: 0;
-          background: rgba(15, 23, 42, 0.8);
-          border: 1px solid rgba(56, 189, 248, 0.16);
+          background: #141a22;
+          border: 1px solid rgba(220, 230, 242, 0.1);
           border-radius: 12px;
           padding: 1.5rem;
           display: flex;
@@ -238,7 +233,7 @@ export default function InvestigationPathView({ caseId }) {
         .path-form-title {
           font-size: 0.85rem;
           font-weight: 700;
-          color: #38bdf8;
+          color: #35A7FF;
           letter-spacing: 0.05em;
           text-transform: uppercase;
           margin: 0;
@@ -250,31 +245,31 @@ export default function InvestigationPathView({ caseId }) {
         .path-form-label {
           font-size: 0.72rem;
           font-weight: 600;
-          color: #94a3b8;
+          color: #c8d4cf;
           letter-spacing: 0.04em;
           text-transform: uppercase;
         }
         .path-form-select {
           width: 100%;
-          background: rgba(10, 15, 30, 0.85);
-          border: 1px solid rgba(56, 189, 248, 0.2);
+          background: #171D1C;
+          border: 1px solid rgba(242, 247, 242, 0.15);
           border-radius: 8px;
-          color: #f1f5f9;
+          color: #F2F7F2;
           font-size: 0.85rem;
           padding: 0.6rem 2rem 0.6rem 0.75rem;
           outline: none;
           cursor: pointer;
           transition: border-color 0.15s;
           appearance: none;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2335A7FF' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
           background-repeat: no-repeat;
           background-position: right 0.65rem center;
         }
         .path-form-select:focus {
-          border-color: rgba(56, 189, 248, 0.5);
-          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.1);
+          border-color: #35A7FF;
+          box-shadow: 0 0 0 2px rgba(53, 167, 255, 0.2);
         }
-        .path-form-select option { background: #0f172a; color: #f1f5f9; }
+        .path-form-select option { background: #171D1C; color: #F2F7F2; }
         .path-query-btn {
           width: 100%;
           display: flex;
@@ -282,28 +277,28 @@ export default function InvestigationPathView({ caseId }) {
           justify-content: center;
           gap: 0.5rem;
           padding: 0.75rem 1rem;
-          background: rgba(14, 165, 233, 0.2);
-          border: 1px solid rgba(56, 189, 248, 0.45);
+          background: #35A7FF;
+          border: 1px solid #35A7FF;
           border-radius: 8px;
-          color: #38bdf8;
+          color: #171D1C;
           font-size: 0.85rem;
-          font-weight: 700;
+          font-weight: 750;
           cursor: pointer;
           transition: all 0.2s;
           letter-spacing: 0.02em;
           margin-top: 0.5rem;
         }
         .path-query-btn:hover:not(:disabled) {
-          background: rgba(14, 165, 233, 0.32);
-          box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+          background: #2392ea;
+          box-shadow: 0 0 16px rgba(53, 167, 255, 0.35);
         }
         .path-query-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-        .path-same-warn { font-size: 0.72rem; color: #f59e0b; display: flex; align-items: center; gap: 0.35rem; }
+        .path-same-warn { font-size: 0.72rem; color: #FCBA04; display: flex; align-items: center; gap: 0.35rem; }
         .path-result-panel {
           flex: 1;
           min-width: 0;
-          background: rgba(15, 23, 42, 0.8);
-          border: 1px solid rgba(56, 189, 248, 0.14);
+          background: #141a22;
+          border: 1px solid rgba(220, 230, 242, 0.1);
           border-radius: 12px;
           padding: 1.75rem;
           position: relative;
@@ -319,8 +314,8 @@ export default function InvestigationPathView({ caseId }) {
           gap: 1rem;
         }
         .path-idle-icon { opacity: 0.4; }
-        .path-idle-title { font-size: 0.95rem; font-weight: 600; color: #64748b; margin: 0; }
-        .path-idle-sub { font-size: 0.82rem; color: #475569; max-width: 320px; line-height: 1.5; margin: 0; }
+        .path-idle-title { font-size: 0.95rem; font-weight: 600; color: #F2F7F2; margin: 0; }
+        .path-idle-sub { font-size: 0.82rem; color: #c8d4cf; max-width: 320px; line-height: 1.5; margin: 0; }
         .path-querying-state {
           display: flex;
           flex-direction: column;
@@ -333,16 +328,16 @@ export default function InvestigationPathView({ caseId }) {
         .path-querying-spinner {
           width: 36px;
           height: 36px;
-          border: 2.5px solid rgba(56, 189, 248, 0.2);
-          border-top-color: #38bdf8;
+          border: 2.5px solid rgba(53, 167, 255, 0.2);
+          border-top-color: #35A7FF;
           border-radius: 50%;
           animation: path-spin 0.7s linear infinite;
         }
         @keyframes path-spin { to { transform: rotate(360deg); } }
-        .path-querying-text { font-size: 0.85rem; color: #94a3b8; }
+        .path-querying-text { font-size: 0.85rem; color: #c8d4cf; }
         .path-error-card {
-          background: rgba(239, 68, 68, 0.08);
-          border: 1px solid rgba(239, 68, 68, 0.3);
+          background: rgba(252, 186, 4, 0.1);
+          border: 1px solid rgba(252, 186, 4, 0.35);
           border-radius: 10px;
           padding: 1.25rem 1.5rem;
           display: flex;
@@ -350,8 +345,8 @@ export default function InvestigationPathView({ caseId }) {
           gap: 0.75rem;
           margin-bottom: 1.5rem;
         }
-        .path-error-icon { color: #ef4444; flex-shrink: 0; margin-top: 1px; }
-        .path-error-text { font-size: 0.84rem; color: #fca5a5; line-height: 1.5; }
+        .path-error-icon { color: #FCBA04; flex-shrink: 0; margin-top: 1px; }
+        .path-error-text { font-size: 0.84rem; color: #FCBA04; line-height: 1.5; }
         .path-not-found {
           display: flex;
           flex-direction: column;
@@ -361,23 +356,23 @@ export default function InvestigationPathView({ caseId }) {
           gap: 0.75rem;
           text-align: center;
         }
-        .path-not-found-icon { color: #475569; opacity: 0.6; }
-        .path-not-found-title { font-size: 1rem; font-weight: 700; color: #64748b; margin: 0; }
-        .path-not-found-sub { font-size: 0.82rem; color: #475569; max-width: 360px; line-height: 1.5; margin: 0; }
+        .path-not-found-icon { color: #8a9593; opacity: 0.6; }
+        .path-not-found-title { font-size: 1rem; font-weight: 700; color: #F2F7F2; margin: 0; }
+        .path-not-found-sub { font-size: 0.82rem; color: #c8d4cf; max-width: 360px; line-height: 1.5; margin: 0; }
         .path-result-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 1.5rem;
           padding-bottom: 1rem;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          border-bottom: 1px solid rgba(242, 247, 242, 0.1);
           flex-wrap: wrap;
           gap: 0.75rem;
         }
         .path-result-title {
           font-size: 0.88rem;
           font-weight: 700;
-          color: #38bdf8;
+          color: #35A7FF;
           letter-spacing: 0.04em;
           text-transform: uppercase;
           margin: 0;
@@ -386,20 +381,20 @@ export default function InvestigationPathView({ caseId }) {
           gap: 0.5rem;
         }
         .path-hop-badge {
-          background: rgba(14, 165, 233, 0.15);
-          border: 1px solid rgba(56, 189, 248, 0.35);
+          background: rgba(53, 167, 255, 0.15);
+          border: 1px solid rgba(53, 167, 255, 0.35);
           border-radius: 5px;
           padding: 0.15rem 0.5rem;
           font-size: 0.72rem;
           font-weight: 700;
-          color: #38bdf8;
+          color: #35A7FF;
           font-family: ui-monospace, monospace;
         }
         .path-chain-container {
           overflow-x: auto;
           padding: 1.5rem 0.5rem;
-          background: rgba(10, 15, 30, 0.6);
-          border: 1px solid rgba(56, 189, 248, 0.12);
+          background: #171D1C;
+          border: 1px solid rgba(242, 247, 242, 0.12);
           border-radius: 12px;
           margin-bottom: 1.5rem;
         }
@@ -439,7 +434,7 @@ export default function InvestigationPathView({ caseId }) {
         .path-node-name {
           font-size: 0.9rem;
           font-weight: 700;
-          color: #f8fafc;
+          color: #F2F7F2;
           word-break: break-word;
           line-height: 1.35;
         }
@@ -458,27 +453,27 @@ export default function InvestigationPathView({ caseId }) {
           min-width: 140px;
         }
         .path-rel-arrow:hover {
-          background: rgba(56, 189, 248, 0.08);
-          border-color: rgba(56, 189, 248, 0.25);
+          background: rgba(53, 167, 255, 0.12);
+          border-color: rgba(53, 167, 255, 0.3);
         }
         .path-rel-arrow-active {
-          background: rgba(56, 189, 248, 0.14);
-          border-color: rgba(56, 189, 248, 0.45);
-          box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+          background: rgba(53, 167, 255, 0.18);
+          border-color: #35A7FF;
+          box-shadow: 0 0 12px rgba(53, 167, 255, 0.25);
         }
         .path-rel-pill {
           display: flex;
           align-items: center;
           gap: 0.4rem;
-          background: rgba(15, 23, 42, 0.9);
-          border: 1px solid rgba(56, 189, 248, 0.2);
+          background: #171D1C;
+          border: 1px solid rgba(242, 247, 242, 0.15);
           border-radius: 6px;
           padding: 0.2rem 0.55rem;
         }
         .path-rel-type {
           font-size: 0.68rem;
           font-weight: 700;
-          color: #cbd5e1;
+          color: #F2F7F2;
           font-family: ui-monospace, monospace;
           letter-spacing: 0.04em;
           text-transform: uppercase;
@@ -497,7 +492,7 @@ export default function InvestigationPathView({ caseId }) {
         .path-rel-line-bar {
           flex: 1;
           height: 2.5px;
-          background: var(--rel-color, #38bdf8);
+          background: var(--rel-color, #35A7FF);
           opacity: 0.85;
           border-radius: 2px;
         }
@@ -507,8 +502,8 @@ export default function InvestigationPathView({ caseId }) {
           opacity: 0.9;
         }
         .path-evidence-panel {
-          background: rgba(10, 15, 30, 0.85);
-          border: 1px solid rgba(56, 189, 248, 0.25);
+          background: #171D1C;
+          border: 1px solid rgba(53, 167, 255, 0.3);
           border-radius: 10px;
           overflow: hidden;
           animation: fadeInUp 0.2s ease;
@@ -522,13 +517,13 @@ export default function InvestigationPathView({ caseId }) {
           justify-content: space-between;
           align-items: center;
           padding: 0.85rem 1.1rem;
-          background: rgba(14, 165, 233, 0.08);
-          border-bottom: 1px solid rgba(56, 189, 248, 0.15);
+          background: rgba(53, 167, 255, 0.12);
+          border-bottom: 1px solid rgba(53, 167, 255, 0.25);
         }
         .path-evidence-title {
           font-size: 0.78rem;
           font-weight: 700;
-          color: #38bdf8;
+          color: #35A7FF;
           letter-spacing: 0.05em;
           text-transform: uppercase;
           margin: 0;
@@ -539,7 +534,7 @@ export default function InvestigationPathView({ caseId }) {
         .path-evidence-close {
           background: none;
           border: none;
-          color: #64748b;
+          color: #c8d4cf;
           cursor: pointer;
           padding: 0.2rem;
           display: flex;
@@ -547,14 +542,14 @@ export default function InvestigationPathView({ caseId }) {
           border-radius: 4px;
           transition: color 0.15s;
         }
-        .path-evidence-close:hover { color: #f1f5f9; }
+        .path-evidence-close:hover { color: #F2F7F2; }
         .path-evidence-body { padding: 1.1rem; display: flex; flex-direction: column; gap: 0.75rem; }
-        .path-ev-loading { display: flex; align-items: center; gap: 0.65rem; color: #64748b; font-size: 0.82rem; }
+        .path-ev-loading { display: flex; align-items: center; gap: 0.65rem; color: #c8d4cf; font-size: 0.82rem; }
         .path-ev-spinner {
           width: 16px;
           height: 16px;
-          border: 2px solid rgba(56, 189, 248, 0.2);
-          border-top-color: #38bdf8;
+          border: 2px solid rgba(53, 167, 255, 0.2);
+          border-top-color: #35A7FF;
           border-radius: 50%;
           animation: path-spin 0.7s linear infinite;
           flex-shrink: 0;
@@ -563,7 +558,7 @@ export default function InvestigationPathView({ caseId }) {
         .path-ev-key {
           font-size: 0.72rem;
           font-weight: 600;
-          color: #64748b;
+          color: #c8d4cf;
           text-transform: uppercase;
           letter-spacing: 0.04em;
           min-width: 110px;
@@ -572,31 +567,31 @@ export default function InvestigationPathView({ caseId }) {
         }
         .path-ev-val {
           font-size: 0.82rem;
-          color: #cbd5e1;
+          color: #F2F7F2;
           line-height: 1.5;
           word-break: break-word;
           font-family: ui-monospace, monospace;
         }
         .path-ev-snippet {
-          background: rgba(56, 189, 248, 0.06);
-          border-left: 3px solid rgba(56, 189, 248, 0.35);
+          background: rgba(53, 167, 255, 0.08);
+          border-left: 3px solid #35A7FF;
           padding: 0.6rem 0.85rem;
           border-radius: 0 6px 6px 0;
           font-size: 0.82rem;
-          color: #94a3b8;
+          color: #F2F7F2;
           line-height: 1.6;
           font-style: italic;
           word-break: break-word;
           white-space: pre-wrap;
           margin: 0;
         }
-        .path-ev-error { font-size: 0.8rem; color: #fca5a5; }
-        .path-entity-loading { display: flex; align-items: center; gap: 0.5rem; color: #64748b; font-size: 0.8rem; }
+        .path-ev-error { font-size: 0.8rem; color: #FCBA04; }
+        .path-entity-loading { display: flex; align-items: center; gap: 0.5rem; color: #c8d4cf; font-size: 0.8rem; }
         .path-mini-spinner {
           width: 14px;
           height: 14px;
-          border: 2px solid rgba(56, 189, 248, 0.2);
-          border-top-color: #38bdf8;
+          border: 2px solid rgba(53, 167, 255, 0.2);
+          border-top-color: #35A7FF;
           border-radius: 50%;
           animation: path-spin 0.7s linear infinite;
           flex-shrink: 0;

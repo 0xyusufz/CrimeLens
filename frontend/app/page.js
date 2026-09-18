@@ -6,15 +6,15 @@ import { apiClient } from "../lib/apiClient";
 import AuthLayout from "../components/Layout";
 
 export const CRIME_CATEGORIES = [
-  { id: "HOMICIDE", label: "Homicide & Murder", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
-  { id: "ORGANIZED_CRIME", label: "Organized Crime & Gang", color: "#7c3aed", bg: "#faf5ff", border: "#e9d5ff" },
-  { id: "FINANCIAL_FRAUD", label: "Financial Fraud & Laundering", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
-  { id: "CYBERCRIME", label: "Cybercrime & Digital Extortion", color: "#0284c7", bg: "#f0f9ff", border: "#bae6fd" },
-  { id: "NARCOTICS", label: "Narcotics & Contraband", color: "#0d9488", bg: "#f0fdfa", border: "#99f6e4" },
-  { id: "KIDNAPPING", label: "Kidnapping & Missing Person", color: "#ea580c", bg: "#fff7ed", border: "#fed7aa" },
-  { id: "ARMED_ROBBERY", label: "Armed Robbery & Heist", color: "#b91c1c", bg: "#fef2f2", border: "#fecaca" },
-  { id: "CORRUPTION", label: "Public Corruption & Bribery", color: "#4f46e5", bg: "#eef2ff", border: "#c7d2fe" },
-  { id: "OTHER", label: "General Investigation", color: "#475569", bg: "#f8fafc", border: "#e2e8f0" },
+  { id: "HOMICIDE", label: "Homicide & Murder", color: "#94a3b8", bg: "rgba(148, 163, 184, 0.10)", border: "rgba(148, 163, 184, 0.20)" },
+  { id: "ORGANIZED_CRIME", label: "Organized Crime & Gang", color: "#94a3b8", bg: "rgba(148, 163, 184, 0.10)", border: "rgba(148, 163, 184, 0.20)" },
+  { id: "FINANCIAL_FRAUD", label: "Financial Fraud & Laundering", color: "#94a3b8", bg: "rgba(148, 163, 184, 0.10)", border: "rgba(148, 163, 184, 0.20)" },
+  { id: "CYBERCRIME", label: "Cybercrime & Digital Extortion", color: "#94a3b8", bg: "rgba(148, 163, 184, 0.10)", border: "rgba(148, 163, 184, 0.20)" },
+  { id: "NARCOTICS", label: "Narcotics & Contraband", color: "#94a3b8", bg: "rgba(148, 163, 184, 0.10)", border: "rgba(148, 163, 184, 0.20)" },
+  { id: "KIDNAPPING", label: "Kidnapping & Missing Person", color: "#94a3b8", bg: "rgba(148, 163, 184, 0.10)", border: "rgba(148, 163, 184, 0.20)" },
+  { id: "ARMED_ROBBERY", label: "Armed Robbery & Heist", color: "#94a3b8", bg: "rgba(148, 163, 184, 0.10)", border: "rgba(148, 163, 184, 0.20)" },
+  { id: "CORRUPTION", label: "Public Corruption & Bribery", color: "#94a3b8", bg: "rgba(148, 163, 184, 0.10)", border: "rgba(148, 163, 184, 0.20)" },
+  { id: "OTHER", label: "General Investigation", color: "#94a3b8", bg: "rgba(148, 163, 184, 0.10)", border: "rgba(148, 163, 184, 0.20)" },
 ];
 
 export function CrimeCategoryIcon({ categoryId, size = 15, color = "currentColor", className = "" }) {
@@ -98,6 +98,22 @@ export function CrimeCategoryIcon({ categoryId, size = 15, color = "currentColor
         </svg>
       );
   }
+}
+
+export function highlightMatch(text, query) {
+  if (!text) return "";
+  if (!query) return text;
+  const q = query.trim();
+  if (!q) return text;
+  const index = text.toLowerCase().indexOf(q.toLowerCase());
+  if (index === -1) return text;
+  return (
+    <>
+      {text.slice(0, index)}
+      <mark className="search-highlight">{text.slice(index, index + q.length)}</mark>
+      {text.slice(index + q.length)}
+    </>
+  );
 }
 
 export function CategoryFilterDropdown({
@@ -306,32 +322,33 @@ export function CategoryFilterDropdown({
           height: 42px;
           padding: 0 0.85rem;
           border-radius: 10px;
-          border: 1px solid #dce7f1;
-          background: #f8fbfe;
-          color: #1e293b;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          color: #0f172a;
           font-size: 0.82rem;
           font-weight: 650;
           cursor: pointer;
           transition: all 0.18s ease;
           gap: 0.55rem;
           user-select: none;
-          box-shadow: none;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
         }
 
         .dropdown-trigger-btn:hover {
-          background: #ffffff;
-          border-color: #bae6fd;
+          background: #f8fafc;
+          border-color: #cbd5e1;
         }
 
         .dropdown-trigger-btn.is-open {
           background: #ffffff;
-          border-color: #0787d1;
-          box-shadow: 0 0 0 2.5px rgba(7, 135, 209, 0.15);
+          border-color: #2563eb;
+          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
         }
 
         .dropdown-trigger-btn.has-filter {
-          background: #f0f9ff;
-          border-color: #b9e6fe;
+          background: #eff6ff;
+          border-color: #bfdbfe;
+          color: #2563eb;
         }
 
         .trigger-left-content {
@@ -355,14 +372,14 @@ export function CategoryFilterDropdown({
         }
 
         .trigger-icon-all {
-          background: #e2e8f0;
+          background: #f1f5f9;
           color: #475569;
         }
 
         .trigger-label {
           font-size: 0.8rem;
           font-weight: 650;
-          color: #1e293b;
+          color: #0f172a;
           text-overflow: ellipsis;
           overflow: hidden;
           white-space: nowrap;
@@ -383,14 +400,14 @@ export function CategoryFilterDropdown({
           width: 18px;
           height: 18px;
           border-radius: 50%;
-          background: #e2e8f0;
-          color: #475569;
+          background: #f1f5f9;
+          color: #64748b;
           cursor: pointer;
           transition: all 0.15s ease;
         }
 
         .trigger-clear-btn:hover {
-          background: #cbd5e1;
+          background: #e2e8f0;
           color: #0f172a;
         }
 
@@ -412,9 +429,9 @@ export function CategoryFilterDropdown({
           left: 0;
           min-width: 260px;
           background: #ffffff;
-          border: 1px solid #dce7f1;
-          border-radius: 12px;
-          box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12), 0 4px 10px rgba(15, 23, 42, 0.04);
+          border: 1px solid #e2e8f0;
+          border-radius: 14px;
+          box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.1), 0 4px 10px -2px rgba(0, 0, 0, 0.05);
           z-index: 100;
           padding: 6px;
           animation: dropdownFadeIn 0.15s ease-out;
@@ -430,7 +447,7 @@ export function CategoryFilterDropdown({
           font-size: 0.65rem;
           font-weight: 800;
           letter-spacing: 0.08em;
-          color: #94a3b8;
+          color: #64748b;
           border-bottom: 1px solid #f1f5f9;
           margin-bottom: 4px;
         }
@@ -459,11 +476,11 @@ export function CategoryFilterDropdown({
         }
 
         .dropdown-option-item:hover {
-          background: #f1f5f9;
+          background: #f8fafc;
         }
 
         .dropdown-option-item.is-active-option {
-          background: #eef2ff;
+          background: #eff6ff;
         }
 
         .option-left-content {
@@ -487,13 +504,13 @@ export function CategoryFilterDropdown({
         .badge-all {
           background: #f1f5f9;
           border-color: #e2e8f0;
-          color: #64748b;
+          color: #475569;
         }
 
         .option-label {
           font-size: 0.78rem;
           font-weight: 600;
-          color: #1e293b;
+          color: #0f172a;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -511,7 +528,7 @@ export function CategoryFilterDropdown({
           padding: 1px 6px;
           border-radius: 9999px;
           background: #f1f5f9;
-          color: #64748b;
+          color: #475569;
           font-size: 0.68rem;
           font-weight: 700;
         }
@@ -519,6 +536,7 @@ export function CategoryFilterDropdown({
         .option-checkmark {
           display: flex;
           align-items: center;
+          color: #2563eb;
         }
       `}</style>
     </div>
@@ -526,10 +544,10 @@ export function CategoryFilterDropdown({
 }
 
 export const PRIORITY_LEVELS = [
-  { id: "CRITICAL", label: "Critical Threat", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
-  { id: "HIGH", label: "High Priority", color: "#ea580c", bg: "#fff7ed", border: "#fed7aa" },
-  { id: "MEDIUM", label: "Medium Priority", color: "#0284c7", bg: "#f0f9ff", border: "#bae6fd" },
-  { id: "LOW", label: "Routine / Low", color: "#64748b", bg: "#f8fafc", border: "#e2e8f0" },
+  { id: "CRITICAL", label: "Critical Threat", color: "#b45309", bg: "#fffbeb", border: "#fde68a" },
+  { id: "HIGH", label: "High Priority", color: "#b45309", bg: "#fffbeb", border: "#fde68a" },
+  { id: "MEDIUM", label: "Medium Priority", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
+  { id: "LOW", label: "Routine / Low", color: "#475569", bg: "#f1f5f9", border: "#e2e8f0" },
 ];
 
 // Helper to parse case metadata from description
@@ -597,6 +615,20 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState("ALL"); // ALL | ACTIVE | ON_HOLD | SOLVED
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [priorityFilter, setPriorityFilter] = useState("ALL"); // ALL | CRITICAL | HIGH
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchContainerRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setSearchFocused(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Create Case Modal
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -711,6 +743,17 @@ export default function Dashboard() {
       return true;
     });
   }, [enrichedCases, searchTerm, statusFilter, categoryFilter, priorityFilter]);
+
+  // Recommended Cases for live search popover
+  const recommendedCases = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return [];
+    return enrichedCases.filter((c) => {
+      const catObj = CRIME_CATEGORIES.find((cat) => cat.id === c.meta.category);
+      const searchStr = `${c.title || ""} ${c.case_number || ""} ${c.meta.location || ""} ${c.meta.narrative || ""} ${catObj?.label || ""}`.toLowerCase();
+      return searchStr.includes(q);
+    }).slice(0, 6);
+  }, [enrichedCases, searchTerm]);
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -845,17 +888,12 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* 1. CENTRALIZED HERO HEADER */}
+        {/* 1. CENTRALIZED HEADER */}
         <header className="central-command-hero">
-          <div className="hero-status-pill">
-            <span className="live-radar-dot" />
-            <span>CRIMELENS CASE INTELLIGENCE</span>
-          </div>
-
-          <h1 className="central-hero-title">Forensic & Case Investigation Hub</h1>
+          <h1 className="central-hero-title">Investigation Case Files</h1>
 
           <p className="central-hero-desc">
-            Centralized intelligence platform for detectives, forensic specialists, and law enforcement teams. Cross-reference disparate case evidence, track suspect syndicates, and maintain chain-of-custody across all departmental case files in real time.
+            Authorized departmental dossiers, evidence records, and criminal network intelligence.
           </p>
 
           <div className="central-hero-actions">
@@ -892,7 +930,7 @@ export default function Dashboard() {
         {/* 2. CENTRALIZED SEARCH & CLASSIFICATION BAR */}
         {!loading && !errorState && (
           <section className="central-search-shelf">
-            <div className="unified-search-filter-box">
+            <div className="unified-search-filter-box" ref={searchContainerRef}>
               {/* Category Dropdown */}
               <div className="category-select-wrapper">
                 <CategoryFilterDropdown
@@ -917,11 +955,27 @@ export default function Dashboard() {
                   type="text"
                   placeholder="Search cases by title, case ID, location, or narrative…"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setSearchFocused(true);
+                  }}
+                  onFocus={() => setSearchFocused(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setSearchFocused(false);
+                    }
+                  }}
                   className="search-input"
                 />
                 {searchTerm && (
-                  <button className="search-clear-btn" onClick={() => setSearchTerm("")} title="Clear search">
+                  <button
+                    className="search-clear-btn"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSearchFocused(false);
+                    }}
+                    title="Clear search"
+                  >
                     ✕
                   </button>
                 )}
@@ -935,6 +989,7 @@ export default function Dashboard() {
                   onClick={() => {
                     setCategoryFilter("ALL");
                     setSearchTerm("");
+                    setSearchFocused(false);
                   }}
                   title="Reset classification and search"
                 >
@@ -944,6 +999,106 @@ export default function Dashboard() {
                   </svg>
                   <span>Reset</span>
                 </button>
+              )}
+
+              {/* LIVE SEARCH RECOMMENDATIONS & AUTOCOMPLETE POPOVER */}
+              {searchFocused && searchTerm.trim().length > 0 && (
+                <div className="search-recommendations-popover">
+                  {recommendedCases.length > 0 ? (
+                    <>
+                      <div className="rec-popover-header">
+                        <span className="rec-header-label">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#35a7ff" strokeWidth="2.5">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                          </svg>
+                          CASE RECOMMENDATIONS ({recommendedCases.length})
+                        </span>
+                        <span className="rec-header-hint">Click to select or open</span>
+                      </div>
+                      <div className="rec-popover-list">
+                        {recommendedCases.map((c) => {
+                          const cat = CRIME_CATEGORIES.find((cat) => cat.id === c.meta.category) || CRIME_CATEGORIES[CRIME_CATEGORIES.length - 1];
+                          return (
+                            <div
+                              key={c.id}
+                              className="rec-popover-item"
+                              onClick={() => {
+                                setSearchTerm(c.title);
+                                setSearchFocused(false);
+                              }}
+                            >
+                              <div className="rec-item-left">
+                                <span
+                                  className="rec-cat-badge-icon"
+                                  style={{ background: cat.bg, color: cat.color, borderColor: cat.border }}
+                                >
+                                  <CrimeCategoryIcon categoryId={cat.id} size={13} color={cat.color} />
+                                </span>
+                                <div className="rec-item-text-col">
+                                  <div className="rec-title-row">
+                                    <span className="rec-case-title">{highlightMatch(c.title, searchTerm)}</span>
+                                    <span className="rec-case-number font-mono">{c.case_number}</span>
+                                  </div>
+                                  <div className="rec-meta-row">
+                                    <span className="rec-cat-name" style={{ color: cat.color }}>{cat.label}</span>
+                                    {c.meta.location && <span className="rec-dot">• {c.meta.location}</span>}
+                                    {c.meta.subStatus && (
+                                      <span className="rec-status-tag">
+                                        {c.meta.subStatus}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <Link
+                                href={`/cases/${c.id}`}
+                                className="rec-open-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSearchFocused(false);
+                                }}
+                                title="Open case workspace"
+                              >
+                                <span>Open</span>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <path d="M5 12h14M12 5l7 7-7 7" />
+                                </svg>
+                              </Link>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rec-not-found-card">
+                      <div className="rec-not-found-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fcba04" strokeWidth="2">
+                          <circle cx="11" cy="11" r="8" />
+                          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                          <line x1="8" y1="11" x2="14" y2="11" />
+                        </svg>
+                      </div>
+                      <div className="rec-not-found-content">
+                        <div className="rec-not-found-title">No Recommendations Found</div>
+                        <div className="rec-not-found-desc">
+                          No active case file matches <strong>&quot;{searchTerm}&quot;</strong>.
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="rec-not-found-action"
+                        onClick={() => {
+                          setSearchTerm("");
+                          setSearchFocused(false);
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </section>
@@ -970,30 +1125,45 @@ export default function Dashboard() {
         {!loading && !errorState && filteredCases.length === 0 && (
           <div className="dashboard-empty-card">
             <div className="empty-icon-circle">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fcba04" strokeWidth="2">
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                <line x1="8" y1="11" x2="14" y2="11" />
               </svg>
             </div>
-            <h3>No Investigation Records Found</h3>
-            <p>
-              {searchTerm || statusFilter !== "ALL" || categoryFilter !== "ALL" || priorityFilter !== "ALL"
-                ? "No case file matches your selected filters. Try resetting the filters or clearing the search term."
+            <h3 className="empty-title-text">
+              {searchTerm ? `No Cases Found Matching "${searchTerm}"` : "No Investigation Records Found"}
+            </h3>
+            <p className="empty-desc-text">
+              {searchTerm
+                ? `No investigation dossiers match your search term "${searchTerm}". Check for typos or reset your filters to view all available cases.`
+                : categoryFilter !== "ALL" || statusFilter !== "ALL" || priorityFilter !== "ALL"
+                ? "No case files match your selected category or status filter. Reset filters to view all records."
                 : "There are currently no cases recorded in your clearance workspace. Create your first investigation file to begin."}
             </p>
-            {(searchTerm || statusFilter !== "ALL" || categoryFilter !== "ALL" || priorityFilter !== "ALL") && (
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setStatusFilter("ALL");
-                  setCategoryFilter("ALL");
-                  setPriorityFilter("ALL");
-                }}
-                className="action-btn-secondary"
-              >
-                Reset Filters
-              </button>
-            )}
+            <div className="empty-actions-row">
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="action-btn-primary"
+                >
+                  Clear Search
+                </button>
+              )}
+              {(searchTerm || statusFilter !== "ALL" || categoryFilter !== "ALL" || priorityFilter !== "ALL") && (
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setStatusFilter("ALL");
+                    setCategoryFilter("ALL");
+                    setPriorityFilter("ALL");
+                  }}
+                  className="action-btn-secondary"
+                >
+                  Reset All Filters
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -1024,19 +1194,13 @@ export default function Dashboard() {
 
                     <div className="card-status-wrapper">
                       {meta.subStatus === "ACTIVE" && (
-                        <span className="status-badge status-active">
-                          <span className="status-pulse-dot" /> ACTIVE
-                        </span>
+                        <span className="status-text-only status-active-text">ACTIVE</span>
                       )}
                       {meta.subStatus === "ON_HOLD" && (
-                        <span className="status-badge status-hold">
-                          <span className="status-dot dot-amber" /> ON HOLD
-                        </span>
+                        <span className="status-text-only status-hold-text">ON HOLD</span>
                       )}
                       {meta.subStatus === "SOLVED" && (
-                        <span className="status-badge status-solved">
-                          <span className="status-dot dot-blue" /> SOLVED
-                        </span>
+                        <span className="status-text-only status-solved-text">SOLVED</span>
                       )}
                     </div>
                   </div>
@@ -1369,15 +1533,15 @@ export default function Dashboard() {
           }
 
           .notif-success {
-            background: #edfcf6;
-            border: 1px solid #b6ebd4;
-            color: #078158;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #059669;
           }
 
           .notif-error {
-            background: #fff5f5;
-            border: 1px solid #f5c5cb;
-            color: #b33441;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
           }
 
           .notification-pill button {
@@ -1388,56 +1552,33 @@ export default function Dashboard() {
             font-size: 0.9rem;
           }
 
-          /* 1. CENTRALIZED HERO HEADER */
+          /* 1. CENTRALIZED HEADER */
           .central-command-hero {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
-            max-width: 860px;
-            margin: 1.25rem auto 0;
+            max-width: 780px;
+            margin: 1rem auto 0;
             padding: 0 1rem;
-          }
-
-          .hero-status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.35rem 0.85rem;
-            border-radius: 9999px;
-            background: #e7f5ff;
-            border: 1px solid #bae6fd;
-            color: #0369a1;
-            font-size: 0.68rem;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            margin-bottom: 0.85rem;
-          }
-
-          .live-radar-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #0787d1;
-            box-shadow: 0 0 0 3px rgba(7, 135, 209, 0.18);
           }
 
           .central-hero-title {
             margin: 0;
-            font-size: clamp(1.85rem, 3.4vw, 2.5rem);
+            font-size: clamp(1.65rem, 2.8vw, 2.2rem);
             font-weight: 800;
-            letter-spacing: -0.035em;
-            color: #111e33;
+            letter-spacing: -0.03em;
+            color: #0f172a;
             line-height: 1.2;
           }
 
           .central-hero-desc {
-            margin: 0.95rem 0 1.6rem;
-            font-size: 0.94rem;
-            line-height: 1.65;
-            color: #556c86;
-            max-width: 720px;
+            margin: 0.55rem 0 1.25rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #475569;
+            max-width: 580px;
           }
 
           .central-hero-actions {
@@ -1453,21 +1594,22 @@ export default function Dashboard() {
             align-items: center;
             gap: 0.45rem;
             padding: 0.65rem 1.25rem;
-            border-radius: 9px;
-            border: 1px solid #0787d1;
-            background: #0787d1;
+            border-radius: 10px;
+            border: 1px solid #1d4ed8;
+            background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
             color: #ffffff;
             font-size: 0.84rem;
-            font-weight: 650;
+            font-weight: 750;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(7, 135, 209, 0.18);
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
             transition: all 0.18s ease;
           }
 
           .action-btn-primary:hover {
-            background: #056eaf;
-            border-color: #056eaf;
+            background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+            border-color: #2563eb;
             transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
           }
 
           .action-btn-secondary {
@@ -1475,20 +1617,21 @@ export default function Dashboard() {
             align-items: center;
             gap: 0.45rem;
             padding: 0.65rem 1.15rem;
-            border-radius: 9px;
-            border: 1px solid #d4e1ec;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
             background: #ffffff;
-            color: #556c86;
+            color: #334155;
             font-size: 0.84rem;
             font-weight: 650;
             cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
             transition: all 0.18s ease;
           }
 
           .action-btn-secondary:hover:not(:disabled) {
-            background: #f4fbfe;
-            color: #0787d1;
-            border-color: #bce1f7;
+            background: #f8fafc;
+            color: #0f172a;
+            border-color: #cbd5e1;
           }
 
           .spin-animation {
@@ -1508,22 +1651,23 @@ export default function Dashboard() {
           }
 
           .unified-search-filter-box {
+            position: relative;
             display: flex;
             align-items: center;
             width: 100%;
             max-width: 820px;
             background: #ffffff;
-            border: 1px solid #dce7f1;
-            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
             padding: 0.45rem 0.6rem;
-            box-shadow: 0 8px 24px rgba(34, 72, 104, 0.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
             gap: 0.6rem;
             transition: all 0.2s ease;
           }
 
           .unified-search-filter-box:focus-within {
-            border-color: #38bdf8;
-            box-shadow: 0 10px 30px rgba(7, 135, 209, 0.1), 0 0 0 3px rgba(7, 135, 209, 0.08);
+            border-color: #2563eb;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 0 0 2px rgba(37, 99, 235, 0.15);
           }
 
           .category-select-wrapper {
@@ -1553,12 +1697,12 @@ export default function Dashboard() {
             background: transparent;
             outline: none;
             font-size: 0.88rem;
-            color: #162033;
+            color: #0f172a;
             padding: 0.5rem 0;
           }
 
           .search-input::placeholder {
-            color: #8c9eb2;
+            color: #94a3b8;
           }
 
           .search-clear-btn {
@@ -1588,7 +1732,7 @@ export default function Dashboard() {
             gap: 0.35rem;
             padding: 0.45rem 0.8rem;
             border-radius: 8px;
-            background: #f8fafc;
+            background: #ffffff;
             border: 1px solid #e2e8f0;
             color: #475569;
             font-size: 0.78rem;
@@ -1600,9 +1744,270 @@ export default function Dashboard() {
           }
 
           .search-shelf-reset-btn:hover {
-            background: #f1f5f9;
+            background: #f8fafc;
             color: #0f172a;
             border-color: #cbd5e1;
+          }
+
+          /* SEARCH RECOMMENDATIONS POPOVER & AUTOCOMPLETE */
+          .search-recommendations-popover {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+            z-index: 120;
+            overflow: hidden;
+            animation: recDropdownFade 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+          }
+
+          @keyframes recDropdownFade {
+            from {
+              opacity: 0;
+              transform: translateY(-6px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          .rec-popover-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1.1rem 0.6rem;
+            border-bottom: 1px solid #f1f5f9;
+            background: #f8fafc;
+          }
+
+          .rec-header-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            color: #2563eb;
+            text-transform: uppercase;
+          }
+
+          .rec-header-hint {
+            font-size: 0.72rem;
+            color: #64748b;
+          }
+
+          .rec-popover-list {
+            display: flex;
+            flex-direction: column;
+            max-height: 380px;
+            overflow-y: auto;
+            padding: 0.4rem 0.5rem;
+            gap: 3px;
+          }
+
+          .rec-popover-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.65rem 0.85rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.14s ease;
+            gap: 0.85rem;
+          }
+
+          .rec-popover-item:hover {
+            background: #f8fafc;
+          }
+
+          .rec-item-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+            flex: 1;
+          }
+
+          .rec-cat-badge-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid;
+            flex-shrink: 0;
+          }
+
+          .rec-item-text-col {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            min-width: 0;
+            flex: 1;
+          }
+
+          .rec-title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            min-width: 0;
+          }
+
+          .rec-case-title {
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .rec-case-number {
+            font-size: 0.68rem;
+            color: #2563eb;
+            background: rgba(37, 99, 235, 0.08);
+            padding: 1px 6px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+          }
+
+          .rec-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.73rem;
+            color: #64748b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .rec-cat-name {
+            font-weight: 600;
+          }
+
+          .rec-dot {
+            color: #94a3b8;
+          }
+
+          .rec-status-tag {
+            font-size: 0.64rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            padding: 1px 5px;
+            border-radius: 4px;
+            background: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fde68a;
+          }
+
+          .rec-open-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: 7px;
+            background: rgba(37, 99, 235, 0.08);
+            border: 1px solid rgba(37, 99, 235, 0.25);
+            color: #2563eb;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-decoration: none;
+            flex-shrink: 0;
+            transition: all 0.15s ease;
+          }
+
+          .rec-open-btn:hover {
+            background: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+          }
+
+          .search-highlight {
+            background: #fef08a;
+            color: #854d0e;
+            font-weight: 800;
+            border-radius: 3px;
+            padding: 0 3px;
+          }
+
+          /* NOT FOUND CARD IN RECOMMENDATION DROPDOWN */
+          .rec-not-found-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.25rem 1.4rem;
+            background: #ffffff;
+          }
+
+          .rec-not-found-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #b45309;
+            flex-shrink: 0;
+          }
+
+          .rec-not-found-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            flex: 1;
+            min-width: 0;
+          }
+
+          .rec-not-found-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #0f172a;
+          }
+
+          .rec-not-found-desc {
+            font-size: 0.78rem;
+            color: #64748b;
+            line-height: 1.4;
+          }
+
+          .rec-not-found-desc strong {
+            color: #b45309;
+          }
+
+          .rec-not-found-action {
+            padding: 0.45rem 0.85rem;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #0f172a;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s ease;
+          }
+
+          .rec-not-found-action:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+          }
+
+          .empty-actions-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
           }
 
           @media (max-width: 640px) {
@@ -1631,11 +2036,11 @@ export default function Dashboard() {
           }
 
           .case-record-card {
-            padding: 1.35rem;
-            border-radius: 14px;
+            padding: 1.4rem;
+            border-radius: 18px;
             background: #ffffff;
-            border: 1px solid #dce7f1;
-            box-shadow: 0 4px 18px rgba(34, 72, 104, 0.04);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
             display: flex;
             flex-direction: column;
             gap: 0.85rem;
@@ -1644,8 +2049,9 @@ export default function Dashboard() {
 
           .case-record-card:hover {
             transform: translateY(-2px);
-            border-color: #bae6fd;
-            box-shadow: 0 12px 28px rgba(34, 72, 104, 0.08);
+            background: #ffffff;
+            border-color: #cbd5e1;
+            box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.08);
           }
 
           .card-top-header {
@@ -1673,51 +2079,30 @@ export default function Dashboard() {
             flex-shrink: 0;
           }
 
-          .status-badge {
+          .status-text-only {
             display: inline-flex;
             align-items: center;
-            gap: 0.38rem;
-            padding: 0.22rem 0.65rem;
-            border-radius: 9999px;
-            font-size: 0.67rem;
-            font-weight: 800;
-            letter-spacing: 0.04em;
+            font-size: 0.72rem;
+            font-weight: 750;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            line-height: 1;
+            background: none !important;
+            border: none !important;
+            padding: 0 !important;
           }
 
-          .status-active {
-            background: #ecfdf5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
+          .status-active-text {
+            color: #d97706;
           }
 
-          .status-hold {
-            background: #fffbeb;
-            color: #92400e;
-            border: 1px solid #fde68a;
+          .status-hold-text {
+            color: #d97706;
           }
 
-          .status-solved {
-            background: #eff6ff;
-            color: #1e40af;
-            border: 1px solid #bfdbfe;
+          .status-solved-text {
+            color: #059669;
           }
-
-          .status-pulse-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #10b981;
-            box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.25);
-          }
-
-          .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-          }
-
-          .dot-amber { background: #f59e0b; }
-          .dot-blue { background: #3b82f6; }
 
           .card-title-section {
             display: flex;
@@ -1730,11 +2115,11 @@ export default function Dashboard() {
             align-self: flex-start;
             font-size: 0.7rem;
             font-weight: 700;
-            color: #0369a1;
-            background: #f0f9ff;
+            color: #2563eb;
+            background: rgba(37, 99, 235, 0.08);
             padding: 0.12rem 0.5rem;
             border-radius: 4px;
-            border: 1px solid #bae6fd;
+            border: 1px solid rgba(37, 99, 235, 0.2);
             letter-spacing: 0.02em;
           }
 
@@ -1746,14 +2131,14 @@ export default function Dashboard() {
             margin: 0;
             font-size: 1.12rem;
             font-weight: 750;
-            color: #162033;
+            color: #0f172a;
             line-height: 1.35;
             letter-spacing: -0.015em;
             transition: color 0.15s ease;
           }
 
           .card-case-title:hover {
-            color: #0787d1;
+            color: #2563eb;
           }
 
           .card-meta-line {
@@ -1773,7 +2158,7 @@ export default function Dashboard() {
           }
 
           .meta-item svg {
-            color: #94a3b8;
+            color: #64748b;
             flex-shrink: 0;
           }
 
@@ -1781,7 +2166,7 @@ export default function Dashboard() {
             margin: 0;
             font-size: 0.82rem;
             line-height: 1.55;
-            color: #556c86;
+            color: #475569;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
@@ -1805,10 +2190,10 @@ export default function Dashboard() {
             align-items: center;
             gap: 0.45rem;
             padding: 0.48rem 0.95rem;
-            border-radius: 8px;
-            border: 1px solid #0787d1;
-            background: #e7f5ff;
-            color: #0787d1;
+            border-radius: 9px;
+            border: 1px solid rgba(37, 99, 235, 0.25);
+            background: rgba(37, 99, 235, 0.08);
+            color: #2563eb;
             font-size: 0.78rem;
             font-weight: 700;
             text-decoration: none;
@@ -1816,9 +2201,10 @@ export default function Dashboard() {
           }
 
           .view-workspace-action-btn:hover {
-            background: #0787d1;
+            background: #2563eb;
             color: #ffffff;
-            box-shadow: 0 4px 10px rgba(7, 135, 209, 0.2);
+            border-color: #2563eb;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
           }
 
           .card-secondary-actions {
@@ -1830,19 +2216,19 @@ export default function Dashboard() {
           .quick-status-selector {
             height: 34px;
             padding: 0 0.65rem;
-            border-radius: 8px;
-            border: 1px solid #dce7f1;
-            background: #f8fafc;
+            border-radius: 9px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
             font-size: 0.75rem;
             font-weight: 600;
-            color: #334155;
+            color: #0f172a;
             cursor: pointer;
             outline: none;
             transition: border-color 0.15s ease;
           }
 
           .quick-status-selector:focus {
-            border-color: #0787d1;
+            border-color: #2563eb;
           }
 
           .delete-case-btn {
@@ -1851,17 +2237,17 @@ export default function Dashboard() {
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
-            border: 1px solid #ecdbe0;
+            border-radius: 9px;
+            border: 1px solid #e2e8f0;
             background: #ffffff;
-            color: #8c9eb2;
+            color: #64748b;
             cursor: pointer;
             transition: all 0.15s ease;
           }
 
           .delete-case-btn:hover {
             background: #fef2f2;
-            border-color: #fca5a5;
+            border-color: #fecaca;
             color: #dc2626;
           }
 
@@ -1896,9 +2282,10 @@ export default function Dashboard() {
           .dashboard-error-card {
             padding: 3rem 1.5rem;
             text-align: center;
-            border-radius: 14px;
+            border-radius: 18px;
             background: #ffffff;
-            border: 1px dashed #dce7f1;
+            border: 1px dashed #cbd5e1;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -1909,7 +2296,9 @@ export default function Dashboard() {
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            background: #eaf5fd;
+            background: rgba(37, 99, 235, 0.08);
+            color: #2563eb;
+            border: 1px solid rgba(37, 99, 235, 0.2);
             display: grid;
             place-items: center;
             font-size: 1.35rem;
@@ -1919,23 +2308,24 @@ export default function Dashboard() {
           .dashboard-error-card h3 {
             margin: 0;
             font-size: 1.05rem;
-            color: #162033;
+            font-weight: 750;
+            color: #0f172a;
           }
 
           .dashboard-empty-card p,
           .dashboard-error-card p {
             margin: 0;
-            font-size: 0.82rem;
-            color: #64778f;
+            font-size: 0.84rem;
+            color: #475569;
             max-width: 480px;
-            line-height: 1.5;
+            line-height: 1.55;
           }
 
           .loading-radar-ring {
             width: 36px;
             height: 36px;
-            border: 3px solid #e1ecf4;
-            border-top-color: #0787d1;
+            border: 3px solid #e2e8f0;
+            border-top-color: #2563eb;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
           }
@@ -1947,7 +2337,7 @@ export default function Dashboard() {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(22, 32, 51, 0.45);
+            background: rgba(15, 23, 42, 0.45);
             backdrop-filter: blur(4px);
             z-index: 999;
             display: flex;
@@ -1958,9 +2348,9 @@ export default function Dashboard() {
 
           .modal-dialog-box {
             background: #ffffff;
-            border-radius: 14px;
-            border: 1px solid #dce7f1;
-            box-shadow: 0 20px 45px rgba(22, 32, 51, 0.18);
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.15);
             width: 100%;
             max-width: 540px;
             overflow: hidden;
@@ -1981,56 +2371,59 @@ export default function Dashboard() {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
-            padding: 1.2rem 1.4rem;
-            background: #f8fbfe;
-            border-bottom: 1px solid #dce7f1;
+            padding: 1.35rem 1.6rem;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
           }
 
           .modal-kicker {
-            font-size: 0.62rem;
+            font-size: 0.64rem;
             font-weight: 800;
             letter-spacing: 0.08em;
-            color: #0787d1;
+            color: #2563eb;
             display: block;
             margin-bottom: 0.15rem;
           }
 
           .kicker-danger {
-            color: #dc2626;
+            color: #d97706;
           }
 
           .modal-title-wrap h2 {
             margin: 0;
-            font-size: 1.15rem;
-            font-weight: 750;
-            color: #162033;
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.02em;
           }
 
           .modal-close-cross-btn {
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 6px;
-            border: 1px solid #dce7f1;
+            border-radius: 9px;
+            border: 1px solid #e2e8f0;
             background: #ffffff;
-            color: #64778f;
+            color: #64748b;
             cursor: pointer;
             font-size: 0.85rem;
+            transition: all 0.15s ease;
           }
 
           .modal-close-cross-btn:hover {
-            color: #ef4444;
-            background: #fef2f2;
+            color: #0f172a;
+            background: #f1f5f9;
+            border-color: #cbd5e1;
           }
 
           .modal-form-body {
-            padding: 1.4rem;
+            padding: 1.5rem;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 1.15rem;
           }
 
           .modal-error-notice {
@@ -2040,6 +2433,7 @@ export default function Dashboard() {
             border-radius: 8px;
             color: #dc2626;
             font-size: 0.78rem;
+            font-weight: 600;
           }
 
           .modal-input-group {
@@ -2049,13 +2443,13 @@ export default function Dashboard() {
           }
 
           .modal-input-group label {
-            font-size: 0.74rem;
-            font-weight: 700;
-            color: #37485e;
+            font-size: 0.76rem;
+            font-weight: 650;
+            color: #0f172a;
           }
 
           .star-required {
-            color: #dc2626;
+            color: #d97706;
           }
 
           .modal-two-column-row {
@@ -2069,20 +2463,21 @@ export default function Dashboard() {
           .modal-textarea-input {
             width: 100%;
             padding: 0.65rem 0.85rem;
-            border-radius: 8px;
-            border: 1px solid #d4e1ec;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
             background: #ffffff;
-            font-size: 0.82rem;
-            color: #1e2c3f;
+            font-size: 0.85rem;
+            color: #0f172a;
             outline: none;
             font-family: inherit;
+            transition: border-color 0.16s ease, box-shadow 0.16s ease;
           }
 
           .modal-text-input:focus,
           .modal-select-input:focus,
           .modal-textarea-input:focus {
-            border-color: #0787d1;
-            box-shadow: 0 0 0 2px rgba(7, 135, 209, 0.12);
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
           }
 
           .modal-textarea-input {
@@ -2093,46 +2488,52 @@ export default function Dashboard() {
             display: flex;
             align-items: center;
             justify-content: flex-end;
-            gap: 0.65rem;
-            padding-top: 0.65rem;
-            border-top: 1px solid #eef3f7;
+            gap: 0.75rem;
+            padding-top: 0.85rem;
+            border-top: 1px solid #e2e8f0;
             margin-top: 0.5rem;
           }
 
           .modal-secondary-cancel-btn {
-            padding: 0.65rem 1.1rem;
-            border-radius: 8px;
-            border: 1px solid #d4e1ec;
+            padding: 0.65rem 1.15rem;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
             background: #ffffff;
-            color: #556c86;
-            font-size: 0.8rem;
+            color: #334155;
+            font-size: 0.82rem;
             font-weight: 650;
-            cursor: pointer;
-          }
-
-          .modal-secondary-cancel-btn:hover {
-            background: #f4fbfe;
-          }
-
-          .modal-primary-submit-btn {
-            padding: 0.65rem 1.25rem;
-            border-radius: 8px;
-            border: 1px solid #0787d1;
-            background: #0787d1;
-            color: #ffffff;
-            font-size: 0.8rem;
-            font-weight: 700;
             cursor: pointer;
             transition: all 0.16s ease;
           }
 
+          .modal-secondary-cancel-btn:hover {
+            background: #f8fafc;
+            color: #0f172a;
+            border-color: #cbd5e1;
+          }
+
+          .modal-primary-submit-btn {
+            padding: 0.65rem 1.35rem;
+            border-radius: 10px;
+            border: 1px solid #1d4ed8;
+            background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff;
+            font-size: 0.82rem;
+            font-weight: 750;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+            transition: all 0.18s ease;
+          }
+
           .modal-primary-submit-btn:hover:not(:disabled) {
-            background: #056eaf;
+            background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+            border-color: #2563eb;
           }
 
           .modal-primary-submit-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.55;
             cursor: not-allowed;
+            box-shadow: none;
           }
 
           /* DELETE CONFIRM BODY */
@@ -2146,9 +2547,9 @@ export default function Dashboard() {
           .delete-warning-card {
             padding: 1rem;
             border-radius: 8px;
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            color: #991b1b;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #b45309;
             font-size: 0.84rem;
             line-height: 1.5;
           }
@@ -2156,24 +2557,26 @@ export default function Dashboard() {
           .delete-critical-notice {
             margin: 0.5rem 0 0;
             font-size: 0.76rem;
-            color: #b91c1c;
+            color: #b45309;
             font-weight: 600;
           }
 
           .modal-danger-confirm-btn {
-            padding: 0.65rem 1.25rem;
-            border-radius: 8px;
+            padding: 0.65rem 1.35rem;
+            border-radius: 10px;
             border: 1px solid #dc2626;
             background: #dc2626;
             color: #ffffff;
-            font-size: 0.8rem;
-            font-weight: 700;
+            font-size: 0.82rem;
+            font-weight: 750;
             cursor: pointer;
+            box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
             transition: all 0.16s ease;
           }
 
           .modal-danger-confirm-btn:hover:not(:disabled) {
             background: #b91c1c;
+            border-color: #b91c1c;
           }
 
           /* RESPONSIVE */

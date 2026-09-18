@@ -925,38 +925,40 @@ export default function CaseDetailsPage() {
           align-items: center;
           gap: 0.55rem;
           padding: 0.6rem 1.15rem;
-          background: rgba(15, 23, 42, 0.65);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(24, 32, 44, 0.75);
+          border: 1px solid #1f2836;
+          border-top: 1px solid rgba(255, 255, 255, 0.16);
           border-radius: 8px;
-          color: #94a3b8;
+          color: rgba(226, 232, 240, 0.75);
           font-size: 0.84rem;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
         }
 
         .workspace-tab-btn:hover {
-          background: rgba(22, 33, 58, 0.85);
-          color: #f1f5f9;
-          border-color: rgba(56, 189, 248, 0.3);
+          background: rgba(34, 45, 62, 0.92);
+          color: #ffffff;
+          border-color: rgba(220, 230, 242, 0.25);
         }
 
         .tab-btn-active {
-          background: rgba(14, 165, 233, 0.15);
-          border-color: rgba(56, 189, 248, 0.45);
-          color: #38bdf8;
-          box-shadow: 0 0 14px rgba(14, 165, 233, 0.18);
+          background: rgba(53, 167, 255, 0.16);
+          border-color: #35a7ff;
+          color: #35a7ff;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
         .copilot-toggle-btn {
-          border-color: rgba(14, 165, 233, 0.3) !important;
-          background: rgba(14, 165, 233, 0.08) !important;
-          color: #0284c7 !important;
+          border-color: rgba(53, 167, 255, 0.35) !important;
+          background: rgba(53, 167, 255, 0.1) !important;
+          color: #35a7ff !important;
         }
 
         .copilot-toggle-btn:hover {
-          background: rgba(14, 165, 233, 0.16) !important;
-          border-color: #0284c7 !important;
+          background: rgba(53, 167, 255, 0.2) !important;
+          border-color: #35a7ff !important;
         }
 
         .copilot-sidebar-indicator {
@@ -965,7 +967,7 @@ export default function CaseDetailsPage() {
           gap: 0.3rem;
           padding: 0.1rem 0.4rem;
           border-radius: 4px;
-          background: rgba(14, 165, 233, 0.12);
+          background: rgba(53, 167, 255, 0.14);
           font-size: 0.62rem;
           font-weight: 800;
           letter-spacing: 0.04em;
@@ -975,7 +977,7 @@ export default function CaseDetailsPage() {
           width: 5px;
           height: 5px;
           border-radius: 50%;
-          background: #0caa78;
+          background: #fcba04;
         }
 
         .case-workspace-layout {
@@ -1000,9 +1002,10 @@ export default function CaseDetailsPage() {
           max-height: calc(100vh - 110px);
           overflow: hidden;
           border-radius: 12px;
-          border: 1px solid #dce7f1;
-          background: #ffffff;
-          box-shadow: 0 12px 35px rgba(34, 72, 104, 0.08);
+          border: 1px solid #1f2836;
+          border-top: 1px solid rgba(255, 255, 255, 0.18);
+          background: rgba(18, 24, 34, 0.96);
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
           display: flex;
           flex-direction: column;
           z-index: 40;
@@ -1018,7 +1021,7 @@ export default function CaseDetailsPage() {
             max-height: 100vh;
             border-radius: 0;
             z-index: 1000;
-            box-shadow: -10px 0 35px rgba(22, 32, 51, 0.25);
+            box-shadow: -10px 0 35px rgba(0, 0, 0, 0.75);
           }
 
           .copilot-mobile-backdrop {
@@ -1027,8 +1030,8 @@ export default function CaseDetailsPage() {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(22, 32, 51, 0.4);
-            backdrop-filter: blur(3px);
+            background: rgba(18, 23, 22, 0.75);
+            backdrop-filter: blur(4px);
             z-index: 999;
           }
         }
@@ -1043,28 +1046,28 @@ export default function CaseDetailsPage() {
           gap: 0.5rem;
           padding: 0.65rem 1.1rem;
           border-radius: 30px;
-          background: #0787d1;
-          color: #ffffff;
-          border: 1px solid rgba(255, 255, 255, 0.35);
-          box-shadow: 0 8px 24px rgba(7, 135, 209, 0.35);
+          background: linear-gradient(180deg, #35a7ff 0%, #1e8fe6 100%);
+          color: #171d1c;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35);
           font-size: 0.82rem;
-          font-weight: 700;
+          font-weight: 750;
           cursor: pointer;
           transition: all 0.2s ease;
         }
 
         .floating-copilot-bubble-btn:hover {
-          background: #056eaf;
+          background: linear-gradient(180deg, #4cb3ff 0%, #35a7ff 100%);
           transform: translateY(-2px);
-          box-shadow: 0 12px 28px rgba(7, 135, 209, 0.45);
+          box-shadow: 0 12px 28px rgba(53, 167, 255, 0.4);
         }
 
         .bubble-live-dot {
           width: 7px;
           height: 7px;
           border-radius: 50%;
-          background: #34d399;
-          box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.3);
+          background: #fcba04;
+          box-shadow: 0 0 0 2px rgba(252, 186, 4, 0.3);
         }
 
         .graph-workspace-section {
@@ -1079,7 +1082,7 @@ export default function CaseDetailsPage() {
           display: inline-flex;
           align-items: center;
           gap: 0.5rem;
-          color: #94a3b8;
+          color: rgba(242, 247, 242, 0.72);
           font-size: 0.85rem;
           font-weight: 500;
           text-decoration: none;
@@ -1087,7 +1090,7 @@ export default function CaseDetailsPage() {
         }
 
         .back-link:hover {
-          color: #38bdf8;
+          color: #35a7ff;
         }
 
         /* LOADING & ERROR */
@@ -1114,7 +1117,7 @@ export default function CaseDetailsPage() {
           position: absolute;
           inset: 0;
           border-radius: 50%;
-          background: rgba(14, 165, 233, 0.15);
+          background: rgba(53, 167, 255, 0.15);
           animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
         }
 
@@ -1127,13 +1130,13 @@ export default function CaseDetailsPage() {
 
         .loading-text {
           font-size: 0.88rem;
-          color: #94a3b8;
+          color: rgba(242, 247, 242, 0.72);
           letter-spacing: 0.02em;
         }
 
         .case-error-card {
-          background: rgba(15, 23, 42, 0.7);
-          border: 1px solid rgba(239, 68, 68, 0.3);
+          background: rgba(18, 24, 33, 0.65);
+          border: 1px solid rgba(252, 186, 4, 0.3);
           border-radius: 12px;
           padding: 3rem 2rem;
           text-align: center;
@@ -1142,20 +1145,20 @@ export default function CaseDetailsPage() {
         }
 
         .error-icon-box {
-          color: #ef4444;
+          color: #fcba04;
           margin-bottom: 1rem;
         }
 
         .error-title {
           font-size: 1.25rem;
           font-weight: 700;
-          color: #f8fafc;
+          color: #f2f7f2;
           margin-bottom: 0.5rem;
         }
 
         .error-desc {
           font-size: 0.88rem;
-          color: #94a3b8;
+          color: rgba(242, 247, 242, 0.72);
           line-height: 1.5;
           margin-bottom: 1.5rem;
         }
@@ -1173,8 +1176,8 @@ export default function CaseDetailsPage() {
           border-radius: 8px;
           font-size: 0.82rem;
           font-weight: 600;
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.15);
+          background: rgba(24, 32, 44, 0.75);
+          border: 1px solid rgba(220, 230, 242, 0.12);
           color: #f1f5f9;
           text-decoration: none;
         }
@@ -1185,21 +1188,22 @@ export default function CaseDetailsPage() {
           padding: 0.5rem 1rem;
           border-radius: 8px;
           font-size: 0.82rem;
-          font-weight: 600;
-          background: #0284c7;
-          border: 1px solid #38bdf8;
-          color: #ffffff;
+          font-weight: 750;
+          background: linear-gradient(180deg, #35a7ff 0%, #1e8fe6 100%);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          color: #0a0d10;
           cursor: pointer;
         }
 
         /* 1. CASE HEADER CARD */
         .case-header-card {
-          background: rgba(15, 23, 42, 0.75);
-          border: 1px solid rgba(56, 189, 248, 0.15);
+          background: linear-gradient(180deg, rgba(22, 30, 42, 0.88) 0%, rgba(13, 18, 26, 0.94) 100%);
+          border: 1px solid rgba(220, 230, 242, 0.09);
+          border-top: 1px solid rgba(255, 255, 255, 0.16);
           border-radius: 14px;
           padding: 1.75rem 2rem;
           margin-bottom: 2rem;
-          box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+          box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
         }
 
         .header-meta-bar {
@@ -1222,9 +1226,9 @@ export default function CaseDetailsPage() {
           font-size: 0.8rem;
           font-weight: 700;
           letter-spacing: 0.04em;
-          color: #38bdf8;
-          background: rgba(14, 165, 233, 0.1);
-          border: 1px solid rgba(56, 189, 248, 0.25);
+          color: #35a7ff;
+          background: rgba(53, 167, 255, 0.12);
+          border: 1px solid rgba(53, 167, 255, 0.28);
           border-radius: 5px;
           padding: 0.2rem 0.6rem;
         }
@@ -1242,15 +1246,15 @@ export default function CaseDetailsPage() {
         }
 
         .status-pill-open {
-          background: rgba(16, 185, 129, 0.12);
-          color: #34d399;
-          border: 1px solid rgba(52, 211, 153, 0.3);
+          background: rgba(252, 186, 4, 0.12);
+          color: #fcba04;
+          border: 1px solid rgba(252, 186, 4, 0.3);
         }
 
         .status-pill-closed {
-          background: rgba(148, 163, 184, 0.1);
-          color: #94a3b8;
-          border: 1px solid rgba(148, 163, 184, 0.25);
+          background: rgba(53, 167, 255, 0.12);
+          color: #35a7ff;
+          border: 1px solid rgba(53, 167, 255, 0.28);
         }
 
         .status-dot {
@@ -1260,12 +1264,12 @@ export default function CaseDetailsPage() {
         }
 
         .dot-open {
-          background-color: #10b981;
-          box-shadow: 0 0 6px #10b981;
+          background-color: #fcba04;
+          box-shadow: 0 0 6px #fcba04;
         }
 
         .dot-closed {
-          background-color: #64748b;
+          background-color: #35a7ff;
         }
 
         .case-created-meta {
@@ -1273,13 +1277,13 @@ export default function CaseDetailsPage() {
           align-items: center;
           gap: 0.4rem;
           font-size: 0.78rem;
-          color: #94a3b8;
+          color: rgba(242, 247, 242, 0.72);
         }
 
         .case-main-title {
           font-size: 1.75rem;
           font-weight: 700;
-          color: #f8fafc;
+          color: #f2f7f2;
           letter-spacing: -0.02em;
           line-height: 1.25;
           margin-bottom: 1.5rem;
@@ -1294,13 +1298,13 @@ export default function CaseDetailsPage() {
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          color: #94a3b8;
+          color: #f2f7f2;
           margin-bottom: 0.5rem;
         }
 
         .narrative-box {
-          background: rgba(11, 16, 27, 0.6);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: rgba(23, 29, 28, 0.8);
+          border: 1px solid rgba(242, 247, 242, 0.08);
           border-radius: 8px;
           padding: 1rem 1.25rem;
         }
@@ -1308,7 +1312,7 @@ export default function CaseDetailsPage() {
         .narrative-text {
           font-size: 0.88rem;
           line-height: 1.6;
-          color: #cbd5e1;
+          color: #f2f7f2;
         }
 
         .case-technical-meta {
@@ -1316,7 +1320,7 @@ export default function CaseDetailsPage() {
           flex-wrap: wrap;
           gap: 1.5rem;
           padding-top: 1.25rem;
-          border-top: 1px solid rgba(255, 255, 255, 0.06);
+          border-top: 1px solid rgba(242, 247, 242, 0.08);
           font-size: 0.75rem;
         }
 
@@ -1327,11 +1331,11 @@ export default function CaseDetailsPage() {
         }
 
         .meta-label {
-          color: #64748b;
+          color: rgba(242, 247, 242, 0.55);
         }
 
         .meta-value {
-          color: #94a3b8;
+          color: rgba(242, 247, 242, 0.85);
         }
 
         .font-mono {
@@ -1367,16 +1371,16 @@ export default function CaseDetailsPage() {
         .section-title {
           font-size: 1.35rem;
           font-weight: 700;
-          color: #f1f5f9;
+          color: #f2f7f2;
           letter-spacing: -0.01em;
         }
 
         .doc-count-badge {
           font-size: 0.72rem;
           font-weight: 600;
-          color: #38bdf8;
-          background: rgba(14, 165, 233, 0.1);
-          border: 1px solid rgba(56, 189, 248, 0.2);
+          color: #35a7ff;
+          background: rgba(53, 167, 255, 0.12);
+          border: 1px solid rgba(53, 167, 255, 0.25);
           border-radius: 9999px;
           padding: 0.15rem 0.55rem;
           font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -1384,7 +1388,7 @@ export default function CaseDetailsPage() {
 
         .section-desc {
           font-size: 0.82rem;
-          color: #94a3b8;
+          color: rgba(242, 247, 242, 0.72);
         }
 
         .refresh-docs-btn {
@@ -1393,9 +1397,9 @@ export default function CaseDetailsPage() {
           gap: 0.35rem;
           padding: 0.4rem 0.75rem;
           border-radius: 6px;
-          background: rgba(15, 23, 42, 0.75);
-          border: 1px solid rgba(56, 189, 248, 0.2);
-          color: #cbd5e1;
+          background: rgba(24, 32, 44, 0.75);
+          border: 1px solid rgba(220, 230, 242, 0.12);
+          color: #f1f5f9;
           font-size: 0.78rem;
           font-weight: 600;
           cursor: pointer;
@@ -1403,9 +1407,9 @@ export default function CaseDetailsPage() {
         }
 
         .refresh-docs-btn:hover:not(:disabled) {
-          background: rgba(30, 41, 59, 0.85);
-          border-color: rgba(56, 189, 248, 0.4);
-          color: #38bdf8;
+          background: rgba(34, 45, 62, 0.9);
+          border-color: #35a7ff;
+          color: #35a7ff;
         }
 
         .refresh-docs-btn:disabled {
@@ -1423,8 +1427,8 @@ export default function CaseDetailsPage() {
 
         /* UPLOAD CONTAINER */
         .upload-container-card {
-          background: rgba(15, 23, 42, 0.6);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(16, 22, 30, 0.6);
+          border: 1px solid rgba(220, 230, 242, 0.08);
           border-radius: 12px;
           padding: 1.5rem;
         }
@@ -1432,13 +1436,13 @@ export default function CaseDetailsPage() {
         .upload-card-title {
           font-size: 0.95rem;
           font-weight: 600;
-          color: #f1f5f9;
+          color: #f2f7f2;
           margin-bottom: 0.25rem;
         }
 
         .upload-card-subtitle {
           font-size: 0.78rem;
-          color: #94a3b8;
+          color: rgba(242, 247, 242, 0.65);
           margin-bottom: 1rem;
         }
 
@@ -1453,9 +1457,9 @@ export default function CaseDetailsPage() {
         }
 
         .banner-success {
-          background: rgba(16, 185, 129, 0.1);
-          border: 1px solid rgba(16, 185, 129, 0.3);
-          color: #34d399;
+          background: rgba(252, 186, 4, 0.12);
+          border: 1px solid rgba(252, 186, 4, 0.3);
+          color: #fcba04;
         }
 
         .banner-danger {
@@ -1465,8 +1469,8 @@ export default function CaseDetailsPage() {
         }
 
         .dropzone-box {
-          border: 2px dashed rgba(56, 189, 248, 0.25);
-          background: rgba(11, 16, 27, 0.5);
+          border: 2px dashed rgba(242, 247, 242, 0.15);
+          background: #171d1c;
           border-radius: 10px;
           padding: 2rem 1.5rem;
           text-align: center;
@@ -1475,13 +1479,13 @@ export default function CaseDetailsPage() {
         }
 
         .dropzone-box:hover, .dropzone-dragging {
-          border-color: #38bdf8;
-          background: rgba(14, 165, 233, 0.06);
+          border-color: #35a7ff;
+          background: rgba(53, 167, 255, 0.06);
         }
 
         .dropzone-has-file {
           border-style: solid;
-          border-color: rgba(56, 189, 248, 0.4);
+          border-color: rgba(53, 167, 255, 0.4);
           padding: 1.25rem;
         }
 
@@ -1500,12 +1504,12 @@ export default function CaseDetailsPage() {
           width: 44px;
           height: 44px;
           border-radius: 50%;
-          background: rgba(14, 165, 233, 0.1);
-          border: 1px solid rgba(56, 189, 248, 0.2);
+          background: rgba(53, 167, 255, 0.15);
+          border: 1px solid rgba(53, 167, 255, 0.35);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #38bdf8;
+          color: #35a7ff;
         }
 
         .dropzone-text-group {
@@ -1516,12 +1520,12 @@ export default function CaseDetailsPage() {
 
         .dropzone-main-text {
           font-size: 0.88rem;
-          color: #e2e8f0;
+          color: #f2f7f2;
         }
 
         .dropzone-sub-text {
           font-size: 0.75rem;
-          color: #64748b;
+          color: rgba(242, 247, 242, 0.55);
         }
 
         .selected-file-display {
@@ -1539,9 +1543,9 @@ export default function CaseDetailsPage() {
         }
 
         .file-type-pill {
-          background: rgba(14, 165, 233, 0.15);
-          border: 1px solid rgba(56, 189, 248, 0.3);
-          color: #38bdf8;
+          background: rgba(53, 167, 255, 0.15);
+          border: 1px solid rgba(53, 167, 255, 0.35);
+          color: #35a7ff;
           font-size: 0.7rem;
           font-weight: 700;
           padding: 0.25rem 0.5rem;
@@ -1558,18 +1562,18 @@ export default function CaseDetailsPage() {
         .selected-filename {
           font-size: 0.88rem;
           font-weight: 600;
-          color: #f1f5f9;
+          color: #f2f7f2;
         }
 
         .selected-filesize {
           font-size: 0.72rem;
-          color: #94a3b8;
+          color: rgba(242, 247, 242, 0.65);
         }
 
         .remove-file-btn {
-          background: rgba(239, 68, 68, 0.1);
-          border: 1px solid rgba(239, 68, 68, 0.25);
-          color: #f87171;
+          background: rgba(252, 186, 4, 0.12);
+          border: 1px solid rgba(252, 186, 4, 0.3);
+          color: #fcba04;
           width: 30px;
           height: 30px;
           border-radius: 6px;
@@ -1581,7 +1585,7 @@ export default function CaseDetailsPage() {
         }
 
         .remove-file-btn:hover {
-          background: rgba(239, 68, 68, 0.2);
+          background: rgba(252, 186, 4, 0.25);
         }
 
         .upload-submit-bar {
@@ -1595,20 +1599,20 @@ export default function CaseDetailsPage() {
           align-items: center;
           gap: 0.5rem;
           padding: 0.6rem 1.25rem;
-          background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-          border: 1px solid rgba(56, 189, 248, 0.35);
+          background: linear-gradient(180deg, #35a7ff 0%, #1e8fe6 100%);
+          border: 1px solid rgba(255, 255, 255, 0.3);
           border-radius: 8px;
-          color: #ffffff;
+          color: #171d1c;
           font-size: 0.85rem;
-          font-weight: 600;
+          font-weight: 750;
           cursor: pointer;
           transition: all 0.2s ease;
-          box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
         }
 
         .upload-submit-btn:hover:not(:disabled) {
-          background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
-          box-shadow: 0 4px 18px rgba(14, 165, 233, 0.5);
+          background: linear-gradient(180deg, #4cb3ff 0%, #35a7ff 100%);
+          box-shadow: 0 4px 18px rgba(53, 167, 255, 0.35);
           transform: translateY(-1px);
         }
 
@@ -1621,8 +1625,8 @@ export default function CaseDetailsPage() {
         .mini-spinner {
           width: 14px;
           height: 14px;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          border-top-color: #ffffff;
+          border: 2px solid rgba(23, 29, 28, 0.3);
+          border-top-color: #171d1c;
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
         }
@@ -1643,28 +1647,28 @@ export default function CaseDetailsPage() {
         }
 
         .empty-docs-card {
-          background: rgba(11, 16, 27, 0.5);
-          border: 1px dashed rgba(255, 255, 255, 0.08);
+          background: rgba(18, 24, 33, 0.6);
+          border: 1px dashed rgba(220, 230, 242, 0.14);
           border-radius: 12px;
           padding: 3rem 1.5rem;
           text-align: center;
         }
 
         .empty-docs-icon {
-          color: #475569;
+          color: rgba(242, 247, 242, 0.4);
           margin-bottom: 0.85rem;
         }
 
         .empty-docs-title {
           font-size: 0.98rem;
           font-weight: 600;
-          color: #cbd5e1;
+          color: #f2f7f2;
           margin-bottom: 0.35rem;
         }
 
         .empty-docs-desc {
           font-size: 0.8rem;
-          color: #64748b;
+          color: rgba(242, 247, 242, 0.65);
           max-width: 480px;
           margin: 0 auto;
           line-height: 1.5;
@@ -1677,8 +1681,8 @@ export default function CaseDetailsPage() {
         }
 
         .doc-item-card {
-          background: rgba(15, 23, 42, 0.7);
-          border: 1px solid rgba(255, 255, 255, 0.07);
+          background: rgba(20, 26, 36, 0.7);
+          border: 1px solid rgba(220, 230, 242, 0.08);
           border-radius: 10px;
           padding: 1rem 1.25rem;
           display: flex;
@@ -1689,8 +1693,8 @@ export default function CaseDetailsPage() {
         }
 
         .doc-item-card:hover {
-          border-color: rgba(56, 189, 248, 0.3);
-          background: rgba(22, 33, 58, 0.8);
+          border-color: rgba(53, 167, 255, 0.4);
+          background: rgba(28, 38, 52, 0.85);
           transform: translateX(2px);
         }
 
@@ -1715,21 +1719,21 @@ export default function CaseDetailsPage() {
         }
 
         .badge-pdf {
-          background: rgba(239, 68, 68, 0.12);
-          border: 1px solid rgba(239, 68, 68, 0.3);
-          color: #f87171;
+          background: rgba(252, 186, 4, 0.14);
+          border: 1px solid rgba(252, 186, 4, 0.35);
+          color: #fcba04;
         }
 
         .badge-csv {
-          background: rgba(16, 185, 129, 0.12);
-          border: 1px solid rgba(16, 185, 129, 0.3);
-          color: #34d399;
+          background: rgba(53, 167, 255, 0.14);
+          border: 1px solid rgba(53, 167, 255, 0.35);
+          color: #35a7ff;
         }
 
         .badge-txt {
-          background: rgba(14, 165, 233, 0.12);
-          border: 1px solid rgba(56, 189, 248, 0.3);
-          color: #38bdf8;
+          background: rgba(24, 32, 44, 0.8);
+          border: 1px solid rgba(220, 230, 242, 0.15);
+          color: #f1f5f9;
         }
 
         .doc-details-block {
@@ -1739,7 +1743,7 @@ export default function CaseDetailsPage() {
         .doc-filename {
           font-size: 0.92rem;
           font-weight: 600;
-          color: #f1f5f9;
+          color: #f2f7f2;
           margin-bottom: 0.2rem;
           white-space: nowrap;
           overflow: hidden;
@@ -1751,11 +1755,11 @@ export default function CaseDetailsPage() {
           align-items: center;
           gap: 0.5rem;
           font-size: 0.73rem;
-          color: #94a3b8;
+          color: rgba(242, 247, 242, 0.65);
         }
 
         .meta-separator {
-          color: #475569;
+          color: rgba(242, 247, 242, 0.3);
         }
 
         /* HASH VERIFICATION */
@@ -1764,8 +1768,8 @@ export default function CaseDetailsPage() {
           align-items: center;
           gap: 0.5rem;
           padding: 0.35rem 0.65rem;
-          background: rgba(11, 16, 27, 0.7);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: #0d1218;
+          border: 1px solid #1f2836;
           border-radius: 6px;
           font-size: 0.7rem;
           flex-shrink: 0;
@@ -1773,13 +1777,13 @@ export default function CaseDetailsPage() {
 
         .hash-label {
           font-weight: 700;
-          color: #64748b;
+          color: rgba(242, 247, 242, 0.5);
           font-size: 0.65rem;
           letter-spacing: 0.04em;
         }
 
         .hash-value {
-          color: #38bdf8;
+          color: #35a7ff;
           font-size: 0.72rem;
         }
 
@@ -1797,20 +1801,20 @@ export default function CaseDetailsPage() {
           gap: 0.4rem;
           padding: 0.35rem 0.8rem;
           border-radius: 6px;
-          background: rgba(14, 165, 233, 0.1);
-          border: 1px solid rgba(56, 189, 248, 0.25);
-          color: #38bdf8;
+          background: rgba(53, 167, 255, 0.14);
+          border: 1px solid rgba(53, 167, 255, 0.35);
+          color: #35a7ff;
           font-size: 0.75rem;
-          font-weight: 600;
+          font-weight: 700;
           cursor: pointer;
           transition: all 0.2s ease;
           white-space: nowrap;
         }
 
         .doc-process-btn:hover:not(:disabled) {
-          background: rgba(14, 165, 233, 0.2);
-          border-color: rgba(56, 189, 248, 0.5);
-          box-shadow: 0 0 10px rgba(14, 165, 233, 0.2);
+          background: rgba(53, 167, 255, 0.28);
+          border-color: #35a7ff;
+          box-shadow: 0 0 10px rgba(53, 167, 255, 0.25);
           transform: translateY(-1px);
         }
 
@@ -1821,15 +1825,15 @@ export default function CaseDetailsPage() {
         }
 
         .doc-process-btn--error {
-          background: rgba(239, 68, 68, 0.1);
-          border-color: rgba(239, 68, 68, 0.3);
-          color: #f87171;
+          background: rgba(252, 186, 4, 0.12);
+          border-color: rgba(252, 186, 4, 0.35);
+          color: #fcba04;
         }
 
         .doc-process-btn--error:hover:not(:disabled) {
-          background: rgba(239, 68, 68, 0.2);
-          border-color: rgba(239, 68, 68, 0.5);
-          box-shadow: 0 0 10px rgba(239, 68, 68, 0.15);
+          background: rgba(252, 186, 4, 0.25);
+          border-color: #fcba04;
+          box-shadow: 0 0 10px rgba(252, 186, 4, 0.2);
         }
 
         .doc-process-success {
@@ -1838,17 +1842,17 @@ export default function CaseDetailsPage() {
           gap: 0.4rem;
           padding: 0.35rem 0.8rem;
           border-radius: 6px;
-          background: rgba(16, 185, 129, 0.1);
-          border: 1px solid rgba(16, 185, 129, 0.3);
-          color: #34d399;
+          background: rgba(53, 167, 255, 0.14);
+          border: 1px solid rgba(53, 167, 255, 0.35);
+          color: #35a7ff;
           font-size: 0.75rem;
-          font-weight: 600;
+          font-weight: 700;
           white-space: nowrap;
         }
 
         .doc-process-error {
           font-size: 0.72rem;
-          color: #f87171;
+          color: #fcba04;
           margin-top: 0.25rem;
           max-width: 340px;
           line-height: 1.4;
@@ -1888,19 +1892,19 @@ export default function CaseDetailsPage() {
           justify-content: space-between;
           align-items: center;
           padding-bottom: 0.5rem;
-          border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+          border-bottom: 1px solid rgba(242, 247, 242, 0.08);
           flex-wrap: wrap;
           gap: 0.5rem;
         }
 
         .staged-counter-pill {
-          background: #e0f2fe;
-          color: #0369a1;
+          background: rgba(53, 167, 255, 0.14);
+          color: #35a7ff;
           font-size: 0.72rem;
           font-weight: 800;
           padding: 0.2rem 0.6rem;
           border-radius: 9999px;
-          border: 1px solid #bae6fd;
+          border: 1px solid rgba(53, 167, 255, 0.3);
           letter-spacing: 0.04em;
         }
 
@@ -1912,14 +1916,14 @@ export default function CaseDetailsPage() {
 
         .staged-total-size {
           font-size: 0.75rem;
-          color: #64748b;
+          color: rgba(242, 247, 242, 0.65);
           font-weight: 600;
         }
 
         .btn-add-more-files {
-          background: #f8fafc;
-          border: 1px solid #cbd5e1;
-          color: #0ea5e9;
+          background: rgba(24, 32, 44, 0.75);
+          border: 1px solid rgba(220, 230, 242, 0.12);
+          color: #35a7ff;
           font-size: 0.74rem;
           font-weight: 700;
           padding: 0.2rem 0.55rem;
@@ -1929,14 +1933,14 @@ export default function CaseDetailsPage() {
         }
 
         .btn-add-more-files:hover {
-          background: #e0f2fe;
-          border-color: #0ea5e9;
+          background: rgba(34, 45, 62, 0.9);
+          border-color: #35a7ff;
         }
 
         .btn-clear-all-staged {
           background: transparent;
           border: none;
-          color: #ef4444;
+          color: #fcba04;
           font-size: 0.74rem;
           font-weight: 600;
           cursor: pointer;
@@ -1954,14 +1958,14 @@ export default function CaseDetailsPage() {
         }
 
         .staged-file-card {
-          background: #ffffff;
-          border: 1px solid #e2e8f0;
+          background: #0d1218;
+          border: 1px solid #1f2836;
           border-radius: 8px;
           padding: 0.55rem 0.75rem;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
         .staged-file-left {
@@ -1977,15 +1981,15 @@ export default function CaseDetailsPage() {
           padding: 0.15rem 0.45rem;
           border-radius: 4px;
           letter-spacing: 0.04em;
-          background: #f1f5f9;
-          color: #475569;
+          background: rgba(24, 32, 44, 0.85);
+          color: #f1f5f9;
         }
 
-        .ext-pdf { background: #fee2e2; color: #b91c1c; }
-        .ext-docx { background: #dbeafe; color: #1d4ed8; }
-        .ext-csv { background: #fef3c7; color: #b45309; }
-        .ext-txt { background: #f1f5f9; color: #334155; }
-        .ext-png, .ext-jpg, .ext-jpeg { background: #fae8ff; color: #86198f; }
+        .ext-pdf { background: rgba(252, 186, 4, 0.16); color: #fcba04; }
+        .ext-docx { background: rgba(53, 167, 255, 0.16); color: #35a7ff; }
+        .ext-csv { background: rgba(53, 167, 255, 0.16); color: #35a7ff; }
+        .ext-txt { background: rgba(24, 32, 44, 0.85); color: #f1f5f9; }
+        .ext-png, .ext-jpg, .ext-jpeg { background: rgba(252, 186, 4, 0.16); color: #fcba04; }
 
         .staged-meta {
           display: flex;
@@ -1996,7 +2000,7 @@ export default function CaseDetailsPage() {
         .staged-filename {
           font-size: 0.78rem;
           font-weight: 600;
-          color: #0f172a;
+          color: #f2f7f2;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -2005,13 +2009,13 @@ export default function CaseDetailsPage() {
 
         .staged-size {
           font-size: 0.7rem;
-          color: #94a3b8;
+          color: rgba(242, 247, 242, 0.6);
         }
 
         .staged-remove-btn {
           background: transparent;
           border: none;
-          color: #94a3b8;
+          color: rgba(242, 247, 242, 0.6);
           font-size: 0.85rem;
           cursor: pointer;
           padding: 0.2rem 0.35rem;
@@ -2020,8 +2024,8 @@ export default function CaseDetailsPage() {
         }
 
         .staged-remove-btn:hover {
-          color: #ef4444;
-          background: #fee2e2;
+          color: #fcba04;
+          background: rgba(252, 186, 4, 0.15);
         }
 
         /* Batch Process All Header Bar */
@@ -2030,8 +2034,8 @@ export default function CaseDetailsPage() {
           justify-content: space-between;
           align-items: center;
           padding: 0.65rem 1rem;
-          background: #ffffff;
-          border-bottom: 1px solid #e2e8f0;
+          background: #202726;
+          border-bottom: 1px solid rgba(242, 247, 242, 0.08);
           margin-bottom: 0.5rem;
           border-radius: 8px 8px 0 0;
         }
@@ -2039,7 +2043,7 @@ export default function CaseDetailsPage() {
         .docs-count-label {
           font-size: 0.8rem;
           font-weight: 700;
-          color: #334155;
+          color: #f2f7f2;
         }
 
         .btn-batch-process-all {
@@ -2047,19 +2051,19 @@ export default function CaseDetailsPage() {
           align-items: center;
           gap: 0.45rem;
           padding: 0.4rem 0.85rem;
-          background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-          color: #ffffff;
-          border: 1px solid rgba(56, 189, 248, 0.4);
+          background: linear-gradient(180deg, #35a7ff 0%, #1e8fe6 100%);
+          color: #171d1c;
+          border: 1px solid rgba(255, 255, 255, 0.3);
           border-radius: 6px;
           font-size: 0.75rem;
-          font-weight: 700;
+          font-weight: 750;
           cursor: pointer;
-          box-shadow: 0 2px 6px rgba(14, 165, 233, 0.25);
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35);
           transition: all 0.15s ease;
         }
 
         .btn-batch-process-all:hover:not(:disabled) {
-          background: #0ea5e9;
+          background: linear-gradient(180deg, #4cb3ff 0%, #35a7ff 100%);
           transform: translateY(-1px);
         }
 

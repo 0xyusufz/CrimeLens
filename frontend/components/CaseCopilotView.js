@@ -590,7 +590,8 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           flex-direction: column;
           width: 100%;
           height: 100%;
-          background: #ffffff;
+          background: #171D1C;
+          border: 1px solid rgba(242, 247, 242, 0.12);
           border-radius: 12px;
           overflow: hidden;
           font-family: inherit;
@@ -607,8 +608,8 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           align-items: flex-start;
           justify-content: space-between;
           padding: 1rem 1.15rem;
-          background: #f8fbfe;
-          border-bottom: 1px solid #dce7f1;
+          background: #171D1C;
+          border-bottom: 1px solid rgba(242, 247, 242, 0.1);
         }
 
         .copilot-header-info {
@@ -626,28 +627,28 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           width: 7px;
           height: 7px;
           border-radius: 50%;
-          background: #0caa78;
-          box-shadow: 0 0 0 3px rgba(12, 170, 120, 0.18);
+          background: #FCBA04;
+          box-shadow: 0 0 0 3px rgba(252, 186, 4, 0.2);
         }
 
         .copilot-badge-text {
           font-size: 0.65rem;
           font-weight: 800;
           letter-spacing: 0.08em;
-          color: #0787d1;
+          color: #FCBA04;
         }
 
         .copilot-title {
           font-size: 1rem;
           font-weight: 750;
-          color: #162033;
+          color: #F2F7F2;
           margin: 0;
           line-height: 1.25;
         }
 
         .copilot-subtitle {
           font-size: 0.73rem;
-          color: #71829b;
+          color: #c8d4cf;
           margin: 0.15rem 0 0;
         }
 
@@ -658,18 +659,18 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           align-items: center;
           justify-content: center;
           border-radius: 6px;
-          border: 1px solid #dce7f1;
-          background: #ffffff;
-          color: #64778f;
+          border: 1px solid rgba(242, 247, 242, 0.15);
+          background: #18202b;
+          color: #c8d4cf;
           cursor: pointer;
           font-size: 0.85rem;
           transition: all 0.16s ease;
         }
 
         .copilot-close-btn:hover {
-          background: #fef2f2;
-          color: #ef4444;
-          border-color: #fca5a5;
+          background: rgba(252, 186, 4, 0.15);
+          color: #FCBA04;
+          border-color: rgba(252, 186, 4, 0.4);
         }
 
         /* 2. SUB-NAVIGATION PILLS */
@@ -678,8 +679,8 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           align-items: center;
           gap: 0.35rem;
           padding: 0.45rem 0.65rem;
-          background: #f1f6fa;
-          border-bottom: 1px solid #dce7f1;
+          background: #171D1C;
+          border-bottom: 1px solid rgba(242, 247, 242, 0.1);
         }
 
         .nav-pill-btn {
@@ -692,7 +693,7 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           border-radius: 7px;
           border: 1px solid transparent;
           background: transparent;
-          color: #64778f;
+          color: #c8d4cf;
           font-size: 0.74rem;
           font-weight: 650;
           cursor: pointer;
@@ -705,28 +706,29 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
         }
 
         .nav-pill-btn:hover {
-          color: #0787d1;
-          background: #eaf5fd;
+          color: #35A7FF;
+          background: rgba(53, 167, 255, 0.12);
         }
 
         .nav-pill-btn.is-active {
-          color: #0787d1;
-          background: #ffffff;
-          border-color: #cde4f3;
-          box-shadow: 0 2px 6px rgba(34, 72, 104, 0.05);
+          color: #171D1C;
+          background: #35A7FF;
+          border-color: #35A7FF;
+          font-weight: 750;
+          box-shadow: 0 2px 6px rgba(53, 167, 255, 0.3);
         }
 
         .count-pill {
           padding: 0 0.28rem;
           border-radius: 10px;
           font-size: 0.62rem;
-          background: #e2edf6;
-          color: #556c86;
+          background: #18202b;
+          color: #F2F7F2;
         }
 
         .is-active .count-pill {
-          background: #e1f2fc;
-          color: #0787d1;
+          background: #171D1C;
+          color: #35A7FF;
         }
 
         /* 3. TAB BODY */
@@ -736,6 +738,7 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           display: flex;
           flex-direction: column;
           min-height: 0;
+          background: #171D1C;
         }
 
         /* CHAT SECTION */
@@ -744,6 +747,7 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           flex-direction: column;
           flex: 1;
           min-height: 0;
+          background: #171D1C;
         }
 
         .copilot-context-status {
@@ -751,31 +755,31 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           align-items: center;
           gap: 0.35rem;
           padding: 0.45rem 0.85rem;
-          background: #f8fcff;
-          border-bottom: 1px solid #e5eef5;
+          background: #171D1C;
+          border-bottom: 1px solid rgba(242, 247, 242, 0.08);
           font-size: 0.68rem;
           font-weight: 600;
-          color: #667c94;
+          color: #c8d4cf;
         }
 
         .status-indicator-dot {
           width: 5px;
           height: 5px;
           border-radius: 50%;
-          background: #0caa78;
+          background: #FCBA04;
         }
 
         .quick-suggestions-block {
           padding: 0.75rem 0.85rem;
-          background: #fbfdff;
-          border-bottom: 1px solid #edf3f8;
+          background: #171D1C;
+          border-bottom: 1px solid rgba(242, 247, 242, 0.08);
         }
 
         .suggestions-title {
           font-size: 0.61rem;
           font-weight: 800;
           letter-spacing: 0.06em;
-          color: #8c9eb2;
+          color: #c8d4cf;
           display: block;
           margin-bottom: 0.4rem;
         }
@@ -791,9 +795,9 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           text-align: left;
           padding: 0.38rem 0.65rem;
           border-radius: 6px;
-          border: 1px solid #dce8f2;
-          background: #ffffff;
-          color: #384d66;
+          border: 1px solid rgba(242, 247, 242, 0.12);
+          background: #141a22;
+          color: #F2F7F2;
           font-size: 0.72rem;
           font-weight: 550;
           cursor: pointer;
@@ -801,9 +805,9 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
         }
 
         .suggestion-chip:hover {
-          background: #edf6fd;
-          border-color: #bce1f7;
-          color: #0787d1;
+          background: rgba(53, 167, 255, 0.15);
+          border-color: #35A7FF;
+          color: #35A7FF;
         }
 
         .copilot-messages-feed {
@@ -815,26 +819,27 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           gap: 0.75rem;
           min-height: 260px;
           max-height: 480px;
+          background: #171D1C;
         }
 
         .copilot-bubble {
           max-width: 90%;
           padding: 0.65rem 0.85rem;
           border-radius: 8px;
-          box-shadow: 0 2px 6px rgba(34, 72, 104, 0.03);
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
         }
 
         .bubble-copilot {
           align-self: flex-start;
-          background: #f8fbfd;
-          border: 1px solid #dce7f1;
+          background: #141a22;
+          border: 1px solid rgba(220, 230, 242, 0.1);
         }
 
         .bubble-user {
           align-self: flex-end;
-          background: #0787d1;
-          border: 1px solid #0787d1;
-          color: #ffffff;
+          background: #35A7FF;
+          border: 1px solid #35A7FF;
+          color: #171D1C;
         }
 
         .bubble-header {
@@ -845,23 +850,24 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           font-size: 0.58rem;
           font-weight: 800;
           letter-spacing: 0.07em;
-          color: #0787d1;
+          color: #35A7FF;
         }
 
         .bubble-user .bubble-author {
-          color: #e0f2fe;
+          color: #171D1C;
         }
 
         .bubble-text {
           font-size: 0.8rem;
           line-height: 1.5;
-          color: #27384f;
+          color: #F2F7F2;
           white-space: pre-wrap;
           word-break: break-word;
         }
 
         .bubble-user .bubble-text {
-          color: #ffffff;
+          color: #171D1C;
+          font-weight: 600;
         }
 
         .copilot-thinking-pill {
@@ -870,18 +876,18 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           align-items: center;
           gap: 0.35rem;
           padding: 0.45rem 0.75rem;
-          background: #f4fbfe;
-          border: 1px solid #cce8f8;
+          background: #141a22;
+          border: 1px solid rgba(53, 167, 255, 0.35);
           border-radius: 7px;
           font-size: 0.72rem;
-          color: #087ec2;
+          color: #35A7FF;
         }
 
         .copilot-thinking-pill .dot {
           width: 5px;
           height: 5px;
           border-radius: 50%;
-          background: #0787d1;
+          background: #35A7FF;
           animation: dot-pulse 1s infinite alternate;
         }
 
@@ -903,8 +909,8 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           display: flex;
           gap: 0.45rem;
           padding: 0.75rem 0.85rem;
-          background: #ffffff;
-          border-top: 1px solid #dce7f1;
+          background: #171D1C;
+          border-top: 1px solid rgba(242, 247, 242, 0.1);
         }
 
         .copilot-input-field {
@@ -912,17 +918,17 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           min-width: 0;
           height: 38px;
           padding: 0 0.75rem;
-          background: #fbfdff;
-          border: 1px solid #d4e1ec;
+          background: #0d1218;
+          border: 1px solid rgba(220, 230, 242, 0.15);
           border-radius: 8px;
           font-size: 0.78rem;
-          color: #1e2c3f;
+          color: #F2F7F2;
           outline: none;
         }
 
         .copilot-input-field:focus {
-          border-color: #0787d1;
-          box-shadow: 0 0 0 2px rgba(7, 135, 209, 0.12);
+          border-color: #35A7FF;
+          box-shadow: 0 0 0 2px rgba(53, 167, 255, 0.2);
         }
 
         .copilot-send-action-btn {
@@ -932,19 +938,20 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           align-items: center;
           justify-content: center;
           border-radius: 8px;
-          border: 1px solid #0787d1;
-          background: #0787d1;
-          color: #ffffff;
+          border: 1px solid #35A7FF;
+          background: #35A7FF;
+          color: #171D1C;
           cursor: pointer;
           transition: all 0.16s ease;
+          font-weight: 750;
         }
 
         .copilot-send-action-btn:hover:not(:disabled) {
-          background: #056eaf;
+          background: #2392ea;
         }
 
         .copilot-send-action-btn:disabled {
-          opacity: 0.5;
+          opacity: 0.45;
           cursor: not-allowed;
         }
 
@@ -954,6 +961,7 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           display: flex;
           flex-direction: column;
           gap: 0.85rem;
+          background: #171D1C;
         }
 
         .brief-action-bar,
@@ -962,21 +970,21 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           align-items: center;
           justify-content: space-between;
           padding-bottom: 0.65rem;
-          border-bottom: 1px solid #e0eaf2;
+          border-bottom: 1px solid rgba(242, 247, 242, 0.1);
         }
 
         .section-eyebrow {
           font-size: 0.6rem;
           font-weight: 800;
           letter-spacing: 0.08em;
-          color: #0787d1;
+          color: #FCBA04;
         }
 
         .section-heading {
           margin: 0.1rem 0 0;
           font-size: 0.88rem;
           font-weight: 700;
-          color: #162033;
+          color: #F2F7F2;
         }
 
         .brief-refresh-btn,
@@ -986,9 +994,9 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           gap: 0.35rem;
           padding: 0.35rem 0.65rem;
           border-radius: 6px;
-          border: 1px solid #d4e1ec;
-          background: #ffffff;
-          color: #556c86;
+          border: 1px solid rgba(242, 247, 242, 0.15);
+          background: #18202b;
+          color: #F2F7F2;
           font-size: 0.72rem;
           font-weight: 600;
           cursor: pointer;
@@ -996,9 +1004,9 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
 
         .brief-refresh-btn:hover,
         .matrix-refresh-btn:hover {
-          background: #edf6fc;
-          color: #0787d1;
-          border-color: #bde0f6;
+          background: #35A7FF;
+          color: #171D1C;
+          border-color: #35A7FF;
         }
 
         .brief-refresh-btn :global(svg),
@@ -1010,15 +1018,15 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
         .brief-card-content {
           padding: 1rem;
           border-radius: 8px;
-          border: 1px solid #dce7f1;
-          background: #f8fbfd;
+          border: 1px solid rgba(220, 230, 242, 0.1);
+          background: #141a22;
         }
 
         .brief-paragraph {
           margin: 0;
           font-size: 0.8rem;
           line-height: 1.65;
-          color: #37485e;
+          color: #F2F7F2;
           white-space: pre-wrap;
         }
 
@@ -1028,18 +1036,18 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           padding: 1.5rem;
           text-align: center;
           font-size: 0.78rem;
-          color: #71829b;
-          border: 1px dashed #dce7f1;
+          color: #c8d4cf;
+          border: 1px dashed rgba(220, 230, 242, 0.15);
           border-radius: 8px;
-          background: #fbfdff;
+          background: #141a22;
         }
 
         .loading-spinner {
           display: inline-block;
           width: 20px;
           height: 20px;
-          border: 2px solid #e1ecf4;
-          border-top-color: #0787d1;
+          border: 2px solid rgba(53, 167, 255, 0.2);
+          border-top-color: #35A7FF;
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
           margin-bottom: 0.5rem;
@@ -1057,6 +1065,7 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           display: flex;
           flex-direction: column;
           gap: 0.75rem;
+          background: #171D1C;
         }
 
         .matrix-search-box {
@@ -1068,7 +1077,7 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
         .matrix-search-box svg {
           position: absolute;
           left: 0.65rem;
-          color: #8c9eb2;
+          color: #c8d4cf;
           pointer-events: none;
         }
 
@@ -1077,15 +1086,15 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           height: 34px;
           padding: 0 1.8rem 0 2rem;
           border-radius: 6px;
-          border: 1px solid #d4e1ec;
-          background: #fbfdff;
+          border: 1px solid rgba(220, 230, 242, 0.15);
+          background: #0d1218;
           font-size: 0.75rem;
-          color: #27384f;
+          color: #F2F7F2;
           outline: none;
         }
 
         .matrix-search-input:focus {
-          border-color: #0787d1;
+          border-color: #35A7FF;
         }
 
         .matrix-clear-btn {
@@ -1093,7 +1102,7 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           right: 0.5rem;
           background: none;
           border: none;
-          color: #8c9eb2;
+          color: #c8d4cf;
           font-size: 0.75rem;
           cursor: pointer;
         }
@@ -1109,9 +1118,9 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
         .matrix-rel-card {
           padding: 0.7rem 0.8rem;
           border-radius: 8px;
-          border: 1px solid #dce7f1;
-          background: #ffffff;
-          box-shadow: 0 2px 6px rgba(34, 72, 104, 0.025);
+          border: 1px solid rgba(220, 230, 242, 0.1);
+          background: #141a22;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
         }
 
         .rel-card-header {
@@ -1127,15 +1136,15 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           letter-spacing: 0.05em;
           padding: 0.15rem 0.4rem;
           border-radius: 4px;
-          background: #e7f5ff;
-          color: #0787d1;
+          background: rgba(53, 167, 255, 0.15);
+          color: #35A7FF;
           font-family: ui-monospace, monospace;
         }
 
         .rel-conf-pill {
           font-size: 0.62rem;
           font-weight: 700;
-          color: #0caa78;
+          color: #FCBA04;
           font-family: ui-monospace, monospace;
         }
 
@@ -1152,8 +1161,8 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           align-items: center;
           gap: 0.35rem;
           padding: 0.35rem 0.5rem;
-          background: #f8fbfd;
-          border: 1px solid #e1ebf4;
+          background: #171D1C;
+          border: 1px solid rgba(242, 247, 242, 0.1);
           border-radius: 6px;
         }
 
@@ -1161,18 +1170,18 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           width: 6px;
           height: 6px;
           border-radius: 50%;
-          background: #0284c7;
+          background: #35A7FF;
           flex-shrink: 0;
         }
 
         .dot-tgt {
-          background: #16a34a;
+          background: #FCBA04;
         }
 
         .entity-label {
           font-size: 0.74rem;
           font-weight: 650;
-          color: #1e2c3e;
+          color: #F2F7F2;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -1180,20 +1189,20 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
 
         .rel-arrow-connector {
           font-size: 0.8rem;
-          color: #8c9eb2;
+          color: #c8d4cf;
           flex-shrink: 0;
         }
 
         .rel-card-snippet {
           margin-top: 0.45rem;
           padding-top: 0.4rem;
-          border-top: 1px dashed #e8f0f5;
+          border-top: 1px dashed rgba(242, 247, 242, 0.1);
         }
 
         .snippet-quote {
           font-size: 0.68rem;
           line-height: 1.4;
-          color: #64778f;
+          color: #c8d4cf;
           font-style: italic;
           display: -webkit-box;
           -webkit-line-clamp: 2;
@@ -1207,16 +1216,17 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           display: flex;
           flex-direction: column;
           gap: 0.85rem;
+          background: #171D1C;
         }
 
         .path-intro-header {
-          border-bottom: 1px solid #e0eaf2;
+          border-bottom: 1px solid rgba(242, 247, 242, 0.1);
           padding-bottom: 0.65rem;
         }
 
         .path-subtext {
           font-size: 0.72rem;
-          color: #71829b;
+          color: #c8d4cf;
           margin: 0.15rem 0 0;
         }
 
@@ -1236,7 +1246,7 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           font-size: 0.62rem;
           font-weight: 800;
           letter-spacing: 0.05em;
-          color: #71829b;
+          color: #c8d4cf;
         }
 
         .compact-select {
@@ -1244,56 +1254,55 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           height: 36px;
           padding: 0 0.65rem;
           border-radius: 6px;
-          border: 1px solid #d4e1ec;
-          background: #ffffff;
+          border: 1px solid rgba(220, 230, 242, 0.15);
+          background: #0d1218;
           font-size: 0.76rem;
-          color: #27384f;
+          color: #F2F7F2;
           outline: none;
         }
 
         .compact-select:focus {
-          border-color: #0787d1;
+          border-color: #35A7FF;
         }
 
         .path-trace-btn {
           width: 100%;
           height: 38px;
           border-radius: 6px;
-          border: 1px solid #0787d1;
-          background: #e7f5ff;
-          color: #0787d1;
+          border: 1px solid #35A7FF;
+          background: #35A7FF;
+          color: #171D1C;
           font-size: 0.78rem;
-          font-weight: 700;
+          font-weight: 750;
           cursor: pointer;
           transition: all 0.16s ease;
           margin-top: 0.25rem;
         }
 
         .path-trace-btn:hover:not(:disabled) {
-          background: #0787d1;
-          color: #ffffff;
+          background: #2392ea;
         }
 
         .path-trace-btn:disabled {
-          opacity: 0.5;
+          opacity: 0.45;
           cursor: not-allowed;
         }
 
         .path-inline-error {
           padding: 0.5rem 0.65rem;
-          background: #fef2f2;
-          border: 1px solid #fecaca;
+          background: rgba(252, 186, 4, 0.12);
+          border: 1px solid rgba(252, 186, 4, 0.35);
           border-radius: 6px;
-          color: #dc2626;
+          color: #FCBA04;
           font-size: 0.72rem;
         }
 
         .path-found-banner {
           padding: 0.45rem 0.65rem;
-          background: #f0fdf4;
-          border: 1px solid #bbf7d0;
+          background: rgba(53, 167, 255, 0.15);
+          border: 1px solid rgba(53, 167, 255, 0.35);
           border-radius: 6px;
-          color: #16a34a;
+          color: #35A7FF;
           font-size: 0.72rem;
           font-weight: 650;
           margin-bottom: 0.65rem;
@@ -1315,27 +1324,27 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           width: 100%;
           padding: 0.55rem 0.75rem;
           border-radius: 6px;
-          border: 1px solid #dce7f1;
-          background: #ffffff;
+          border: 1px solid rgba(220, 230, 242, 0.1);
+          background: #141a22;
           display: flex;
           flex-direction: column;
           gap: 0.15rem;
         }
 
         .chain-node-box.is-start {
-          border-color: #0787d1;
-          background: #f0f9ff;
+          border-color: #35A7FF;
+          background: rgba(53, 167, 255, 0.12);
         }
 
         .chain-node-box.is-end {
-          border-color: #16a34a;
-          background: #f0fdf4;
+          border-color: #FCBA04;
+          background: rgba(252, 186, 4, 0.12);
         }
 
         .node-type-micro {
           font-size: 0.58rem;
           font-weight: 800;
-          color: #0787d1;
+          color: #35A7FF;
           text-transform: uppercase;
           letter-spacing: 0.06em;
         }
@@ -1343,7 +1352,7 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
         .node-name-text {
           font-size: 0.78rem;
           font-weight: 700;
-          color: #1e2c3e;
+          color: #F2F7F2;
         }
 
         .chain-rel-connector {
@@ -1358,24 +1367,24 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
           font-weight: 800;
           padding: 0.12rem 0.45rem;
           border-radius: 4px;
-          background: #f1f5f9;
-          color: #475569;
+          background: #171D1C;
+          color: #F2F7F2;
           font-family: ui-monospace, monospace;
         }
 
         .chain-rel-line {
           width: 2px;
           height: 12px;
-          background: #cbd5e1;
+          background: rgba(242, 247, 242, 0.2);
         }
 
         .path-none-found {
           padding: 1rem;
           border-radius: 6px;
-          background: #f8fafc;
-          border: 1px dashed #cbd5e1;
+          background: #141a22;
+          border: 1px dashed rgba(220, 230, 242, 0.15);
           font-size: 0.74rem;
-          color: #64748b;
+          color: #c8d4cf;
           text-align: center;
         }
       `}</style>

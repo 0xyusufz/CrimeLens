@@ -18,51 +18,51 @@ import { apiClient } from "../lib/apiClient";
 // Entity type visual tokens with refined analytical aesthetics
 const ENTITY_CONFIG = {
   PERSON: {
-    color: "#0284c7",
-    bg: "#f0f9ff",
-    border: "#bae6fd",
+    color: "#35A7FF",
+    bg: "rgba(53, 167, 255, 0.15)",
+    border: "rgba(53, 167, 255, 0.35)",
     icon: "👤",
     label: "Person",
   },
   PHONE: {
-    color: "#16a34a",
-    bg: "#f0fdf4",
-    border: "#bbf7d0",
+    color: "#FCBA04",
+    bg: "rgba(252, 186, 4, 0.15)",
+    border: "rgba(252, 186, 4, 0.35)",
     icon: "📞",
     label: "Phone",
   },
   BANK_ACCOUNT: {
-    color: "#d97706",
-    bg: "#fffbeb",
-    border: "#fde68a",
+    color: "#FCBA04",
+    bg: "rgba(252, 186, 4, 0.15)",
+    border: "rgba(252, 186, 4, 0.35)",
     icon: "💳",
     label: "Bank Account",
   },
   VEHICLE: {
-    color: "#7c3aed",
-    bg: "#faf5ff",
-    border: "#e9d5ff",
+    color: "#35A7FF",
+    bg: "rgba(53, 167, 255, 0.15)",
+    border: "rgba(53, 167, 255, 0.35)",
     icon: "🚗",
     label: "Vehicle",
   },
   ORGANIZATION: {
-    color: "#0d9488",
-    bg: "#f0fdfa",
-    border: "#99f6e4",
+    color: "#F2F7F2",
+    bg: "rgba(242, 247, 242, 0.12)",
+    border: "rgba(242, 247, 242, 0.25)",
     icon: "🏢",
     label: "Organization",
   },
   LOCATION: {
-    color: "#ea580c",
-    bg: "#fff7ed",
-    border: "#fed7aa",
+    color: "#FCBA04",
+    bg: "rgba(252, 186, 4, 0.15)",
+    border: "rgba(252, 186, 4, 0.35)",
     icon: "📍",
     label: "Location",
   },
   EVENT: {
-    color: "#dc2626",
-    bg: "#fef2f2",
-    border: "#fecaca",
+    color: "#35A7FF",
+    bg: "rgba(53, 167, 255, 0.15)",
+    border: "rgba(53, 167, 255, 0.35)",
     icon: "🚨",
     label: "Event",
   },
@@ -136,13 +136,14 @@ function InvestigationNode({ data, selected }) {
           position: relative;
           width: 176px;
           min-height: 82px;
-          background: #ffffff;
-          border: 1.5px solid #cbd5e1;
+          background: #1c2432;
+          border: 1px solid #2d3b4f;
+          border-top: 1px solid rgba(255, 255, 255, 0.16);
           border-radius: 9px;
           padding: 8px 10px;
-          box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
           cursor: pointer;
-          transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.2s ease;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
@@ -151,31 +152,34 @@ function InvestigationNode({ data, selected }) {
         }
 
         .inv-card:hover {
-          border-color: #0284c7;
-          box-shadow: 0 8px 24px rgba(2, 132, 199, 0.2);
+          background: #232e3f;
+          border-color: #3b4d66;
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
           transform: translateY(-2px);
           z-index: 8;
         }
 
-        /* Focus Center Subject */
+        /* Focus Center Subject (Clean accent border, NO NEON LIGHT) */
         .card-focus {
-          border: 2.5px solid #d97706 !important;
-          box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.18), 0 12px 28px rgba(217, 119, 6, 0.25) !important;
-          background: #fffdfa !important;
-          transform: scale(1.05);
+          background: #243042 !important;
+          border: 2px solid #35A7FF !important;
+          border-top: 2px solid #70baff !important;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+          transform: scale(1.03);
           z-index: 10 !important;
         }
 
-        /* Accused / SOS / Threat */
+        /* Accused / SOS / Threat (Clean amber border, NO NEON LIGHT) */
         .card-sos {
-          border: 2px solid #dc2626 !important;
-          box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18), 0 8px 22px rgba(220, 38, 38, 0.22) !important;
+          background: #252e3c !important;
+          border: 2px solid #e2b339 !important;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
         }
 
-        /* Selected Active State */
+        /* Selected Active State (Clean outline, NO NEON LIGHT) */
         .card-selected {
-          border-color: #0284c7 !important;
-          box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.22) !important;
+          border-color: #35A7FF !important;
+          box-shadow: 0 0 0 2px rgba(53, 167, 255, 0.4), 0 4px 14px rgba(0, 0, 0, 0.4) !important;
         }
 
         /* Dimmed in Focus Mode */
@@ -196,15 +200,15 @@ function InvestigationNode({ data, selected }) {
         }
 
         .banner-focus {
-          background: #fef3c7;
-          color: #92400e;
-          border: 1px solid #fde68a;
+          background: rgba(53, 167, 255, 0.15);
+          color: #38bdf8;
+          border: 1px solid rgba(53, 167, 255, 0.3);
         }
 
         .banner-sos {
-          background: #fee2e2;
-          color: #991b1b;
-          border: 1px solid #fecaca;
+          background: rgba(252, 186, 4, 0.14);
+          color: #fbbf24;
+          border: 1px solid rgba(252, 186, 4, 0.3);
         }
 
         .card-header-row {
@@ -234,11 +238,12 @@ function InvestigationNode({ data, selected }) {
         .card-degree-badge {
           font-size: 0.66rem;
           font-weight: 800;
-          background: #0f172a;
-          color: #ffffff;
+          background: #171D1C;
+          color: #F2F7F2;
           padding: 1px 5px;
           border-radius: 9999px;
           line-height: 1.1;
+          border: 1px solid rgba(242, 247, 242, 0.15);
         }
 
         .card-title-wrap {
@@ -251,7 +256,7 @@ function InvestigationNode({ data, selected }) {
         .card-name {
           font-size: 0.8rem;
           font-weight: 700;
-          color: #0f172a;
+          color: #F2F7F2;
           line-height: 1.25;
           display: -webkit-box;
           -webkit-line-clamp: 2;
@@ -262,15 +267,15 @@ function InvestigationNode({ data, selected }) {
         }
 
         .name-focus {
-          color: #92400e;
+          color: #FCBA04;
           font-weight: 800;
         }
 
         :global(.inv-handle) {
           width: 7px !important;
           height: 7px !important;
-          background: #0284c7 !important;
-          border: 1.5px solid #ffffff !important;
+          background: #35A7FF !important;
+          border: 1.5px solid #171D1C !important;
           border-radius: 50% !important;
           opacity: 0 !important;
           pointer-events: none !important;
@@ -631,8 +636,8 @@ function buildInvestigationLayout(rfNodes, rawRels, focusNodeId = null, isFocusM
         transition: "all 0.3s ease",
       },
       label: isDimmed ? undefined : relLabel,
-      labelStyle: { fill: "#334155", fontWeight: 600, fontSize: 10.5 },
-      labelBgStyle: { fill: "#ffffff", fillOpacity: 0.95, rx: 4, ry: 4, stroke: "#cbd5e1", strokeWidth: 1 },
+      labelStyle: { fill: "#F2F7F2", fontWeight: 600, fontSize: 10.5 },
+      labelBgStyle: { fill: "#141a22", fillOpacity: 0.95, rx: 4, ry: 4, stroke: "rgba(220, 230, 242, 0.15)", strokeWidth: 1 },
       labelBgPadding: [6, 2],
       data: {
         relationshipId: r.relationship_id,
@@ -1264,7 +1269,7 @@ function GraphCanvas({ caseId }) {
             <MiniMap
               className="rf-minimap-custom"
               nodeColor={(n) => (n.data?.isSos ? "#ef4444" : "#f59e0b")}
-              maskColor="rgba(241, 245, 249, 0.75)"
+              maskColor="rgba(20, 26, 36, 0.85)"
             />
           </ReactFlow>
         </div>
@@ -1713,7 +1718,9 @@ function GraphCanvas({ caseId }) {
           flex-direction: column;
           height: calc(100vh - 120px);
           min-height: 600px;
-          background: #f8fafc;
+          background: #171D1C;
+          border: 1px solid rgba(242, 247, 242, 0.12);
+          border-radius: 12px;
           position: relative;
           overflow: hidden;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -1725,10 +1732,10 @@ function GraphCanvas({ caseId }) {
           justify-content: space-between;
           align-items: center;
           padding: 0.65rem 1.25rem;
-          background: #ffffff;
-          border-bottom: 1px solid #e2e8f0;
+          background: #171D1C;
+          border-bottom: 1px solid rgba(242, 247, 242, 0.1);
           z-index: 10;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
         .toolbar-left {
@@ -1750,16 +1757,16 @@ function GraphCanvas({ caseId }) {
           gap: 0.35rem;
           font-size: 0.75rem;
           font-weight: 600;
-          color: #475569;
+          color: #c8d4cf;
         }
 
         .legend-dot-focus {
           width: 12px;
           height: 12px;
           border-radius: 3px;
-          background: #ffffff;
-          border: 2px solid #0284c7;
-          box-shadow: 0 0 6px rgba(2, 132, 199, 0.4);
+          background: #18202b;
+          border: 2px solid #FCBA04;
+          box-shadow: 0 0 6px rgba(252, 186, 4, 0.4);
           display: inline-block;
         }
 
@@ -1767,9 +1774,9 @@ function GraphCanvas({ caseId }) {
           width: 12px;
           height: 12px;
           border-radius: 3px;
-          background: #fef2f2;
-          border: 2px solid #ef4444;
-          box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+          background: #18202b;
+          border: 2px solid #FCBA04;
+          box-shadow: 0 0 6px rgba(252, 186, 4, 0.4);
           display: inline-block;
         }
 
@@ -1777,15 +1784,15 @@ function GraphCanvas({ caseId }) {
           width: 12px;
           height: 12px;
           border-radius: 3px;
-          background: #ffffff;
-          border: 1.5px solid #cbd5e1;
+          background: #18202b;
+          border: 1.5px solid rgba(242, 247, 242, 0.2);
           display: inline-block;
         }
 
         .cyan-line-dot {
           width: 16px;
           height: 2.5px;
-          background: #0ea5e9;
+          background: #35A7FF;
           border-radius: 2px;
           display: inline-block;
         }
@@ -1793,7 +1800,7 @@ function GraphCanvas({ caseId }) {
         .dashed-line-dot {
           width: 16px;
           height: 0px;
-          border-top: 2px dashed #94a3b8;
+          border-top: 2px dashed #FCBA04;
           display: inline-block;
         }
 
@@ -1802,7 +1809,7 @@ function GraphCanvas({ caseId }) {
           align-items: center;
           gap: 0.35rem;
           font-size: 0.78rem;
-          color: #64748b;
+          color: #c8d4cf;
         }
 
         .stat-label {
@@ -1811,15 +1818,15 @@ function GraphCanvas({ caseId }) {
 
         .stat-value {
           font-weight: 700;
-          color: #0f172a;
+          color: #F2F7F2;
         }
 
         .truncated-badge {
           font-size: 0.7rem;
           font-weight: 600;
-          color: #d97706;
-          background: #fef3c7;
-          border: 1px solid #fde68a;
+          color: #FCBA04;
+          background: rgba(252, 186, 4, 0.15);
+          border: 1px solid rgba(252, 186, 4, 0.35);
           padding: 0.15rem 0.5rem;
           border-radius: 4px;
         }
@@ -1835,10 +1842,10 @@ function GraphCanvas({ caseId }) {
           align-items: center;
           gap: 0.4rem;
           padding: 0.45rem 0.85rem;
-          background: #ffffff;
-          border: 1px solid #cbd5e1;
+          background: #18202b;
+          border: 1px solid rgba(220, 230, 242, 0.15);
           border-radius: 6px;
-          color: #334155;
+          color: #F2F7F2;
           font-size: 0.78rem;
           font-weight: 600;
           cursor: pointer;
@@ -1846,35 +1853,38 @@ function GraphCanvas({ caseId }) {
         }
 
         .tool-btn:hover:not(:disabled) {
-          background: #f1f5f9;
-          border-color: #94a3b8;
+          background: rgba(53, 167, 255, 0.15);
+          border-color: #35A7FF;
+          color: #35A7FF;
         }
 
         .inspector-toggle-active {
-          background: #0ea5e9 !important;
-          color: #ffffff !important;
-          border-color: #0ea5e9 !important;
+          background: #35A7FF !important;
+          color: #171D1C !important;
+          font-weight: 750 !important;
+          border-color: #35A7FF !important;
         }
 
         .focus-toggle-active {
-          background: #0284c7 !important;
-          color: #ffffff !important;
-          border-color: #0284c7 !important;
-          box-shadow: 0 0 10px rgba(2, 132, 199, 0.35) !important;
+          background: #FCBA04 !important;
+          color: #171D1C !important;
+          font-weight: 750 !important;
+          border-color: #FCBA04 !important;
+          box-shadow: 0 0 10px rgba(252, 186, 4, 0.35) !important;
         }
 
         /* AI Toolbar Button */
         .ai-analyze-btn {
-          background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
-          color: #ffffff !important;
-          border: 1px solid rgba(56, 189, 248, 0.4) !important;
-          box-shadow: 0 0 12px rgba(14, 165, 233, 0.35) !important;
-          font-weight: 700 !important;
+          background: #35A7FF !important;
+          color: #171D1C !important;
+          border: 1px solid #35A7FF !important;
+          box-shadow: 0 0 12px rgba(53, 167, 255, 0.35) !important;
+          font-weight: 750 !important;
         }
 
         .ai-analyze-btn:hover:not(:disabled) {
-          background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
-          box-shadow: 0 0 18px rgba(14, 165, 233, 0.55) !important;
+          background: #2392ea !important;
+          box-shadow: 0 0 18px rgba(53, 167, 255, 0.55) !important;
           transform: translateY(-1px);
         }
 
@@ -1893,7 +1903,7 @@ function GraphCanvas({ caseId }) {
         .graph-viewport-area {
           flex: 1;
           position: relative;
-          background: #f8fafc;
+          background: #171D1C;
         }
 
         /* Overlays */
@@ -1915,8 +1925,8 @@ function GraphCanvas({ caseId }) {
         }
 
         .graph-overlay-loading {
-          background: rgba(248, 250, 252, 0.85);
-          color: #0284c7;
+          background: rgba(23, 29, 28, 0.85);
+          color: #35A7FF;
           font-weight: 600;
           font-size: 0.9rem;
           gap: 0.85rem;
@@ -1925,7 +1935,7 @@ function GraphCanvas({ caseId }) {
         .mini-radar-pulse {
           width: 36px;
           height: 36px;
-          border: 3px solid #0ea5e9;
+          border: 3px solid #35A7FF;
           border-radius: 50%;
           animation: radarPulse 1.2s infinite cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
@@ -1936,8 +1946,8 @@ function GraphCanvas({ caseId }) {
         }
 
         .graph-overlay-error {
-          background: rgba(254, 242, 242, 0.95);
-          color: #dc2626;
+          background: rgba(23, 29, 28, 0.95);
+          color: #FCBA04;
           gap: 0.75rem;
           font-size: 0.88rem;
         }
@@ -1945,18 +1955,18 @@ function GraphCanvas({ caseId }) {
         .retry-btn {
           margin-top: 0.5rem;
           padding: 0.45rem 1.15rem;
-          background: #0ea5e9;
-          color: #ffffff;
+          background: #35A7FF;
+          color: #171D1C;
           border: none;
           border-radius: 6px;
           font-size: 0.8rem;
-          font-weight: 600;
+          font-weight: 750;
           cursor: pointer;
         }
 
         .graph-overlay-empty {
-          background: #f8fafc;
-          color: #475569;
+          background: #171D1C;
+          color: #c8d4cf;
           max-width: 440px;
           margin: 0 auto;
         }
@@ -1964,31 +1974,40 @@ function GraphCanvas({ caseId }) {
         .graph-overlay-empty h4 {
           font-size: 1.05rem;
           font-weight: 700;
-          color: #0f172a;
+          color: #F2F7F2;
           margin: 0.75rem 0 0.4rem 0;
         }
 
         .graph-overlay-empty p {
           font-size: 0.82rem;
-          color: #64748b;
+          color: #c8d4cf;
           line-height: 1.5;
           margin: 0 0 1rem 0;
         }
 
-        /* Inspector Sidebar */
+        /* Inspector Sidebar - Refined lighter slate, clean surface, zero neon */
         .graph-details-sidebar {
-          width: 340px;
-          background: #ffffff;
-          border-left: 1px solid #e2e8f0;
+          width: 350px;
+          background: #1a222e;
+          border-left: 1px solid #2a374a;
           display: flex;
           flex-direction: column;
           overflow-y: auto;
-          box-shadow: -2px 0 8px rgba(0, 0, 0, 0.04);
+          box-shadow: -4px 0 20px rgba(0, 0, 0, 0.4);
           z-index: 8;
+        }
+
+        .rf-minimap-custom {
+          background: #1a222e !important;
+          border: 1px solid #2d3a4d !important;
+          border-radius: 10px !important;
+          overflow: hidden !important;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
         }
 
         .panel-card {
           padding: 1.25rem;
+          background: #1a222e;
         }
 
         .panel-header {
@@ -1997,7 +2016,7 @@ function GraphCanvas({ caseId }) {
           align-items: flex-start;
           margin-bottom: 1rem;
           padding-bottom: 0.75rem;
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom: 1px solid rgba(242, 247, 242, 0.1);
         }
 
         .panel-title-group {
@@ -2011,13 +2030,13 @@ function GraphCanvas({ caseId }) {
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          color: #0ea5e9;
+          color: #35A7FF;
         }
 
         .panel-entity-name {
           font-size: 1.1rem;
           font-weight: 700;
-          color: #0f172a;
+          color: #F2F7F2;
           line-height: 1.3;
           margin: 0;
         }
@@ -2025,14 +2044,14 @@ function GraphCanvas({ caseId }) {
         .close-panel-btn {
           background: transparent;
           border: none;
-          color: #64748b;
+          color: #c8d4cf;
           font-size: 1rem;
           cursor: pointer;
           padding: 0.2rem;
         }
 
         .close-panel-btn:hover {
-          color: #0f172a;
+          color: #F2F7F2;
         }
 
         .panel-body {
@@ -2049,12 +2068,12 @@ function GraphCanvas({ caseId }) {
         }
 
         .detail-key {
-          color: #64748b;
+          color: #c8d4cf;
           font-weight: 500;
         }
 
         .detail-val {
-          color: #0f172a;
+          color: #F2F7F2;
         }
 
         .entity-badge-pill {
@@ -2082,7 +2101,7 @@ function GraphCanvas({ caseId }) {
 
         .meta-section-label {
           font-weight: 600;
-          color: #475569;
+          color: #c8d4cf;
           font-size: 0.72rem;
           text-transform: uppercase;
           letter-spacing: 0.03em;
@@ -2104,39 +2123,39 @@ function GraphCanvas({ caseId }) {
         }
 
         .alias-chip {
-          background: #eff6ff;
-          border: 1px solid #bfdbfe;
-          color: #1d4ed8;
+          background: rgba(53, 167, 255, 0.15);
+          border: 1px solid rgba(53, 167, 255, 0.35);
+          color: #35A7FF;
         }
 
         .phone-chip {
-          background: #f0fdf4;
-          border: 1px solid #bbf7d0;
-          color: #15803d;
+          background: rgba(252, 186, 4, 0.15);
+          border: 1px solid rgba(252, 186, 4, 0.35);
+          color: #FCBA04;
         }
 
         .location-chip {
-          background: #fefce8;
-          border: 1px solid #fef08a;
-          color: #a16207;
+          background: rgba(252, 186, 4, 0.15);
+          border: 1px solid rgba(252, 186, 4, 0.35);
+          color: #FCBA04;
         }
 
         .vehicle-chip {
-          background: #faf5ff;
-          border: 1px solid #e9d5ff;
-          color: #7e22ce;
+          background: rgba(53, 167, 255, 0.15);
+          border: 1px solid rgba(53, 167, 255, 0.35);
+          color: #35A7FF;
         }
 
         .org-chip {
-          background: #f1f5f9;
-          border: 1px solid #cbd5e1;
-          color: #334155;
+          background: rgba(242, 247, 242, 0.12);
+          border: 1px solid rgba(242, 247, 242, 0.25);
+          color: #F2F7F2;
         }
 
         .doc-chip {
-          background: #fff7ed;
-          border: 1px solid #fed7aa;
-          color: #c2410c;
+          background: rgba(252, 186, 4, 0.15);
+          border: 1px solid rgba(252, 186, 4, 0.35);
+          color: #FCBA04;
         }
 
         .evidence-snippets-stack {
@@ -2148,11 +2167,11 @@ function GraphCanvas({ caseId }) {
         .evidence-quote-small {
           margin: 0;
           padding: 0.45rem 0.65rem;
-          background: #f8fafc;
-          border-left: 3px solid #0284c7;
+          background: #171D1C;
+          border-left: 3px solid #35A7FF;
           border-radius: 0 4px 4px 0;
           font-size: 0.72rem;
-          color: #334155;
+          color: #F2F7F2;
           font-style: italic;
           line-height: 1.4;
         }
@@ -2166,16 +2185,16 @@ function GraphCanvas({ caseId }) {
         .case-chip {
           font-size: 0.7rem;
           padding: 0.15rem 0.45rem;
-          background: #f0fdf4;
-          border: 1px solid #bbf7d0;
+          background: rgba(53, 167, 255, 0.15);
+          border: 1px solid rgba(53, 167, 255, 0.35);
           border-radius: 4px;
-          color: #166534;
+          color: #35A7FF;
         }
 
         .details-loading-spinner,
         .no-data-text {
           font-size: 0.75rem;
-          color: #94a3b8;
+          color: #c8d4cf;
         }
 
         /* AI Node Action Button */
@@ -2190,19 +2209,19 @@ function GraphCanvas({ caseId }) {
           justify-content: center;
           gap: 0.45rem;
           padding: 0.6rem 0.85rem;
-          background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-          border: 1px solid rgba(56, 189, 248, 0.4);
+          background: #35A7FF;
+          border: 1px solid #35A7FF;
           border-radius: 8px;
-          color: #ffffff;
+          color: #171D1C;
           font-size: 0.8rem;
-          font-weight: 700;
+          font-weight: 750;
           cursor: pointer;
           transition: all 0.2s ease;
-          box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
+          box-shadow: 0 2px 8px rgba(53, 167, 255, 0.3);
         }
 
         .ai-node-analyze-btn:hover:not(:disabled) {
-          background: #0ea5e9;
+          background: #2392ea;
           transform: translateY(-1px);
         }
 
@@ -2220,10 +2239,10 @@ function GraphCanvas({ caseId }) {
           justify-content: center;
           gap: 0.5rem;
           padding: 0.55rem 1rem;
-          background: #f8fafc;
-          border: 1px solid #cbd5e1;
+          background: #171D1C;
+          border: 1px solid rgba(242, 247, 242, 0.15);
           border-radius: 8px;
-          color: #334155;
+          color: #F2F7F2;
           font-size: 0.8rem;
           font-weight: 600;
           cursor: pointer;
@@ -2231,19 +2250,21 @@ function GraphCanvas({ caseId }) {
         }
 
         .expand-connections-btn:hover:not(:disabled) {
-          background: #e2e8f0;
+          background: rgba(53, 167, 255, 0.15);
+          border-color: #35A7FF;
+          color: #35A7FF;
         }
 
         .expand-connections-btn:disabled {
-          opacity: 0.6;
+          opacity: 0.45;
           cursor: not-allowed;
         }
 
         .mini-spin {
           width: 12px;
           height: 12px;
-          border: 2px solid rgba(0, 0, 0, 0.2);
-          border-top-color: #0ea5e9;
+          border: 2px solid rgba(242, 247, 242, 0.2);
+          border-top-color: #35A7FF;
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
         }
@@ -2260,21 +2281,21 @@ function GraphCanvas({ caseId }) {
         }
 
         .banner-success {
-          background: #ecfdf5;
-          border: 1px solid #a7f3d0;
-          color: #065f46;
+          background: rgba(53, 167, 255, 0.15);
+          border: 1px solid rgba(53, 167, 255, 0.35);
+          color: #35A7FF;
         }
 
         .banner-info {
-          background: #f0f9ff;
-          border: 1px solid #bae6fd;
-          color: #0369a1;
+          background: rgba(53, 167, 255, 0.15);
+          border: 1px solid rgba(53, 167, 255, 0.35);
+          color: #35A7FF;
         }
 
         .banner-error {
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #b91c1c;
+          background: rgba(252, 186, 4, 0.15);
+          border: 1px solid rgba(252, 186, 4, 0.35);
+          color: #FCBA04;
         }
 
         /* Evidence */
@@ -2286,52 +2307,52 @@ function GraphCanvas({ caseId }) {
         }
 
         .badge-confirmed {
-          background: #e0f2fe;
-          color: #0369a1;
-          border: 1px solid #bae6fd;
+          background: rgba(53, 167, 255, 0.15);
+          color: #35A7FF;
+          border: 1px solid rgba(53, 167, 255, 0.35);
         }
 
         .badge-inferred {
-          background: #e0e7ff;
-          color: #4338ca;
-          border: 1px solid #c7d2fe;
+          background: rgba(252, 186, 4, 0.15);
+          color: #FCBA04;
+          border: 1px solid rgba(252, 186, 4, 0.35);
         }
 
         .badge-predicted {
-          background: #fef3c7;
-          color: #b45309;
-          border: 1px solid #fde68a;
+          background: rgba(252, 186, 4, 0.15);
+          color: #FCBA04;
+          border: 1px solid rgba(252, 186, 4, 0.35);
         }
 
         .evidence-snippet-section {
           margin-top: 0.5rem;
           padding-top: 0.75rem;
-          border-top: 1px solid #f1f5f9;
+          border-top: 1px solid rgba(242, 247, 242, 0.1);
         }
 
         .snippet-heading {
           display: block;
           font-size: 0.75rem;
           font-weight: 600;
-          color: #64748b;
+          color: #c8d4cf;
           margin-bottom: 0.5rem;
         }
 
         .evidence-quote {
-          background: #f8fafc;
-          border-left: 3px solid #0ea5e9;
+          background: #171D1C;
+          border-left: 3px solid #35A7FF;
           border-radius: 0 6px 6px 0;
           padding: 0.75rem;
           font-size: 0.8rem;
           font-style: italic;
-          color: #334155;
+          color: #F2F7F2;
           line-height: 1.5;
           margin: 0;
         }
 
         .no-snippet-text {
           font-size: 0.75rem;
-          color: #94a3b8;
+          color: #c8d4cf;
           line-height: 1.4;
         }
 
@@ -2341,25 +2362,25 @@ function GraphCanvas({ caseId }) {
           flex-direction: column;
           align-items: center;
           text-align: center;
-          color: #64748b;
+          color: #c8d4cf;
           margin: auto 0;
         }
 
         .idle-icon {
-          color: #94a3b8;
+          color: #c8d4cf;
           margin-bottom: 0.85rem;
         }
 
         .idle-title {
           font-size: 0.95rem;
           font-weight: 600;
-          color: #1e293b;
+          color: #F2F7F2;
           margin-bottom: 0.35rem;
         }
 
         .idle-desc {
           font-size: 0.78rem;
-          color: #64748b;
+          color: #c8d4cf;
           line-height: 1.5;
         }
 
@@ -2370,7 +2391,7 @@ function GraphCanvas({ caseId }) {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(15, 23, 42, 0.78);
+          background: rgba(23, 29, 28, 0.85);
           backdrop-filter: blur(6px);
           z-index: 9999;
           display: flex;
@@ -2380,15 +2401,15 @@ function GraphCanvas({ caseId }) {
         }
 
         .ai-modal-container {
-          background: #0f172a;
-          border: 1px solid rgba(56, 189, 248, 0.35);
+          background: #171D1C;
+          border: 1px solid rgba(53, 167, 255, 0.35);
           border-radius: 16px;
           width: 100%;
           max-width: 960px;
           max-height: 88vh;
           display: flex;
           flex-direction: column;
-          box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.7), 0 0 35px rgba(14, 165, 233, 0.25);
+          box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(53, 167, 255, 0.2);
           overflow: hidden;
           animation: modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -2403,8 +2424,8 @@ function GraphCanvas({ caseId }) {
           justify-content: space-between;
           align-items: flex-start;
           padding: 1.25rem 1.75rem;
-          background: rgba(30, 41, 59, 0.65);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          background: #171D1C;
+          border-bottom: 1px solid rgba(242, 247, 242, 0.1);
         }
 
         .ai-title-row {
@@ -2418,15 +2439,15 @@ function GraphCanvas({ caseId }) {
         .ai-badge-pulse {
           font-size: 0.75rem;
           font-weight: 700;
-          color: #38bdf8;
+          color: #35A7FF;
           text-transform: uppercase;
           letter-spacing: 0.05em;
         }
 
         .ai-mode-pill {
-          background: rgba(14, 165, 233, 0.15);
-          border: 1px solid rgba(14, 165, 233, 0.4);
-          color: #38bdf8;
+          background: rgba(53, 167, 255, 0.15);
+          border: 1px solid rgba(53, 167, 255, 0.4);
+          color: #35A7FF;
           font-size: 0.7rem;
           font-weight: 600;
           padding: 0.15rem 0.5rem;
@@ -2434,8 +2455,8 @@ function GraphCanvas({ caseId }) {
         }
 
         .ai-model-pill {
-          background: rgba(255, 255, 255, 0.06);
-          color: #94a3b8;
+          background: rgba(242, 247, 242, 0.08);
+          color: #c8d4cf;
           font-size: 0.68rem;
           padding: 0.15rem 0.5rem;
           border-radius: 9999px;
@@ -2444,20 +2465,20 @@ function GraphCanvas({ caseId }) {
         .ai-modal-heading {
           font-size: 1.28rem;
           font-weight: 700;
-          color: #f8fafc;
+          color: #F2F7F2;
           margin: 0;
         }
 
         .ai-modal-sub {
           font-size: 0.78rem;
-          color: #94a3b8;
+          color: #c8d4cf;
           margin: 0.35rem 0 0 0;
         }
 
         .ai-close-btn {
           background: transparent;
           border: none;
-          color: #94a3b8;
+          color: #c8d4cf;
           cursor: pointer;
           padding: 0.35rem;
           border-radius: 6px;
@@ -2465,8 +2486,8 @@ function GraphCanvas({ caseId }) {
         }
 
         .ai-close-btn:hover {
-          color: #f8fafc;
-          background: rgba(255, 255, 255, 0.08);
+          color: #F2F7F2;
+          background: rgba(242, 247, 242, 0.08);
         }
 
         .ai-modal-body {
@@ -2478,26 +2499,26 @@ function GraphCanvas({ caseId }) {
         }
 
         .ai-card {
-          background: rgba(30, 41, 59, 0.5);
-          border: 1px solid rgba(255, 255, 255, 0.07);
+          background: #141a22;
+          border: 1px solid rgba(220, 230, 242, 0.1);
           border-radius: 10px;
           padding: 1.15rem 1.25rem;
         }
 
         .ai-summary-card {
-          border-left: 4px solid #0ea5e9;
-          background: rgba(14, 165, 233, 0.04);
+          border-left: 4px solid #35A7FF;
+          background: rgba(53, 167, 255, 0.06);
         }
 
         .ai-anomalies-card {
-          border-left: 4px solid #f59e0b;
-          background: rgba(245, 158, 11, 0.04);
+          border-left: 4px solid #FCBA04;
+          background: rgba(252, 186, 4, 0.06);
         }
 
         .ai-card-title {
           font-size: 0.92rem;
           font-weight: 700;
-          color: #e2e8f0;
+          color: #F2F7F2;
           margin: 0 0 0.75rem 0;
           display: flex;
           align-items: center;
@@ -2513,7 +2534,7 @@ function GraphCanvas({ caseId }) {
 
         .ai-summary-text {
           font-size: 0.88rem;
-          color: #cbd5e1;
+          color: #F2F7F2;
           line-height: 1.6;
           margin: 0;
         }
@@ -2525,8 +2546,8 @@ function GraphCanvas({ caseId }) {
         }
 
         .ai-poi-card {
-          background: #1e293b;
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: #171D1C;
+          border: 1px solid rgba(242, 247, 242, 0.1);
           border-radius: 8px;
           padding: 0.85rem 1rem;
           display: flex;
@@ -2535,13 +2556,13 @@ function GraphCanvas({ caseId }) {
         }
 
         .ai-poi-card.threat-crit {
-          border-color: rgba(239, 68, 68, 0.6);
-          background: rgba(239, 68, 68, 0.06);
+          border-color: rgba(252, 186, 4, 0.6);
+          background: rgba(252, 186, 4, 0.08);
         }
 
         .ai-poi-card.threat-high {
-          border-color: rgba(249, 115, 22, 0.5);
-          background: rgba(249, 115, 22, 0.05);
+          border-color: rgba(252, 186, 4, 0.5);
+          background: rgba(252, 186, 4, 0.06);
         }
 
         .ai-poi-header {
@@ -2553,7 +2574,7 @@ function GraphCanvas({ caseId }) {
         .ai-poi-name {
           font-size: 0.9rem;
           font-weight: 700;
-          color: #f8fafc;
+          color: #F2F7F2;
         }
 
         .ai-threat-badge {
@@ -2565,39 +2586,42 @@ function GraphCanvas({ caseId }) {
         }
 
         .ai-threat-badge.threat-crit {
-          background: #ef4444;
-          color: #ffffff;
+          background: #FCBA04;
+          color: #171D1C;
+          font-weight: 800;
         }
 
         .ai-threat-badge.threat-high {
-          background: #f97316;
-          color: #ffffff;
+          background: #FCBA04;
+          color: #171D1C;
+          font-weight: 800;
         }
 
         .ai-threat-badge.threat-med {
-          background: #3b82f6;
-          color: #ffffff;
+          background: #35A7FF;
+          color: #171D1C;
+          font-weight: 800;
         }
 
         .ai-poi-reason {
           font-size: 0.78rem;
-          color: #cbd5e1;
+          color: #c8d4cf;
           margin: 0;
           line-height: 1.45;
         }
 
         .ai-poi-evidence {
           font-size: 0.72rem;
-          color: #94a3b8;
+          color: #c8d4cf;
           font-style: italic;
-          background: rgba(0, 0, 0, 0.2);
+          background: #10151d;
           padding: 0.35rem 0.5rem;
           border-radius: 4px;
         }
 
         .ev-tag {
           font-weight: 700;
-          color: #38bdf8;
+          color: #35A7FF;
           margin-right: 4px;
         }
 
@@ -2614,15 +2638,15 @@ function GraphCanvas({ caseId }) {
           display: flex;
           align-items: flex-start;
           gap: 0.75rem;
-          background: rgba(15, 23, 42, 0.4);
+          background: #171D1C;
           padding: 0.6rem 0.85rem;
           border-radius: 6px;
-          border: 1px solid rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(242, 247, 242, 0.08);
         }
 
         .lead-number {
-          background: #0ea5e9;
-          color: #ffffff;
+          background: #35A7FF;
+          color: #171D1C;
           font-size: 0.7rem;
           font-weight: 800;
           width: 20px;
@@ -2637,7 +2661,7 @@ function GraphCanvas({ caseId }) {
 
         .lead-text {
           font-size: 0.82rem;
-          color: #e2e8f0;
+          color: #F2F7F2;
           line-height: 1.45;
         }
 
@@ -2648,23 +2672,23 @@ function GraphCanvas({ caseId }) {
         }
 
         .ai-ev-item {
-          background: rgba(15, 23, 42, 0.5);
+          background: #171D1C;
           padding: 0.65rem 0.85rem;
           border-radius: 6px;
-          border-left: 3px solid #38bdf8;
+          border-left: 3px solid #35A7FF;
         }
 
         .ai-ev-claim {
           font-size: 0.75rem;
           font-weight: 700;
-          color: #38bdf8;
+          color: #35A7FF;
           display: block;
           margin-bottom: 0.25rem;
         }
 
         .ai-ev-quote {
           font-size: 0.78rem;
-          color: #cbd5e1;
+          color: #c8d4cf;
           margin: 0;
           font-style: italic;
           line-height: 1.45;
@@ -2674,14 +2698,14 @@ function GraphCanvas({ caseId }) {
           margin: 0;
           padding-left: 1.25rem;
           font-size: 0.8rem;
-          color: #fde68a;
+          color: #FCBA04;
           line-height: 1.6;
         }
 
         .ai-copy-btn {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          color: #e2e8f0;
+          background: #18202b;
+          border: 1px solid rgba(220, 230, 242, 0.15);
+          color: #F2F7F2;
           font-size: 0.72rem;
           font-weight: 600;
           padding: 0.25rem 0.65rem;
@@ -2691,17 +2715,17 @@ function GraphCanvas({ caseId }) {
         }
 
         .ai-copy-btn:hover {
-          background: #0ea5e9;
-          color: #ffffff;
+          background: #35A7FF;
+          color: #171D1C;
         }
 
         .ai-dossier-pre {
-          background: #090d16;
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: #171D1C;
+          border: 1px solid rgba(242, 247, 242, 0.1);
           border-radius: 8px;
           padding: 1rem;
           font-size: 0.78rem;
-          color: #cbd5e1;
+          color: #F2F7F2;
           font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
           white-space: pre-wrap;
           word-break: break-word;
@@ -2716,22 +2740,22 @@ function GraphCanvas({ caseId }) {
           justify-content: space-between;
           align-items: center;
           padding: 1rem 1.75rem;
-          background: rgba(30, 41, 59, 0.65);
-          border-top: 1px solid rgba(255, 255, 255, 0.08);
+          background: #171D1C;
+          border-top: 1px solid rgba(242, 247, 242, 0.1);
         }
 
         .ai-footer-note {
           font-size: 0.7rem;
-          color: #64748b;
+          color: #c8d4cf;
           font-style: italic;
         }
 
         .ai-done-btn {
-          background: #0ea5e9;
-          color: #ffffff;
+          background: #35A7FF;
+          color: #171D1C;
           border: none;
           font-size: 0.82rem;
-          font-weight: 700;
+          font-weight: 750;
           padding: 0.45rem 1.25rem;
           border-radius: 6px;
           cursor: pointer;
@@ -2739,7 +2763,7 @@ function GraphCanvas({ caseId }) {
         }
 
         .ai-done-btn:hover {
-          background: #0284c7;
+          background: #2392ea;
         }
 
         .font-mono {
@@ -2761,7 +2785,7 @@ function GraphCanvas({ caseId }) {
           .graph-details-sidebar {
             width: 100%;
             border-left: none;
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid rgba(242, 247, 242, 0.1);
           }
         }
       `}</style>

@@ -30,18 +30,18 @@ export function CrimeLensStar({
 }
 
 export default function CrimeLensLogo({
-  size = 32,
+  size = 36,
   iconSize = null,
   withBadge = true,
   className = "",
 }) {
-  const calculatedIconSize = iconSize || Math.round(size * 0.58);
+  const calculatedIconSize = iconSize || Math.round(size * 0.62);
 
   if (!withBadge) {
     return (
       <CrimeLensStar
         size={size}
-        color="#2563eb"
+        color="#ffffff"
         className={className}
       />
     );
@@ -53,12 +53,13 @@ export default function CrimeLensLogo({
       style={{
         width: `${size}px`,
         height: `${size}px`,
-        borderRadius: `${Math.round(size * 0.28)}px`,
-        background: "linear-gradient(135deg, #38bdf8 0%, #0284c7 45%, #2563eb 100%)",
+        borderRadius: `${Math.round(size * 0.3)}px`,
+        background: "#141f2d",
+        border: "1px solid rgba(53, 167, 255, 0.38)",
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        boxShadow: "0 2px 10px rgba(2, 132, 199, 0.35)",
+        boxShadow: "0 2px 10px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
         flexShrink: 0,
       }}
     >

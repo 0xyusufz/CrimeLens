@@ -20,22 +20,22 @@ const LEAD_TYPE_LABELS = {
 };
 
 const SEVERITY_CONFIG = {
-  HIGH:   { color: "#f87171", bg: "rgba(239,68,68,0.10)",   border: "rgba(239,68,68,0.30)",   label: "HIGH" },
-  MEDIUM: { color: "#fbbf24", bg: "rgba(245,158,11,0.10)",  border: "rgba(245,158,11,0.30)",  label: "MEDIUM" },
-  LOW:    { color: "#94a3b8", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.25)", label: "LOW" },
+  HIGH:   { color: "#FCBA04", bg: "rgba(252,186,4,0.12)",   border: "rgba(252,186,4,0.35)",   label: "HIGH" },
+  MEDIUM: { color: "#FCBA04", bg: "rgba(252,186,4,0.08)",  border: "rgba(252,186,4,0.25)",  label: "MEDIUM" },
+  LOW:    { color: "#c8d4cf", bg: "rgba(242,247,242,0.08)", border: "rgba(242,247,242,0.20)", label: "LOW" },
 };
 
 const PRIORITY_CONFIG = {
-  HIGH:   { color: "#f87171", bg: "rgba(239,68,68,0.10)",   border: "rgba(239,68,68,0.30)",   label: "HIGH" },
-  MEDIUM: { color: "#fbbf24", bg: "rgba(245,158,11,0.10)",  border: "rgba(245,158,11,0.30)",  label: "MEDIUM" },
-  LOW:    { color: "#94a3b8", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.25)", label: "LOW" },
+  HIGH:   { color: "#FCBA04", bg: "rgba(252,186,4,0.12)",   border: "rgba(252,186,4,0.35)",   label: "HIGH" },
+  MEDIUM: { color: "#FCBA04", bg: "rgba(252,186,4,0.08)",  border: "rgba(252,186,4,0.25)",  label: "MEDIUM" },
+  LOW:    { color: "#c8d4cf", bg: "rgba(242,247,242,0.08)", border: "rgba(242,247,242,0.20)", label: "LOW" },
 };
 
 const STATUS_CONFIG = {
-  CONFIRMED:       { color: "#38bdf8", label: "CONFIRMED" },
-  INFERRED:        { color: "#818cf8", label: "INFERRED" },
-  PREDICTED:       { color: "#f59e0b", label: "PREDICTED" },
-  REVIEW_REQUIRED: { color: "#fb923c", label: "REVIEW REQUIRED" },
+  CONFIRMED:       { color: "#35A7FF", label: "CONFIRMED" },
+  INFERRED:        { color: "#FCBA04", label: "INFERRED" },
+  PREDICTED:       { color: "#FCBA04", label: "PREDICTED" },
+  REVIEW_REQUIRED: { color: "#FCBA04", label: "REVIEW REQUIRED" },
 };
 
 // ─── Small helpers ─────────────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ function PriorityBadge({ value }) {
 }
 
 function StatusBadge({ value }) {
-  const cfg = STATUS_CONFIG[value] || { color: "#64748b", label: value };
+  const cfg = STATUS_CONFIG[value] || { color: "#c8d4cf", label: value };
   return (
     <span style={{
       color: cfg.color, fontSize: "0.67rem", fontWeight: 700,
@@ -91,9 +91,9 @@ function EvidenceId({ id }) {
   return (
     <span style={{
       display: "inline-block",
-      background: "rgba(56,189,248,0.07)",
-      border: "1px solid rgba(56,189,248,0.18)",
-      color: "#7dd3fc", borderRadius: "3px",
+      background: "rgba(53,167,255,0.12)",
+      border: "1px solid rgba(53,167,255,0.30)",
+      color: "#35A7FF", borderRadius: "3px",
       padding: "0.08rem 0.4rem", fontSize: "0.67rem",
       fontFamily: "ui-monospace, monospace",
       marginRight: "0.35rem", marginBottom: "0.25rem",
@@ -108,9 +108,9 @@ function EntityRefId({ id }) {
   return (
     <span style={{
       display: "inline-block",
-      background: "rgba(129,140,248,0.07)",
-      border: "1px solid rgba(129,140,248,0.18)",
-      color: "#a5b4fc", borderRadius: "3px",
+      background: "rgba(252,186,4,0.12)",
+      border: "1px solid rgba(252,186,4,0.30)",
+      color: "#FCBA04", borderRadius: "3px",
       padding: "0.08rem 0.4rem", fontSize: "0.67rem",
       fontFamily: "ui-monospace, monospace",
       marginRight: "0.35rem", marginBottom: "0.25rem",
@@ -295,56 +295,56 @@ export default function CaseInsightsView({ caseId }) {
         .insights-root { display:flex; flex-direction:column; gap:0; }
         .insights-section-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; }
         .insights-title-group { display:flex; flex-direction:column; gap:0.25rem; }
-        .insights-section-title { font-size:0.78rem; font-weight:700; color:#38bdf8; letter-spacing:0.06em; text-transform:uppercase; margin:0; display:flex; align-items:center; gap:0.5rem; }
-        .insights-section-desc { font-size:0.78rem; color:#64748b; margin:0; }
-        .insights-refresh-btn { display:flex; align-items:center; gap:0.4rem; background:rgba(14,165,233,0.08); border:1px solid rgba(56,189,248,0.22); color:#38bdf8; border-radius:7px; padding:0.45rem 0.85rem; font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.15s; letter-spacing:0.02em; }
-        .insights-refresh-btn:hover:not(:disabled) { background:rgba(14,165,233,0.18); box-shadow:0 0 10px rgba(56,189,248,0.15); }
+        .insights-section-title { font-size:0.78rem; font-weight:700; color:#35A7FF; letter-spacing:0.06em; text-transform:uppercase; margin:0; display:flex; align-items:center; gap:0.5rem; }
+        .insights-section-desc { font-size:0.78rem; color:#c8d4cf; margin:0; }
+        .insights-refresh-btn { display:flex; align-items:center; gap:0.4rem; background:#18202b; border:1px solid rgba(220,230,242,0.12); color:#f1f5f9; border-radius:7px; padding:0.45rem 0.85rem; font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.15s; letter-spacing:0.02em; }
+        .insights-refresh-btn:hover:not(:disabled) { background:#35A7FF; color:#171D1C; border-color:#35A7FF; box-shadow:0 0 10px rgba(53,167,255,0.25); }
         .insights-refresh-btn:disabled { opacity:0.45; cursor:not-allowed; }
         .insights-spin { animation:insights-spin 0.8s linear infinite; }
         @keyframes insights-spin { to { transform:rotate(360deg); } }
         .insights-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:380px; gap:1rem; }
-        .insights-loading-spinner { width:36px; height:36px; border:2.5px solid rgba(56,189,248,0.15); border-top-color:#38bdf8; border-radius:50%; animation:insights-spin 0.75s linear infinite; }
-        .insights-loading-text { font-size:0.84rem; color:#64748b; }
+        .insights-loading-spinner { width:36px; height:36px; border:2.5px solid rgba(53,167,255,0.2); border-top-color:#35A7FF; border-radius:50%; animation:insights-spin 0.75s linear infinite; }
+        .insights-loading-text { font-size:0.84rem; color:#c8d4cf; }
         .insights-error-block { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:300px; gap:0.85rem; text-align:center; }
-        .insights-error-icon { color:#ef4444; }
-        .insights-error-title { font-size:0.95rem; font-weight:700; color:#f87171; margin:0; }
-        .insights-error-msg { font-size:0.82rem; color:#94a3b8; max-width:380px; line-height:1.55; margin:0; }
-        .insights-error-code { font-size:0.72rem; color:#475569; font-family:ui-monospace,monospace; }
+        .insights-error-icon { color:#FCBA04; }
+        .insights-error-title { font-size:0.95rem; font-weight:700; color:#FCBA04; margin:0; }
+        .insights-error-msg { font-size:0.82rem; color:#c8d4cf; max-width:380px; line-height:1.55; margin:0; }
+        .insights-error-code { font-size:0.72rem; color:#8a9593; font-family:ui-monospace,monospace; }
         .insights-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:340px; gap:0.9rem; text-align:center; }
-        .insights-empty-icon { opacity:0.35; }
-        .insights-empty-title { font-size:0.95rem; font-weight:600; color:#64748b; margin:0; }
-        .insights-empty-sub { font-size:0.8rem; color:#475569; max-width:400px; line-height:1.6; margin:0; }
+        .insights-empty-icon { opacity:0.45; }
+        .insights-empty-title { font-size:0.95rem; font-weight:600; color:#F2F7F2; margin:0; }
+        .insights-empty-sub { font-size:0.8rem; color:#c8d4cf; max-width:400px; line-height:1.6; margin:0; }
         .insights-columns { display:grid; grid-template-columns:1fr 1fr; gap:2rem; align-items:start; }
         @media (max-width:900px) { .insights-columns { grid-template-columns:1fr; } }
-        .insights-column-header { display:flex; align-items:center; gap:0.6rem; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); }
+        .insights-column-header { display:flex; align-items:center; gap:0.6rem; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(242,247,242,0.1); }
         .insights-column-title { font-size:0.75rem; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; margin:0; }
-        .insights-column-count { margin-left:auto; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); color:#38bdf8; border-radius:10px; padding:0.1rem 0.5rem; font-size:0.67rem; font-weight:700; font-family:ui-monospace,monospace; }
-        .intel-card { background:rgba(10,15,30,0.85); border:1px solid rgba(56,189,248,0.12); border-radius:10px; padding:1rem 1.1rem; margin-bottom:0.85rem; transition:border-color 0.15s; }
-        .intel-card:hover { border-color:rgba(56,189,248,0.25); }
+        .insights-column-count { margin-left:auto; background:rgba(53,167,255,0.15); border:1px solid rgba(53,167,255,0.35); color:#35A7FF; border-radius:10px; padding:0.1rem 0.5rem; font-size:0.67rem; font-weight:700; font-family:ui-monospace,monospace; }
+        .intel-card { background:#141a22; border:1px solid rgba(220,230,242,0.1); border-radius:10px; padding:1rem 1.1rem; margin-bottom:0.85rem; transition:border-color 0.15s; }
+        .intel-card:hover { border-color:rgba(53,167,255,0.35); }
         .intel-card-header { display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.65rem; }
         .intel-card-left { display:flex; align-items:center; gap:0.6rem; min-width:0; }
         .intel-card-right { display:flex; align-items:center; gap:0.5rem; flex-shrink:0; }
         .intel-kind-tag { font-size:0.6rem; font-weight:800; letter-spacing:0.07em; text-transform:uppercase; border-radius:3px; padding:0.1rem 0.4rem; flex-shrink:0; font-family:ui-monospace,monospace; }
-        .pattern-kind { background:rgba(14,165,233,0.14); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); }
-        .lead-kind { background:rgba(20,184,166,0.12); color:#2dd4bf; border:1px solid rgba(45,212,191,0.3); }
-        .intel-type-label { font-size:0.82rem; font-weight:600; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .intel-expand-btn { background:none; border:1px solid rgba(255,255,255,0.08); border-radius:5px; color:#64748b; cursor:pointer; padding:0.2rem; display:flex; align-items:center; transition:all 0.15s; }
-        .intel-expand-btn:hover { border-color:rgba(56,189,248,0.25); color:#94a3b8; }
-        .intel-lead-title { font-size:0.82rem; font-weight:600; color:#94a3b8; margin-bottom:0.4rem; font-style:italic; }
-        .intel-explanation { font-size:0.82rem; color:#94a3b8; line-height:1.6; margin:0; }
+        .pattern-kind { background:rgba(53,167,255,0.15); color:#35A7FF; border:1px solid rgba(53,167,255,0.35); }
+        .lead-kind { background:rgba(252,186,4,0.15); color:#FCBA04; border:1px solid rgba(252,186,4,0.35); }
+        .intel-type-label { font-size:0.82rem; font-weight:600; color:#F2F7F2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .intel-expand-btn { background:none; border:1px solid rgba(242,247,242,0.15); border-radius:5px; color:#c8d4cf; cursor:pointer; padding:0.2rem; display:flex; align-items:center; transition:all 0.15s; }
+        .intel-expand-btn:hover { border-color:#35A7FF; color:#35A7FF; }
+        .intel-lead-title { font-size:0.82rem; font-weight:600; color:#FCBA04; margin-bottom:0.4rem; font-style:italic; }
+        .intel-explanation { font-size:0.82rem; color:#F2F7F2; line-height:1.6; margin:0; }
         .intel-priority-score-bar { margin-top:0.75rem; }
-        .intel-priority-score-label { display:flex; justify-content:space-between; font-size:0.7rem; color:#64748b; margin-bottom:0.3rem; }
-        .intel-priority-track { height:4px; background:rgba(255,255,255,0.07); border-radius:2px; overflow:hidden; }
-        .intel-priority-fill { height:100%; background:linear-gradient(90deg,#38bdf8,#818cf8); border-radius:2px; }
-        .intel-details { margin-top:0.9rem; padding-top:0.85rem; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.6rem; }
+        .intel-priority-score-label { display:flex; justify-content:space-between; font-size:0.7rem; color:#c8d4cf; margin-bottom:0.3rem; }
+        .intel-priority-track { height:4px; background:#171D1C; border-radius:2px; overflow:hidden; }
+        .intel-priority-fill { height:100%; background:linear-gradient(90deg,#35A7FF,#FCBA04); border-radius:2px; }
+        .intel-details { margin-top:0.9rem; padding-top:0.85rem; border-top:1px solid rgba(242,247,242,0.1); display:flex; flex-direction:column; gap:0.6rem; }
         .intel-detail-row { display:flex; gap:0.75rem; align-items:center; }
-        .intel-detail-key { font-size:0.69rem; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:0.04em; min-width:120px; flex-shrink:0; }
-        .intel-detail-val { font-size:0.79rem; color:#cbd5e1; line-height:1.5; word-break:break-all; }
+        .intel-detail-key { font-size:0.69rem; font-weight:600; color:#c8d4cf; text-transform:uppercase; letter-spacing:0.04em; min-width:120px; flex-shrink:0; }
+        .intel-detail-val { font-size:0.79rem; color:#F2F7F2; line-height:1.5; word-break:break-all; }
         .mono { font-family:ui-monospace,monospace; font-size:0.72rem !important; }
-        .intel-notice { display:flex; align-items:flex-start; gap:0.45rem; font-size:0.72rem; color:#475569; line-height:1.5; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:0.5rem 0.7rem; margin-top:0.25rem; }
-        .intel-notice strong { color:#64748b; }
-        .insights-positioning { margin-top:2rem; padding:0.85rem 1.1rem; background:rgba(14,165,233,0.04); border:1px solid rgba(56,189,248,0.1); border-radius:8px; font-size:0.76rem; color:#475569; line-height:1.6; display:flex; align-items:flex-start; gap:0.55rem; }
-        .insights-positioning svg { flex-shrink:0; margin-top:2px; color:#38bdf8; opacity:0.6; }
+        .intel-notice { display:flex; align-items:flex-start; gap:0.45rem; font-size:0.72rem; color:#c8d4cf; line-height:1.5; background:#171D1C; border:1px solid rgba(242,247,242,0.1); border-radius:6px; padding:0.5rem 0.7rem; margin-top:0.25rem; }
+        .intel-notice strong { color:#F2F7F2; }
+        .insights-positioning { margin-top:2rem; padding:0.85rem 1.1rem; background:#141a22; border:1px solid rgba(220,230,242,0.1); border-radius:8px; font-size:0.76rem; color:#c8d4cf; line-height:1.6; display:flex; align-items:flex-start; gap:0.55rem; }
+        .insights-positioning svg { flex-shrink:0; margin-top:2px; color:#35A7FF; opacity:0.9; }
       `}</style>
 
       {/* Header */}
@@ -396,7 +396,7 @@ export default function CaseInsightsView({ caseId }) {
       {!loading && !error && isEmpty && (
         <div className="insights-empty">
           <div className="insights-empty-icon">
-            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="1.2">
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#35A7FF" strokeWidth="1.2">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
           </div>
@@ -415,27 +415,27 @@ export default function CaseInsightsView({ caseId }) {
           <div className="insights-columns">
             <div>
               <div className="insights-column-header">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#35A7FF" strokeWidth="2.5">
                   <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
-                <h3 className="insights-column-title" style={{ color: "#38bdf8" }}>Patterns</h3>
+                <h3 className="insights-column-title" style={{ color: "#35A7FF" }}>Patterns</h3>
                 <span className="insights-column-count">{patterns.length}</span>
               </div>
               {!hasPatterns
-                ? <div style={{ fontSize: "0.8rem", color: "#475569", padding: "1rem 0" }}>No patterns detected for this case.</div>
+                ? <div style={{ fontSize: "0.8rem", color: "#c8d4cf", padding: "1rem 0" }}>No patterns detected for this case.</div>
                 : patterns.map(p => <PatternCard key={p.id} pattern={p} />)
               }
             </div>
             <div>
               <div className="insights-column-header">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" strokeWidth="2.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FCBA04" strokeWidth="2.5">
                   <line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" />
                 </svg>
-                <h3 className="insights-column-title" style={{ color: "#2dd4bf" }}>Investigative Leads</h3>
+                <h3 className="insights-column-title" style={{ color: "#FCBA04" }}>Investigative Leads</h3>
                 <span className="insights-column-count">{leads.length}</span>
               </div>
               {!hasLeads
-                ? <div style={{ fontSize: "0.8rem", color: "#475569", padding: "1rem 0" }}>No investigative leads for this case.</div>
+                ? <div style={{ fontSize: "0.8rem", color: "#c8d4cf", padding: "1rem 0" }}>No investigative leads for this case.</div>
                 : leads.map(l => <LeadCard key={l.id} lead={l} />)
               }
             </div>
@@ -446,7 +446,7 @@ export default function CaseInsightsView({ caseId }) {
               <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <span>
-              <strong style={{ color: "#64748b" }}>Investigator Responsibility: </strong>
+              <strong style={{ color: "#F2F7F2" }}>Investigator Responsibility: </strong>
               AI discovers. Graph connects. Evidence supports. Investigator decides.
               Patterns and leads are algorithmic hypotheses, not determinations of fact or culpability.
               All intelligence must be independently verified before any operational action.
