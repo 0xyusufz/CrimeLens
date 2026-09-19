@@ -607,15 +607,78 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   background: #f8fafc !important;
 }
 .doc-process-btn {
-  background: rgba(37, 99, 235, 0.08) !important;
-  color: #2563eb !important;
-  border: 1px solid rgba(37, 99, 235, 0.25) !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid #bfdbfe !important;
   border-radius: 8px !important;
   font-weight: 650 !important;
 }
 .doc-process-btn:hover:not(:disabled) {
-  background: rgba(37, 99, 235, 0.16) !important;
-  border-color: #2563eb !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #1d4ed8 !important;
+}
+
+/* Evidentiary Documents Table Header and Hash Verification */
+.docs-table-top-bar {
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important;
+  border: 1px solid #1d4ed8 !important;
+  border-radius: 12px 12px 0 0 !important;
+  padding: 0.75rem 1.15rem !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2) !important;
+}
+.docs-count-label {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+}
+.btn-batch-process-all {
+  background: #ffffff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid #ffffff !important;
+  border-radius: 8px !important;
+  font-weight: 750 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12) !important;
+}
+.btn-batch-process-all:hover:not(:disabled) {
+  background: #eff6ff !important;
+  color: #1e40af !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18) !important;
+}
+.doc-id-badge {
+  background: rgba(100, 116, 139, 0.08) !important;
+  border: 1px solid rgba(148, 163, 184, 0.22) !important;
+  border-radius: 5px !important;
+}
+.doc-hash-wrapper {
+  background: rgba(37, 99, 235, 0.05) !important;
+  border: 1px solid rgba(37, 99, 235, 0.18) !important;
+  border-radius: 8px !important;
+  backdrop-filter: blur(4px) !important;
+}
+.doc-hash-wrapper:hover {
+  background: rgba(37, 99, 235, 0.1) !important;
+  border-color: rgba(37, 99, 235, 0.35) !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08) !important;
+}
+.doc-hash-wrapper .hash-label {
+  color: #2563eb !important;
+  background: rgba(37, 99, 235, 0.1) !important;
+  border: 1px solid rgba(37, 99, 235, 0.2) !important;
+  font-weight: 800 !important;
+}
+.doc-hash-wrapper .hash-value {
+  color: #1e40af !important;
+  font-weight: 600 !important;
+}
+
+/* Red PDF Badge with White Text */
+.badge-pdf, .ext-pdf {
+  background: #ef4444 !important;
+  border: 1px solid #dc2626 !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.25) !important;
 }
 
 /* Graph canvas and controls */

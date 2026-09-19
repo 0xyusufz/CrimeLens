@@ -543,6 +543,332 @@ export function CategoryFilterDropdown({
   );
 }
 
+export const CASE_STATUS_OPTIONS = [
+  { id: "ACTIVE", label: "Active", dotColor: "#2563eb", textColor: "#1d4ed8", bg: "#eff6ff" },
+  { id: "ON_HOLD", label: "On Hold", dotColor: "#d97706", textColor: "#b45309", bg: "#fffbeb" },
+  { id: "SOLVED", label: "Solved", dotColor: "#059669", textColor: "#047857", bg: "#ecfdf5" },
+];
+
+function CaseStatusDropdown({ value, onChange, disabled }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [openUpwards, setOpenUpwards] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const currentOption =
+    CASE_STATUS_OPTIONS.find((opt) => opt.id === value) || CASE_STATUS_OPTIONS[0];
+
+  const handleToggle = () => {
+    if (disabled) return;
+    if (!isOpen && dropdownRef.current) {
+      const rect = dropdownRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < 180 && rect.top > 180) {
+        setOpenUpwards(true);
+      } else {
+        setOpenUpwards(false);
+      }
+    }
+    setIsOpen((prev) => !prev);
+  };
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    }
+    function handleKeyDown(e) {
+      if (e.key === "Escape") setIsOpen(false);
+    }
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const variantClass = `status-variant-${(currentOption.id || "active").toLowerCase()}`;
+
+  return (
+    <div className={`custom-status-dropdown-root ${isOpen ? "is-open-root" : ""}`} ref={dropdownRef}>
+      <button
+        type="button"
+        className={`status-dropdown-trigger ${variantClass} ${isOpen ? "is-open" : ""}`}
+        onClick={handleToggle}
+        disabled={disabled}
+        title="Change Case Status"
+      >
+        <span
+          className="status-dropdown-dot"
+          style={{ backgroundColor: currentOption.dotColor }}
+        />
+        <span className="status-dropdown-text">{currentOption.label}</span>
+        <svg
+          className={`status-dropdown-chevron ${isOpen ? "rotate" : ""}`}
+          width="11"
+          height="11"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div
+          className={`status-dropdown-menu ${
+            openUpwards ? "status-dropdown-menu-up" : "status-dropdown-menu-down"
+          }`}
+        >
+          <div className="status-dropdown-header">CASE STATUS</div>
+          <div className="status-options-list">
+            {CASE_STATUS_OPTIONS.map((opt) => {
+              const isSelected = opt.id === value;
+              const optVariantClass = `status-item-${opt.id.toLowerCase()}`;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className={`status-dropdown-item ${optVariantClass} ${
+                    isSelected ? "is-selected" : ""
+                  }`}
+                  onClick={() => {
+                    onChange(opt.id);
+                    setIsOpen(false);
+                  }}
+                >
+                  <span
+                    className="status-dropdown-dot"
+                    style={{ backgroundColor: opt.dotColor }}
+                  />
+                  <span className="status-dropdown-item-label">{opt.label}</span>
+                  {isSelected && (
+                    <svg
+                      className="status-dropdown-check"
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        .custom-status-dropdown-root {
+          position: relative;
+          display: inline-block;
+        }
+
+        .custom-status-dropdown-root.is-open-root {
+          z-index: 150;
+        }
+
+        .status-dropdown-trigger {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.45rem;
+          height: 30px;
+          padding: 0 0.65rem;
+          border-radius: 6px;
+          border: 1px solid #cbd5e1;
+          background: #ffffff;
+          color: #0f172a;
+          font-size: 0.74rem;
+          font-weight: 650;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+          user-select: none;
+          outline: none;
+        }
+
+        .status-dropdown-trigger:hover:not(:disabled) {
+          transform: translateY(-0.5px);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+        }
+
+        .status-dropdown-trigger.status-variant-active {
+          background: #eff6ff;
+          border-color: #bfdbfe;
+          color: #1d4ed8;
+        }
+        .status-dropdown-trigger.status-variant-active:hover:not(:disabled) {
+          background: #dbeafe;
+          border-color: #93c5fd;
+        }
+
+        .status-dropdown-trigger.status-variant-on_hold {
+          background: #fffbeb;
+          border-color: #fde68a;
+          color: #b45309;
+        }
+        .status-dropdown-trigger.status-variant-on_hold:hover:not(:disabled) {
+          background: #fef3c7;
+          border-color: #fcd34d;
+        }
+
+        .status-dropdown-trigger.status-variant-solved {
+          background: #ecfdf5;
+          border-color: #a7f3d0;
+          color: #047857;
+        }
+        .status-dropdown-trigger.status-variant-solved:hover:not(:disabled) {
+          background: #d1fae5;
+          border-color: #6ee7b7;
+        }
+
+        .status-dropdown-trigger.is-open {
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+        }
+
+        .status-dropdown-trigger:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+
+        .status-dropdown-dot {
+          width: 6.5px;
+          height: 6.5px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+
+        .status-dropdown-text {
+          line-height: 1;
+          letter-spacing: 0.01em;
+          white-space: nowrap;
+        }
+
+        .status-dropdown-chevron {
+          color: currentColor;
+          opacity: 0.7;
+          transition: transform 0.18s ease;
+          flex-shrink: 0;
+        }
+
+        .status-dropdown-chevron.rotate {
+          transform: rotate(180deg);
+        }
+
+        .status-dropdown-menu {
+          position: absolute;
+          right: 0;
+          min-width: 145px;
+          background: #ffffff;
+          border: 1.5px solid #cbd5e1;
+          border-radius: 8px;
+          box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.14), 0 4px 8px -2px rgba(15, 23, 42, 0.06);
+          padding: 0.35rem;
+          z-index: 999;
+          animation: statusDropAnim 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes statusDropAnim {
+          from {
+            opacity: 0;
+            transform: translateY(-3px) scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .status-dropdown-menu-down {
+          top: calc(100% + 5px);
+        }
+
+        .status-dropdown-menu-up {
+          bottom: calc(100% + 5px);
+        }
+
+        .status-dropdown-header {
+          font-size: 0.62rem;
+          font-weight: 800;
+          color: #94a3b8;
+          letter-spacing: 0.08em;
+          padding: 0.3rem 0.5rem 0.25rem;
+          text-transform: uppercase;
+          border-bottom: 1px solid #f1f5f9;
+          margin-bottom: 0.25rem;
+        }
+
+        .status-options-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.15rem;
+        }
+
+        .status-dropdown-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          width: 100%;
+          padding: 0.42rem 0.55rem;
+          border-radius: 6px;
+          border: none;
+          background: transparent;
+          font-size: 0.76rem;
+          font-weight: 600;
+          color: #1e293b;
+          cursor: pointer;
+          text-align: left;
+          transition: all 0.12s ease;
+        }
+
+        .status-dropdown-item:hover {
+          background: #f1f5f9;
+          color: #0f172a;
+        }
+
+        .status-dropdown-item.is-selected {
+          background: #eff6ff;
+          color: #1d4ed8;
+          font-weight: 700;
+        }
+
+        .status-dropdown-item.status-item-on_hold.is-selected {
+          background: #fffbeb;
+          color: #b45309;
+        }
+
+        .status-dropdown-item.status-item-solved.is-selected {
+          background: #ecfdf5;
+          color: #047857;
+        }
+
+        .status-dropdown-item-label {
+          flex: 1;
+        }
+
+        .status-dropdown-check {
+          margin-left: auto;
+          flex-shrink: 0;
+          color: currentColor;
+        }
+      `}</style>
+    </div>
+  );
+}
+
 export const PRIORITY_LEVELS = [
   { id: "CRITICAL", label: "Critical Threat", color: "#b45309", bg: "#fffbeb", border: "#fde68a" },
   { id: "HIGH", label: "High Priority", color: "#b45309", bg: "#fffbeb", border: "#fde68a" },
@@ -601,6 +927,14 @@ export function serializeCaseMeta({ category, priority, subStatus, incidentDate,
     leadOfficer: leadOfficer || null,
     narrative: narrative || "",
   });
+}
+
+export function getTodayDateString() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export default function Dashboard() {
@@ -774,6 +1108,12 @@ export default function Dashboard() {
     e.preventDefault();
     if (!createForm.title.trim()) {
       setCreateError("Case title is required.");
+      return;
+    }
+
+    const maxAllowedDate = getTodayDateString();
+    if (createForm.incidentDate && createForm.incidentDate > maxAllowedDate) {
+      setCreateError("Date of incident cannot be in the future.");
       return;
     }
 
@@ -1044,7 +1384,7 @@ export default function Dashboard() {
                                     <span className="rec-cat-name" style={{ color: cat.color }}>{cat.label}</span>
                                     {c.meta.location && <span className="rec-dot">• {c.meta.location}</span>}
                                     {c.meta.subStatus && (
-                                      <span className="rec-status-tag">
+                                      <span className={`rec-status-tag rec-status-${(c.meta.subStatus || "").toLowerCase()}`}>
                                         {c.meta.subStatus}
                                       </span>
                                     )}
@@ -1263,17 +1603,11 @@ export default function Dashboard() {
 
                     <div className="card-secondary-actions">
                       {/* STATUS SELECTOR */}
-                      <select
+                      <CaseStatusDropdown
                         value={meta.subStatus}
-                        onChange={(e) => handleStatusChange(c, e.target.value)}
+                        onChange={(newStatus) => handleStatusChange(c, newStatus)}
                         disabled={isUpdating}
-                        className="quick-status-selector"
-                        title="Change Case Status"
-                      >
-                        <option value="ACTIVE">Active</option>
-                        <option value="ON_HOLD">On Hold</option>
-                        <option value="SOLVED">Solved</option>
-                      </select>
+                      />
 
                       {/* DELETE BUTTON */}
                       <button
@@ -1377,12 +1711,26 @@ export default function Dashboard() {
                 {/* ROW 3: Incident Date & Location */}
                 <div className="modal-two-column-row">
                   <div className="modal-input-group">
-                    <label htmlFor="modal-incident-date">Date of Incident</label>
+                    <label htmlFor="modal-incident-date">
+                      Date of Incident
+                      <span style={{ fontSize: "0.72rem", color: "#64748b", marginLeft: "0.35rem", fontWeight: 400 }}>
+                        (Cannot be future date)
+                      </span>
+                    </label>
                     <input
                       id="modal-incident-date"
                       type="date"
                       value={createForm.incidentDate}
-                      onChange={(e) => setCreateForm({ ...createForm, incidentDate: e.target.value })}
+                      max={getTodayDateString()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const today = getTodayDateString();
+                        if (val && val > today) {
+                          setCreateForm({ ...createForm, incidentDate: today });
+                        } else {
+                          setCreateForm({ ...createForm, incidentDate: val });
+                        }
+                      }}
                       disabled={createSubmitting}
                       className="modal-text-input"
                     />
@@ -1869,12 +2217,14 @@ export default function Dashboard() {
 
           .rec-case-number {
             font-size: 0.68rem;
-            color: #2563eb;
-            background: rgba(37, 99, 235, 0.08);
-            padding: 1px 6px;
-            border-radius: 4px;
+            font-weight: 750;
+            color: #ffffff;
+            background: #0f172a;
+            padding: 2px 7px;
+            border-radius: 5px;
             flex-shrink: 0;
-            border: 1px solid rgba(37, 99, 235, 0.2);
+            border: 1.5px solid #0f172a;
+            letter-spacing: 0.03em;
           }
 
           .rec-meta-row {
@@ -1897,14 +2247,34 @@ export default function Dashboard() {
           }
 
           .rec-status-tag {
-            font-size: 0.64rem;
+            font-size: 0.63rem;
             font-weight: 800;
             letter-spacing: 0.06em;
-            padding: 1px 5px;
-            border-radius: 4px;
-            background: #fffbeb;
-            color: #b45309;
-            border: 1px solid #fde68a;
+            padding: 2px 7px;
+            border-radius: 5px;
+            text-transform: uppercase;
+            background: #1d4ed8;
+            color: #ffffff;
+            border: 1.5px solid #1d4ed8;
+            flex-shrink: 0;
+          }
+
+          .rec-status-tag.rec-status-active {
+            background: #1d4ed8;
+            color: #ffffff;
+            border-color: #1e40af;
+          }
+
+          .rec-status-tag.rec-status-on_hold {
+            background: #b45309;
+            color: #ffffff;
+            border-color: #92400e;
+          }
+
+          .rec-status-tag.rec-status-solved {
+            background: #047857;
+            color: #ffffff;
+            border-color: #065f46;
           }
 
           .rec-open-btn {
@@ -2114,13 +2484,13 @@ export default function Dashboard() {
             display: inline-block;
             align-self: flex-start;
             font-size: 0.7rem;
-            font-weight: 700;
-            color: #2563eb;
-            background: rgba(37, 99, 235, 0.08);
-            padding: 0.12rem 0.5rem;
-            border-radius: 4px;
-            border: 1px solid rgba(37, 99, 235, 0.2);
-            letter-spacing: 0.02em;
+            font-weight: 750;
+            color: #ffffff;
+            background: #0f172a;
+            padding: 0.15rem 0.55rem;
+            border-radius: 5px;
+            border: 1.5px solid #0f172a;
+            letter-spacing: 0.03em;
           }
 
           .card-title-link {
@@ -2213,22 +2583,154 @@ export default function Dashboard() {
             gap: 0.45rem;
           }
 
-          .quick-status-selector {
-            height: 34px;
-            padding: 0 0.65rem;
-            border-radius: 9px;
-            border: 1px solid #cbd5e1;
-            background: #ffffff;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: #0f172a;
-            cursor: pointer;
-            outline: none;
-            transition: border-color 0.15s ease;
+          .custom-status-dropdown-root {
+            position: relative;
+            display: inline-block;
           }
 
-          .quick-status-selector:focus {
-            border-color: #2563eb;
+          .custom-status-dropdown-root.is-open-root {
+            z-index: 120;
+          }
+
+          .status-dropdown-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            height: 34px;
+            padding: 0 0.75rem;
+            border-radius: 9px;
+            border: 1.5px solid #cbd5e1;
+            background: #ffffff;
+            color: #0f172a;
+            font-size: 0.76rem;
+            font-weight: 650;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            outline: none;
+            user-select: none;
+          }
+
+          .status-dropdown-trigger:hover:not(:disabled) {
+            border-color: #94a3b8;
+            background: #f8fafc;
+          }
+
+          .status-dropdown-trigger.is-open {
+            border-color: #0f172a !important;
+            background: #ffffff !important;
+            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+          }
+
+          .status-dropdown-trigger:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+          }
+
+          .status-dropdown-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+          }
+
+          .status-dropdown-text {
+            white-space: nowrap;
+          }
+
+          .status-dropdown-chevron {
+            color: #64748b;
+            transition: transform 0.2s ease;
+            margin-left: 0.1rem;
+            flex-shrink: 0;
+          }
+
+          .status-dropdown-chevron.rotate {
+            transform: rotate(180deg);
+            color: #0f172a;
+          }
+
+          .status-dropdown-menu {
+            position: absolute;
+            right: 0;
+            z-index: 200;
+            min-width: 130px;
+            background: #ffffff;
+            border: 1.5px solid #0f172a;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.16), 0 4px 6px -2px rgba(15, 23, 42, 0.06);
+            padding: 0.35rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+            animation: statusMenuFade 0.12s ease-out;
+          }
+
+          .status-dropdown-menu-up {
+            bottom: calc(100% + 5px);
+            box-shadow: 0 -10px 25px -4px rgba(15, 23, 42, 0.16), 0 -4px 6px -2px rgba(15, 23, 42, 0.06);
+          }
+
+          .status-dropdown-menu-down {
+            top: calc(100% + 5px);
+          }
+
+          @keyframes statusMenuFade {
+            from {
+              opacity: 0;
+              transform: translateY(2px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          .status-dropdown-header {
+            font-size: 0.6rem;
+            font-weight: 750;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            padding: 0.2rem 0.5rem 0.2rem;
+            text-transform: uppercase;
+            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 0.15rem;
+          }
+
+          .status-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.44rem 0.6rem;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: #1e293b;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.12s ease;
+          }
+
+          .status-dropdown-item:hover {
+            background: #f1f5f9;
+          }
+
+          .status-dropdown-item.is-selected {
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-weight: 700;
+          }
+
+          .status-dropdown-item-label {
+            flex: 1;
+            white-space: nowrap;
+          }
+
+          .status-dropdown-check {
+            margin-left: auto;
+            flex-shrink: 0;
           }
 
           .delete-case-btn {

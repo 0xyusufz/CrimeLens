@@ -96,12 +96,12 @@ function InvestigationNode({ data, selected }) {
       {/* Top Banner for Focus or High-Threat */}
       {isFocus && (
         <div className="card-top-banner banner-focus">
-          <span>🎯 SUBJECT UNDER INVESTIGATION</span>
+          <span>SUBJECT UNDER INVESTIGATION</span>
         </div>
       )}
       {!isFocus && isSos && (
         <div className="card-top-banner banner-sos">
-          <span>🚨 ACCUSED / KEY THREAT</span>
+          <span>ACCUSED / KEY THREAT</span>
         </div>
       )}
 
@@ -285,6 +285,170 @@ function InvestigationNode({ data, selected }) {
       `}</style>
     </div>
   );
+}
+
+// Inline Markdown Parser for Dossier Report
+function parseInlineMarkdown(text) {
+  if (!text || typeof text !== "string") return text;
+
+  const tokens = [];
+  const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
+  let lastIdx = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIdx) {
+      tokens.push(text.substring(lastIdx, match.index));
+    }
+    const chunk = match[0];
+    if (chunk.startsWith("**") && chunk.endsWith("**") && chunk.length >= 4) {
+      tokens.push(
+        <strong key={match.index} className="md-bold">
+          {chunk.slice(2, -2)}
+        </strong>
+      );
+    } else if (chunk.startsWith("*") && chunk.endsWith("*") && chunk.length >= 2) {
+      tokens.push(
+        <em key={match.index} className="md-italic">
+          {chunk.slice(1, -1)}
+        </em>
+      );
+    } else if (chunk.startsWith("`") && chunk.endsWith("`") && chunk.length >= 2) {
+      tokens.push(
+        <code key={match.index} className="md-code">
+          {chunk.slice(1, -1)}
+        </code>
+      );
+    } else {
+      tokens.push(chunk);
+    }
+    lastIdx = regex.lastIndex;
+  }
+
+  if (lastIdx < text.length) {
+    tokens.push(text.substring(lastIdx));
+  }
+
+  return tokens.length > 0 ? tokens : text;
+}
+
+// Clean Formatted Markdown Renderer for Dossier Report
+function DossierMarkdownViewer({ markdown }) {
+  if (!markdown) return null;
+
+  const lines = markdown.split("\n");
+  const elements = [];
+  let currentList = null;
+
+  const flushList = (key) => {
+    if (currentList && currentList.items.length > 0) {
+      if (currentList.type === "ul") {
+        elements.push(
+          <ul key={`list-${key}`} className="dossier-md-ul">
+            {currentList.items.map((item, idx) => (
+              <li key={idx} className="dossier-md-li">
+                {parseInlineMarkdown(item)}
+              </li>
+            ))}
+          </ul>
+        );
+      } else {
+        elements.push(
+          <ol key={`list-${key}`} className="dossier-md-ol">
+            {currentList.items.map((item, idx) => (
+              <li key={idx} className="dossier-md-li">
+                {parseInlineMarkdown(item)}
+              </li>
+            ))}
+          </ol>
+        );
+      }
+      currentList = null;
+    }
+  };
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      flushList(index);
+      return;
+    }
+
+    if (trimmed.startsWith("# ")) {
+      flushList(index);
+      elements.push(
+        <h3 key={`h1-${index}`} className="dossier-md-h1">
+          {parseInlineMarkdown(trimmed.substring(2))}
+        </h3>
+      );
+      return;
+    }
+
+    if (trimmed.startsWith("## ")) {
+      flushList(index);
+      elements.push(
+        <h4 key={`h2-${index}`} className="dossier-md-h2">
+          {parseInlineMarkdown(trimmed.substring(3))}
+        </h4>
+      );
+      return;
+    }
+
+    if (trimmed.startsWith("### ")) {
+      flushList(index);
+      elements.push(
+        <h5 key={`h3-${index}`} className="dossier-md-h3">
+          {parseInlineMarkdown(trimmed.substring(4))}
+        </h5>
+      );
+      return;
+    }
+
+    if (trimmed.startsWith("* ") || trimmed.startsWith("- ")) {
+      const itemText = trimmed.substring(2);
+      if (currentList && currentList.type === "ul") {
+        currentList.items.push(itemText);
+      } else {
+        flushList(index);
+        currentList = { type: "ul", items: [itemText] };
+      }
+      return;
+    }
+
+    const olMatch = trimmed.match(/^\d+\.\s+(.+)$/);
+    if (olMatch) {
+      const itemText = olMatch[1];
+      if (currentList && currentList.type === "ol") {
+        currentList.items.push(itemText);
+      } else {
+        flushList(index);
+        currentList = { type: "ol", items: [itemText] };
+      }
+      return;
+    }
+
+    if (trimmed.startsWith("> ")) {
+      flushList(index);
+      elements.push(
+        <blockquote key={`quote-${index}`} className="dossier-md-quote">
+          {parseInlineMarkdown(trimmed.substring(2))}
+        </blockquote>
+      );
+      return;
+    }
+
+    flushList(index);
+    elements.push(
+      <p key={`p-${index}`} className="dossier-md-p">
+        {parseInlineMarkdown(trimmed)}
+      </p>
+    );
+  });
+
+  flushList("end");
+
+  return <div className="dossier-markdown-container">{elements}</div>;
 }
 
 // Deterministic Hierarchical/Directional Investigation Layout Engine
@@ -657,8 +821,910 @@ function buildInvestigationLayout(rfNodes, rawRels, focusNodeId = null, isFocusM
   };
 }
 
+
+// Helper to escape HTML characters safely for printable reports
+function escapeHtmlForReport(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Convert markdown to clean, semantic HTML elements for print output
+function convertMarkdownToPrintableHtml(markdown) {
+  if (!markdown || typeof markdown !== "string") return "";
+  const lines = markdown.split("\n");
+  const htmlParts = [];
+  let inUl = false;
+  let inOl = false;
+  const closeLists = () => {
+    if (inUl) { htmlParts.push("</ul>"); inUl = false; }
+    if (inOl) { htmlParts.push("</ol>"); inOl = false; }
+  };
+  const formatInline = (text) => {
+    let escaped = escapeHtmlForReport(text);
+    escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong class="pdf-bold">$1</strong>');
+    escaped = escaped.replace(/\*([^*]+)\*/g, '<em class="pdf-italic">$1</em>');
+    escaped = escaped.replace(/`([^`]+)`/g, '<code class="pdf-code">$1</code>');
+    return escaped;
+  };
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) { closeLists(); return; }
+    if (trimmed.startsWith("# ")) {
+      closeLists();
+      htmlParts.push('<h2 class="pdf-h1">' + formatInline(trimmed.substring(2)) + '</h2>');
+      return;
+    }
+    if (trimmed.startsWith("## ")) {
+      closeLists();
+      htmlParts.push('<h3 class="pdf-h2">' + formatInline(trimmed.substring(3)) + '</h3>');
+      return;
+    }
+    if (trimmed.startsWith("### ")) {
+      closeLists();
+      htmlParts.push('<h4 class="pdf-h3">' + formatInline(trimmed.substring(4)) + '</h4>');
+      return;
+    }
+    if (trimmed.startsWith("* ") || trimmed.startsWith("- ")) {
+      if (inOl) closeLists();
+      if (!inUl) { htmlParts.push('<ul class="pdf-ul">'); inUl = true; }
+      htmlParts.push('<li class="pdf-li">' + formatInline(trimmed.substring(2)) + '</li>');
+      return;
+    }
+    const olMatch = trimmed.match(/^\d+\.\s+(.+)$/);
+    if (olMatch) {
+      if (inUl) closeLists();
+      if (!inOl) { htmlParts.push('<ol class="pdf-ol">'); inOl = true; }
+      htmlParts.push('<li class="pdf-li">' + formatInline(olMatch[1]) + '</li>');
+      return;
+    }
+    if (trimmed.startsWith("> ")) {
+      closeLists();
+      htmlParts.push('<blockquote class="pdf-quote">' + formatInline(trimmed.substring(2)) + '</blockquote>');
+      return;
+    }
+    closeLists();
+    htmlParts.push('<p class="pdf-p">' + formatInline(trimmed) + '</p>');
+  });
+  closeLists();
+  return htmlParts.join("\n");
+}
+
+// Build fully styled, self-contained printable HTML document
+function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
+  const title = caseTitle || `Case File #${caseId || "INTEL"}`;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+  const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const reportId = "DOSSIER-" + (caseId ? String(caseId).slice(0, 8).toUpperCase() : "INTEL") + "-" + Math.floor(1000 + Math.random() * 9000);
+
+  let summaryHtml = "";
+  if (analysis.case_summary) {
+    summaryHtml = `
+      <section class="report-section">
+        <div class="section-heading">
+          <span class="sec-num">01</span>
+          <h2>Executive Intelligence Summary</h2>
+        </div>
+        <div class="summary-box">
+          <p class="summary-text">${escapeHtmlForReport(analysis.case_summary)}</p>
+        </div>
+      </section>
+    `;
+  }
+
+  let poisHtml = "";
+  if (analysis.potential_persons_of_interest && analysis.potential_persons_of_interest.length > 0) {
+    poisHtml = `
+      <section class="report-section">
+        <div class="section-heading">
+          <span class="sec-num">02</span>
+          <h2>Identified Persons of Interest & Key Subjects</h2>
+        </div>
+        <div class="poi-grid">
+          ${analysis.potential_persons_of_interest.map((poi) => {
+            const threat = (poi.threat_level || "MEDIUM").toUpperCase();
+            const threatBadgeClass = threat.includes("CRIT") ? "badge-critical" : threat.includes("HIGH") ? "badge-high" : "badge-medium";
+            return `
+              <div class="poi-card ${threatBadgeClass}">
+                <div class="poi-card-header">
+                  <div class="poi-name-role">
+                    <span class="poi-name">${escapeHtmlForReport(poi.name)}</span>
+                    ${poi.role ? `<span class="poi-role">${escapeHtmlForReport(poi.role)}</span>` : ""}
+                  </div>
+                  <span class="threat-badge ${threatBadgeClass}">${escapeHtmlForReport(threat)} THREAT</span>
+                </div>
+                <div class="poi-body">
+                  <p class="poi-justification"><strong>Forensic Rationale:</strong> ${escapeHtmlForReport(poi.reason || poi.justification || "Identified key entity in criminal graph.")}</p>
+                  ${poi.evidence ? `<div class="poi-ev-box"><strong>Corroborating Evidence:</strong> "${escapeHtmlForReport(poi.evidence)}"</div>` : ""}
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </section>
+    `;
+  }
+
+  let leadsHtml = "";
+  if (analysis.investigative_leads && analysis.investigative_leads.length > 0) {
+    leadsHtml = `
+      <section class="report-section">
+        <div class="section-heading">
+          <span class="sec-num">03</span>
+          <h2>Actionable Investigative Leads & Next Steps</h2>
+        </div>
+        <div class="leads-container">
+          ${analysis.investigative_leads.map((lead, idx) => `
+            <div class="lead-row">
+              <div class="lead-idx">${idx + 1}</div>
+              <div class="lead-content">${escapeHtmlForReport(lead)}</div>
+            </div>
+          `).join("")}
+        </div>
+      </section>
+    `;
+  }
+
+  let evidenceHtml = "";
+  if (analysis.supporting_evidence && analysis.supporting_evidence.length > 0) {
+    evidenceHtml = `
+      <section class="report-section">
+        <div class="section-heading">
+          <span class="sec-num">04</span>
+          <h2>Evidentiary Citations & Fact Verifications</h2>
+        </div>
+        <div class="evidence-grid">
+          ${analysis.supporting_evidence.map((ev) => `
+            <div class="ev-card">
+              <div class="ev-claim">${escapeHtmlForReport(ev.claim || "Corroborated Fact")}</div>
+              <blockquote class="ev-quote">"${escapeHtmlForReport(ev.quote)}"</blockquote>
+              ${ev.source_document_id ? `<div class="ev-source">Source Doc Ref: ${escapeHtmlForReport(ev.source_document_id)}</div>` : ""}
+            </div>
+          `).join("")}
+        </div>
+      </section>
+    `;
+  }
+
+  let anomaliesHtml = "";
+  if (analysis.contradictions_or_anomalies && analysis.contradictions_or_anomalies.length > 0) {
+    anomaliesHtml = `
+      <section class="report-section">
+        <div class="section-heading heading-alert">
+          <span class="sec-num">05</span>
+          <h2>Evidentiary Inconsistencies & Anomalies</h2>
+        </div>
+        <div class="anomaly-box">
+          <ul class="anomaly-list">
+            ${analysis.contradictions_or_anomalies.map((ano) => `<li>${escapeHtmlForReport(ano)}</li>`).join("")}
+          </ul>
+        </div>
+      </section>
+    `;
+  }
+
+  let dossierBodyHtml = "";
+  if (analysis.dossier_markdown) {
+    const formatted = convertMarkdownToPrintableHtml(analysis.dossier_markdown);
+    dossierBodyHtml = `
+      <section class="report-section">
+        <div class="section-heading">
+          <span class="sec-num">06</span>
+          <h2>Comprehensive Dossier Analysis & Detailed Intelligence</h2>
+        </div>
+        <div class="dossier-rendered-content">
+          ${formatted}
+        </div>
+      </section>
+    `;
+  }
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrimeLens Intelligence Dossier - ${escapeHtmlForReport(title)}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      line-height: 1.55;
+      font-size: 13.5px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Screen Topbar Controls */
+    .screen-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .screen-toolbar-title {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .screen-toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-print {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: #2563eb;
+      color: #ffffff;
+      border: 1px solid #1d4ed8;
+      padding: 0.5rem 1.15rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+      transition: all 0.15s ease;
+    }
+
+    .btn-print:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    .btn-close {
+      background: rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 0.5rem 0.95rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-close:hover {
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+    }
+
+    /* Printable Document Container */
+    .document-wrapper {
+      max-width: 860px;
+      margin: 2rem auto 4rem auto;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      padding: 3rem 3.25rem;
+    }
+
+    /* Official Department Header */
+    .report-header {
+      border-bottom: 2.5px solid #0f172a;
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .agency-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.25rem;
+    }
+
+    .agency-identity {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .agency-logo-icon {
+      width: 44px;
+      height: 44px;
+      background: #0f172a;
+      color: #ffffff;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.3rem;
+      letter-spacing: -0.05em;
+    }
+
+    .agency-titles h1 {
+      font-size: 1.15rem;
+      font-weight: 850;
+      color: #0f172a;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+
+    .agency-titles p {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #2563eb;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .security-badge {
+      display: inline-block;
+      background: #fef2f2;
+      border: 1.5px solid #ef4444;
+      color: #b91c1c;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      padding: 0.35rem 0.75rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      text-align: right;
+    }
+
+    .case-title-row {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 1.5rem;
+    }
+
+    .case-title-col h2 {
+      font-size: 1.45rem;
+      font-weight: 850;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+    }
+
+    .case-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem 1.25rem;
+      margin-top: 1.25rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 0.85rem 1.15rem;
+      border-radius: 6px;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .meta-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .meta-value {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #0f172a;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Section Styles */
+    .report-section {
+      margin-bottom: 2rem;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding-bottom: 0.45rem;
+      border-bottom: 1.5px solid #cbd5e1;
+      margin-bottom: 0.85rem;
+    }
+
+    .section-heading.heading-alert {
+      border-bottom-color: #f59e0b;
+    }
+
+    .sec-num {
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .heading-alert .sec-num {
+      background: #d97706;
+    }
+
+    .section-heading h2 {
+      font-size: 0.96rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: 0.01em;
+      text-transform: uppercase;
+    }
+
+    .summary-box {
+      background: #f8fafc;
+      border-left: 4px solid #2563eb;
+      border-right: 1px solid #e2e8f0;
+      border-top: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      border-radius: 0 6px 6px 0;
+      padding: 0.95rem 1.25rem;
+    }
+
+    .summary-text {
+      font-size: 0.88rem;
+      color: #1e293b;
+      line-height: 1.65;
+      font-weight: 500;
+    }
+
+    /* POI Cards */
+    .poi-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+
+    .poi-card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 0.85rem 1.15rem;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .poi-card.badge-critical {
+      border-left: 4px solid #dc2626;
+      background: #fffafa;
+    }
+
+    .poi-card.badge-high {
+      border-left: 4px solid #ea580c;
+      background: #fffbf7;
+    }
+
+    .poi-card.badge-medium {
+      border-left: 4px solid #2563eb;
+    }
+
+    .poi-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.45rem;
+    }
+
+    .poi-name {
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .poi-role {
+      font-size: 0.75rem;
+      color: #475569;
+      font-weight: 600;
+      margin-left: 0.5rem;
+    }
+
+    .threat-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
+      letter-spacing: 0.04em;
+    }
+
+    .threat-badge.badge-critical {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #f87171;
+    }
+
+    .threat-badge.badge-high {
+      background: #ffedd5;
+      color: #9a3412;
+      border: 1px solid #fb923c;
+    }
+
+    .threat-badge.badge-medium {
+      background: #eff6ff;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+    }
+
+    .poi-justification {
+      font-size: 0.82rem;
+      color: #334155;
+      line-height: 1.5;
+    }
+
+    .poi-ev-box {
+      margin-top: 0.4rem;
+      font-size: 0.78rem;
+      color: #1e293b;
+      background: #f1f5f9;
+      padding: 0.35rem 0.65rem;
+      border-radius: 4px;
+      font-style: italic;
+    }
+
+    /* Leads */
+    .leads-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .lead-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 0.65rem 0.85rem;
+      border-radius: 6px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .lead-idx {
+      background: #2563eb;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 0.7rem;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .lead-content {
+      font-size: 0.84rem;
+      color: #1e293b;
+      font-weight: 550;
+      line-height: 1.5;
+    }
+
+    /* Evidence Citations */
+    .evidence-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .ev-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 3.5px solid #0284c7;
+      padding: 0.65rem 0.95rem;
+      border-radius: 4px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .ev-claim {
+      font-size: 0.76rem;
+      font-weight: 750;
+      color: #0369a1;
+      margin-bottom: 0.25rem;
+    }
+
+    .ev-quote {
+      font-size: 0.8rem;
+      color: #334155;
+      font-style: italic;
+      line-height: 1.45;
+    }
+
+    .ev-source {
+      font-size: 0.68rem;
+      color: #64748b;
+      margin-top: 0.35rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Anomalies */
+    .anomaly-box {
+      background: #fffbeb;
+      border: 1.5px solid #fde68a;
+      border-left: 4px solid #d97706;
+      border-radius: 6px;
+      padding: 0.85rem 1.25rem;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .anomaly-list {
+      padding-left: 1.2rem;
+      color: #92400e;
+      font-size: 0.83rem;
+      font-weight: 600;
+      line-height: 1.6;
+    }
+
+    /* Rendered Markdown Dossier */
+    .dossier-rendered-content {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 1.25rem 1.45rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .pdf-h1 {
+      font-size: 1.12rem;
+      font-weight: 850;
+      color: #0f172a;
+      margin: 0.75rem 0 0.35rem 0;
+      padding-bottom: 0.35rem;
+      border-bottom: 1.5px solid #e2e8f0;
+    }
+
+    .pdf-h2 {
+      font-size: 0.95rem;
+      font-weight: 750;
+      color: #1d4ed8;
+      margin: 0.7rem 0 0.25rem 0;
+    }
+
+    .pdf-h3 {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0.5rem 0 0.2rem 0;
+    }
+
+    .pdf-p {
+      font-size: 0.84rem;
+      line-height: 1.62;
+      color: #1e293b;
+      margin-bottom: 0.4rem;
+    }
+
+    .pdf-ul, .pdf-ol {
+      padding-left: 1.35rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .pdf-li {
+      font-size: 0.83rem;
+      color: #1e293b;
+      line-height: 1.5;
+    }
+
+    .pdf-bold {
+      font-weight: 750;
+      color: #0f172a;
+    }
+
+    .pdf-italic {
+      font-style: italic;
+      color: #475569;
+    }
+
+    .pdf-code {
+      font-family: 'JetBrains Mono', monospace;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      font-size: 0.78rem;
+    }
+
+    .pdf-quote {
+      border-left: 3.5px solid #2563eb;
+      background: #eff6ff;
+      padding: 0.5rem 0.85rem;
+      font-style: italic;
+      color: #1e40af;
+      margin: 0.4rem 0;
+      font-size: 0.82rem;
+    }
+
+    /* Certification Footer */
+    .report-footer {
+      margin-top: 2.5rem;
+      padding-top: 1.25rem;
+      border-top: 1.5px solid #cbd5e1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      color: #64748b;
+    }
+
+    .footer-disclaimer {
+      max-width: 600px;
+      line-height: 1.4;
+      font-style: italic;
+    }
+
+    /* Print Overrides */
+    @media print {
+      body {
+        background: #ffffff !important;
+        font-size: 11pt !important;
+      }
+
+      .screen-toolbar {
+        display: none !important;
+      }
+
+      .document-wrapper {
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        max-width: 100% !important;
+      }
+
+      @page {
+        size: A4 portrait;
+        margin: 14mm 12mm 16mm 12mm;
+      }
+
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      .report-section {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="screen-toolbar">
+    <div class="screen-toolbar-title">
+      <span>CrimeLens Forensic Dossier</span>
+      <span style="opacity: 0.5;">|</span>
+      <span style="font-weight: 500; font-size: 0.82rem; color: #94a3b8;">${escapeHtmlForReport(title)}</span>
+    </div>
+    <div class="screen-toolbar-actions">
+      <button onclick="window.print()" class="btn-print">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"></polyline>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+          <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+        <span>Print / Save as PDF</span>
+      </button>
+      <button onclick="window.close()" class="btn-close">Close</button>
+    </div>
+  </div>
+
+  <main class="document-wrapper">
+    <header class="report-header">
+      <div class="agency-banner">
+        <div class="agency-identity">
+          <div class="agency-logo-icon">CL</div>
+          <div class="agency-titles">
+            <h1>CrimeLens Forensic Intelligence Platform</h1>
+            <p>Criminal Network Analysis & Evidence Synthesis Division</p>
+          </div>
+        </div>
+        <div class="security-badge">
+          Law Enforcement Sensitive // Official Work Product
+        </div>
+      </div>
+
+      <div class="case-title-row">
+        <div class="case-title-col">
+          <h2>${escapeHtmlForReport(title)}</h2>
+        </div>
+      </div>
+
+      <div class="case-meta-grid">
+        <div class="meta-item">
+          <span class="meta-label">Case Identifier</span>
+          <span class="meta-value">${escapeHtmlForReport(caseId || "N/A")}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Report ID</span>
+          <span class="meta-value">${escapeHtmlForReport(reportId)}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Generated Timestamp</span>
+          <span class="meta-value">${escapeHtmlForReport(dateStr)} ${escapeHtmlForReport(timeStr)}</span>
+        </div>
+      </div>
+    </header>
+
+    ${summaryHtml}
+    ${poisHtml}
+    ${leadsHtml}
+    ${evidenceHtml}
+    ${anomaliesHtml}
+    ${dossierBodyHtml}
+
+    <footer class="report-footer">
+      <div class="footer-disclaimer">
+        This intelligence dossier has been generated through deterministic graph reasoning and forensic entity resolution. Inferences must be independently corroborated before prosecutorial action.
+      </div>
+      <div class="footer-sign">
+        <strong>CRIMELENS CORE</strong>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        window.print();
+      }, 350);
+    });
+  </script>
+</body>
+</html>`;
+}
+
 // Inner Graph Canvas Component
-function GraphCanvas({ caseId }) {
+function GraphCanvas({ caseId, caseTitle }) {
+  const reactFlowInstance = useReactFlow();
+
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
@@ -685,7 +1751,65 @@ function GraphCanvas({ caseId }) {
   const [aiAnalysisResult, setAiAnalysisResult] = useState(null);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
-  const reactFlowInstance = useReactFlow();
+  // Fullscreen / Expanded Canvas Mode
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const handleToggleExpand = useCallback(() => {
+    setIsExpanded((prev) => {
+      const next = !prev;
+      if (next) {
+        try {
+          const elem = document.documentElement;
+          if (elem.requestFullscreen && !document.fullscreenElement) {
+            elem.requestFullscreen().catch(() => {});
+          }
+        } catch {}
+      } else {
+        try {
+          if (document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+          }
+        } catch {}
+      }
+      setTimeout(() => {
+        reactFlowInstance.fitView({ padding: 0.15, duration: 350 });
+      }, 180);
+      return next;
+    });
+  }, [reactFlowInstance]);
+
+  // Handle ESC key & Fullscreen API change
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && isExpanded) {
+        setIsExpanded(false);
+        try {
+          if (document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+          }
+        } catch {}
+        setTimeout(() => {
+          reactFlowInstance.fitView({ padding: 0.2, duration: 300 });
+        }, 150);
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isExpanded) {
+        setIsExpanded(false);
+        setTimeout(() => {
+          reactFlowInstance.fitView({ padding: 0.2, duration: 300 });
+        }, 150);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [isExpanded, reactFlowInstance]);
 
   const nodeTypes = useMemo(
     () => ({
@@ -1015,6 +2139,30 @@ function GraphCanvas({ caseId }) {
     }
   };
 
+  // Export & Download Official Structured PDF Dossier
+  const handleDownloadPdf = () => {
+    if (!aiAnalysisResult) return;
+    try {
+      const htmlContent = buildPrintableDossierHtml({
+        caseId,
+        caseTitle,
+        analysis: aiAnalysisResult,
+      });
+
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        alert("Popup blocked! Please allow popups for CrimeLens to view and save the PDF dossier.");
+        return;
+      }
+      printWindow.document.open();
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+    } catch (err) {
+      console.error("Failed to generate PDF dossier:", err);
+      alert("Failed to compile PDF report. Please try again.");
+    }
+  };
+
   // Trigger Deep AI Reasoning Analysis (Mode A or Mode B)
   const handleRunAiAnalysis = async (mode = "full", targetNodeId = null) => {
     if (!caseId) return;
@@ -1054,10 +2202,28 @@ function GraphCanvas({ caseId }) {
   };
 
   return (
-    <div className="graph-workspace-layout">
+    <div className={`graph-workspace-layout ${isExpanded ? "is-expanded" : ""}`}>
+      {/* Back button in fullscreen mode */}
       {/* 1. TOP GRAPH TOOLBAR */}
       <div className="graph-toolbar">
         <div className="toolbar-left">
+          {isExpanded && (
+            <>
+              <button
+                onClick={handleToggleExpand}
+                className="btn-exit-fullscreen"
+                title="Back to standard view (or press Esc)"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+                <span>Back</span>
+                <kbd className="fs-kbd-badge">ESC</kbd>
+              </button>
+              <div className="toolbar-divider" />
+            </>
+          )}
+
           {/* Metrics summary pills */}
           <div className="toolbar-stats-group">
             <span className="metric-pill" title="Total Entities in Graph">
@@ -1098,7 +2264,7 @@ function GraphCanvas({ caseId }) {
 
           {isTruncated && (
             <span className="truncated-badge" title="Query limit reached. Showing partial subgraph.">
-              ⚠️ Truncated
+              Truncated
             </span>
           )}
         </div>
@@ -1111,23 +2277,41 @@ function GraphCanvas({ caseId }) {
             disabled={analyzingAi}
             title="Run Gemini/Groq Deep Intelligence Reasoning over the Network"
           >
-            <span className="ai-spark-icon">{analyzingAi ? "⏳" : "⚡"}</span>
+            {analyzingAi && (
+              <span className="ai-spark-icon">
+                <svg className="spinning" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                  <path d="M12 2a10 10 0 0 1 10 10" />
+                </svg>
+              </span>
+            )}
             <span>{analyzingAi ? "Analyzing Network..." : "AI Network Analysis"}</span>
           </button>
 
           <div className="toolbar-divider action-divider" />
 
           <div className="tool-btn-group">
-            {/* Fit to View */}
+            {/* Expand Screen / Fullscreen Toggle (In place of Fit Network) */}
             <button
-              onClick={() => reactFlowInstance.fitView({ padding: 0.2, duration: 300 })}
-              className="tool-btn"
-              title="Fit entire network to viewport"
+              onClick={handleToggleExpand}
+              className={`tool-btn ${isExpanded ? "tool-btn-active tool-btn-expanded" : ""}`}
+              title={isExpanded ? "Exit full screen (Esc)" : "Expand canvas to occupy entire screen (hides sidebars)"}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-              </svg>
-              <span>Fit Network</span>
+              {isExpanded ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+                  </svg>
+                  <span>Exit Fullscreen</span>
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+                  </svg>
+                  <span>Expand Screen</span>
+                </>
+              )}
             </button>
 
             {/* Inspector Toggle */}
@@ -1171,6 +2355,22 @@ function GraphCanvas({ caseId }) {
       <div className="graph-main-split">
         {/* GRAPH VIEWPORT */}
         <div className="graph-viewport-area">
+          {/* Floating Back Button in Fullscreen Mode */}
+          {isExpanded && (
+            <div className="fullscreen-floating-back">
+              <button
+                onClick={handleToggleExpand}
+                className="fullscreen-floating-back-btn"
+                title="Exit full screen (or press Esc)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+                <span>Back</span>
+                <kbd className="fs-kbd-pill">ESC</kbd>
+              </button>
+            </div>
+          )}
           {loading && (
             <div className="graph-overlay-loading">
               <div className="mini-radar-pulse" />
@@ -1236,7 +2436,7 @@ function GraphCanvas({ caseId }) {
             <MiniMap
               className="rf-minimap-custom"
               nodeColor={(n) => (n.data?.isSos ? "#ef4444" : "#f59e0b")}
-              maskColor="rgba(20, 26, 36, 0.85)"
+              maskColor="rgba(241, 245, 249, 0.75)"
             />
           </ReactFlow>
         </div>
@@ -1309,7 +2509,7 @@ function GraphCanvas({ caseId }) {
                       <div className="meta-chips-wrap">
                         {selectedNodeData.attributes.aliases.map((alias, idx) => (
                           <span key={idx} className="meta-chip alias-chip">
-                            👤 {alias}
+                            {alias}
                           </span>
                         ))}
                       </div>
@@ -1323,7 +2523,7 @@ function GraphCanvas({ caseId }) {
                       <div className="meta-chips-wrap">
                         {selectedNodeData.attributes.phone_numbers.map((phone, idx) => (
                           <span key={idx} className="meta-chip phone-chip font-mono">
-                            📞 {phone}
+                            {phone}
                           </span>
                         ))}
                       </div>
@@ -1337,7 +2537,7 @@ function GraphCanvas({ caseId }) {
                       <div className="meta-chips-wrap">
                         {selectedNodeData.attributes.locations.map((loc, idx) => (
                           <span key={idx} className="meta-chip location-chip">
-                            📍 {loc}
+                            {loc}
                           </span>
                         ))}
                       </div>
@@ -1351,7 +2551,7 @@ function GraphCanvas({ caseId }) {
                       <div className="meta-chips-wrap">
                         {selectedNodeData.attributes.vehicles.map((veh, idx) => (
                           <span key={idx} className="meta-chip vehicle-chip font-mono">
-                            🚗 {veh}
+                            {veh}
                           </span>
                         ))}
                       </div>
@@ -1365,7 +2565,7 @@ function GraphCanvas({ caseId }) {
                       <div className="meta-chips-wrap">
                         {selectedNodeData.attributes.organizations.map((org, idx) => (
                           <span key={idx} className="meta-chip org-chip">
-                            🏢 {org}
+                            {org}
                           </span>
                         ))}
                       </div>
@@ -1379,7 +2579,7 @@ function GraphCanvas({ caseId }) {
                       <div className="meta-chips-wrap">
                         {selectedNodeData.attributes.source_documents.map((doc, idx) => (
                           <span key={idx} className="meta-chip doc-chip">
-                            📄 {doc}
+                            {doc}
                           </span>
                         ))}
                       </div>
@@ -1408,7 +2608,14 @@ function GraphCanvas({ caseId }) {
                       disabled={analyzingAi}
                       title="Synthesize 2-hop criminal intelligence dossier for this entity"
                     >
-                      <span className="ai-spark-icon">{analyzingAi ? "⏳" : "⚡"}</span>
+                      {analyzingAi && (
+                        <span className="ai-spark-icon">
+                          <svg className="spinning" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                            <path d="M12 2a10 10 0 0 1 10 10" />
+                          </svg>
+                        </span>
+                      )}
                       <span>{analyzingAi ? "Synthesizing Dossier..." : "AI Intelligence Dossier"}</span>
                     </button>
                   </div>
@@ -1534,11 +2741,10 @@ function GraphCanvas({ caseId }) {
             <div className="ai-modal-header">
               <div className="ai-modal-title-group">
                 <div className="ai-title-row">
-                  <span className="ai-badge-pulse">⚡ CrimeLens Intelligence Engine</span>
+                  <span className="ai-badge-pulse">CrimeLens Intelligence Engine</span>
                   <span className="ai-mode-pill">
                     {aiAnalysisResult.mode === "node" ? "Focused Node (2-Hop)" : "Full Network Analysis"}
                   </span>
-                  <span className="ai-model-pill font-mono">{aiAnalysisResult.model || "Gemini / Groq"}</span>
                 </div>
                 <h2 className="ai-modal-heading">
                   {aiAnalysisResult.mode === "node" && selectedNodeData
@@ -1561,7 +2767,7 @@ function GraphCanvas({ caseId }) {
               {/* Executive Summary Card */}
               <div className="ai-card ai-summary-card">
                 <h4 className="ai-card-title">
-                  <span>📌 Executive Intelligence Summary</span>
+                  <span>Executive Intelligence Summary</span>
                 </h4>
                 <p className="ai-summary-text">{aiAnalysisResult.case_summary}</p>
               </div>
@@ -1570,7 +2776,7 @@ function GraphCanvas({ caseId }) {
               {aiAnalysisResult.potential_persons_of_interest && aiAnalysisResult.potential_persons_of_interest.length > 0 && (
                 <div className="ai-card">
                   <h4 className="ai-card-title">
-                    <span>🚨 Potential Persons of Interest & Key Actors</span>
+                    <span>Potential Persons of Interest & Key Actors</span>
                   </h4>
                   <div className="ai-poi-grid">
                     {aiAnalysisResult.potential_persons_of_interest.map((poi, idx) => {
@@ -1599,7 +2805,7 @@ function GraphCanvas({ caseId }) {
               {aiAnalysisResult.investigative_leads && aiAnalysisResult.investigative_leads.length > 0 && (
                 <div className="ai-card">
                   <h4 className="ai-card-title">
-                    <span>🔍 Recommended Investigative Leads</span>
+                    <span>Recommended Investigative Leads</span>
                   </h4>
                   <ul className="ai-leads-list">
                     {aiAnalysisResult.investigative_leads.map((lead, idx) => (
@@ -1616,7 +2822,7 @@ function GraphCanvas({ caseId }) {
               {aiAnalysisResult.supporting_evidence && aiAnalysisResult.supporting_evidence.length > 0 && (
                 <div className="ai-card">
                   <h4 className="ai-card-title">
-                    <span>📑 Evidentiary Citations & Grounded Quotes</span>
+                    <span>Evidentiary Citations & Grounded Quotes</span>
                   </h4>
                   <div className="ai-evidence-grid">
                     {aiAnalysisResult.supporting_evidence.map((ev, idx) => (
@@ -1633,7 +2839,7 @@ function GraphCanvas({ caseId }) {
               {aiAnalysisResult.contradictions_or_anomalies && aiAnalysisResult.contradictions_or_anomalies.length > 0 && (
                 <div className="ai-card ai-anomalies-card">
                   <h4 className="ai-card-title">
-                    <span>⚠️ Anomalies & Evidentiary Conflicts</span>
+                    <span>Anomalies & Evidentiary Conflicts</span>
                   </h4>
                   <ul className="ai-anomalies-list">
                     {aiAnalysisResult.contradictions_or_anomalies.map((ano, idx) => (
@@ -1648,20 +2854,34 @@ function GraphCanvas({ caseId }) {
                 <div className="ai-card">
                   <div className="ai-card-title-row">
                     <h4 className="ai-card-title">
-                      <span>📄 Full Intelligence Dossier Report</span>
+                      <span>Full Intelligence Dossier Report</span>
                     </h4>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard?.writeText(aiAnalysisResult.dossier_markdown);
-                        alert("Dossier copied to clipboard!");
-                      }}
-                      className="ai-copy-btn"
-                      title="Copy markdown dossier to clipboard"
-                    >
-                      Copy Dossier
-                    </button>
+                    <div className="ai-card-actions">
+                      <button
+                        onClick={handleDownloadPdf}
+                        className="ai-pdf-btn"
+                        title="Download structured PDF report"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        <span>Download PDF</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard?.writeText(aiAnalysisResult.dossier_markdown);
+                          alert("Dossier copied to clipboard!");
+                        }}
+                        className="ai-copy-btn"
+                        title="Copy markdown dossier to clipboard"
+                      >
+                        Copy Dossier
+                      </button>
+                    </div>
                   </div>
-                  <pre className="ai-dossier-pre">{aiAnalysisResult.dossier_markdown}</pre>
+                  <DossierMarkdownViewer markdown={aiAnalysisResult.dossier_markdown} />
                 </div>
               )}
             </div>
@@ -1671,9 +2891,23 @@ function GraphCanvas({ caseId }) {
               <span className="ai-footer-note">
                 CrimeLens AI reasoning strictly separates criminal methodology from factual case evidence.
               </span>
-              <button onClick={() => setIsAiModalOpen(false)} className="ai-done-btn">
-                Done
-              </button>
+              <div className="ai-footer-actions">
+                <button
+                  onClick={handleDownloadPdf}
+                  className="ai-footer-pdf-btn"
+                  title="Download complete dossier as structured PDF"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  <span>Download PDF Report</span>
+                </button>
+                <button onClick={() => setIsAiModalOpen(false)} className="ai-done-btn">
+                  Done
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1685,12 +2919,129 @@ function GraphCanvas({ caseId }) {
           flex-direction: column;
           height: calc(100vh - 120px);
           min-height: 600px;
-          background: #171D1C;
-          border: 1px solid rgba(242, 247, 242, 0.12);
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
           border-radius: 12px;
           position: relative;
           overflow: hidden;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          transition: height 0.2s ease, width 0.2s ease;
+        }
+
+        .graph-workspace-layout.is-expanded {
+          position: fixed !important;
+          inset: 0 !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          min-height: 100vh !important;
+          max-width: 100vw !important;
+          max-height: 100vh !important;
+          margin: 0 !important;
+          z-index: 9999999 !important;
+          border-radius: 0 !important;
+          border: none !important;
+          background: #f8fafc !important;
+        }
+
+        .tool-btn-expanded {
+          background: #eff6ff !important;
+          color: #1d4ed8 !important;
+          border-color: #2563eb !important;
+        }
+
+        .graph-workspace-layout.is-expanded .graph-main-split {
+          height: calc(100vh - 54px) !important;
+        }
+
+        .btn-exit-fullscreen {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.45rem;
+          padding: 0.32rem 0.75rem;
+          background: #f1f5f9;
+          border: 1.5px solid #cbd5e1;
+          border-radius: 6px;
+          font-size: 0.76rem;
+          font-weight: 700;
+          color: #0f172a;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .btn-exit-fullscreen:hover {
+          background: #2563eb;
+          color: #ffffff;
+          border-color: #1d4ed8;
+        }
+
+        .btn-exit-fullscreen:hover .fs-kbd-badge {
+          background: rgba(255, 255, 255, 0.25);
+          color: #ffffff;
+          border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .fs-kbd-badge {
+          font-size: 0.62rem;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          background: #e2e8f0;
+          color: #475569;
+          padding: 1px 4px;
+          border-radius: 4px;
+          border: 1px solid #cbd5e1;
+          line-height: 1;
+        }
+
+        .fullscreen-floating-back {
+          position: absolute;
+          top: 14px;
+          left: 14px;
+          z-index: 50;
+        }
+
+        .fullscreen-floating-back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.45rem;
+          background: rgba(255, 255, 255, 0.94);
+          border: 1.5px solid #cbd5e1;
+          color: #0f172a;
+          padding: 0.38rem 0.8rem;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          font-weight: 750;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+          cursor: pointer;
+          transition: all 0.15s ease;
+          backdrop-filter: blur(8px);
+        }
+
+        .fullscreen-floating-back-btn:hover {
+          background: #2563eb;
+          color: #ffffff;
+          border-color: #1d4ed8;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 18px rgba(37, 99, 235, 0.3);
+        }
+
+        .fullscreen-floating-back-btn:hover .fs-kbd-pill {
+          background: rgba(255, 255, 255, 0.25);
+          color: #ffffff;
+          border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .fs-kbd-pill {
+          font-size: 0.62rem;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          background: #e2e8f0;
+          color: #475569;
+          padding: 1px 5px;
+          border-radius: 4px;
+          border: 1px solid #cbd5e1;
+          line-height: 1.1;
         }
 
         /* Top Toolbar */
@@ -1895,7 +3246,7 @@ function GraphCanvas({ caseId }) {
         .graph-viewport-area {
           flex: 1;
           position: relative;
-          background: #171D1C;
+          background: #f8fafc;
         }
 
         /* Overlays */
@@ -1917,8 +3268,8 @@ function GraphCanvas({ caseId }) {
         }
 
         .graph-overlay-loading {
-          background: rgba(23, 29, 28, 0.85);
-          color: #35A7FF;
+          background: rgba(248, 250, 252, 0.92);
+          color: #2563eb;
           font-weight: 600;
           font-size: 0.9rem;
           gap: 0.85rem;
@@ -1927,7 +3278,7 @@ function GraphCanvas({ caseId }) {
         .mini-radar-pulse {
           width: 36px;
           height: 36px;
-          border: 3px solid #35A7FF;
+          border: 3px solid #2563eb;
           border-radius: 50%;
           animation: radarPulse 1.2s infinite cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
@@ -1938,8 +3289,8 @@ function GraphCanvas({ caseId }) {
         }
 
         .graph-overlay-error {
-          background: rgba(23, 29, 28, 0.95);
-          color: #FCBA04;
+          background: rgba(248, 250, 252, 0.96);
+          color: #dc2626;
           gap: 0.75rem;
           font-size: 0.88rem;
         }
@@ -1947,9 +3298,9 @@ function GraphCanvas({ caseId }) {
         .retry-btn {
           margin-top: 0.5rem;
           padding: 0.45rem 1.15rem;
-          background: #35A7FF;
-          color: #171D1C;
-          border: none;
+          background: #2563eb;
+          color: #ffffff;
+          border: 1px solid #1d4ed8;
           border-radius: 6px;
           font-size: 0.8rem;
           font-weight: 750;
@@ -1957,8 +3308,8 @@ function GraphCanvas({ caseId }) {
         }
 
         .graph-overlay-empty {
-          background: #171D1C;
-          color: #c8d4cf;
+          background: #f8fafc;
+          color: #475569;
           max-width: 440px;
           margin: 0 auto;
         }
@@ -1966,40 +3317,40 @@ function GraphCanvas({ caseId }) {
         .graph-overlay-empty h4 {
           font-size: 1.05rem;
           font-weight: 700;
-          color: #F2F7F2;
+          color: #0f172a;
           margin: 0.75rem 0 0.4rem 0;
         }
 
         .graph-overlay-empty p {
           font-size: 0.82rem;
-          color: #c8d4cf;
+          color: #64748b;
           line-height: 1.5;
           margin: 0 0 1rem 0;
         }
 
-        /* Inspector Sidebar - Refined lighter slate, clean surface, zero neon */
+        /* Inspector Sidebar - Clean surface matching webpage */
         .graph-details-sidebar {
           width: 350px;
-          background: #1a222e;
-          border-left: 1px solid #2a374a;
+          background: #ffffff;
+          border-left: 1px solid #e2e8f0;
           display: flex;
           flex-direction: column;
           overflow-y: auto;
-          box-shadow: -4px 0 20px rgba(0, 0, 0, 0.4);
+          box-shadow: -4px 0 20px rgba(0, 0, 0, 0.05);
           z-index: 8;
         }
 
         .rf-minimap-custom {
-          background: #1a222e !important;
-          border: 1px solid #2d3a4d !important;
+          background: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
           border-radius: 10px !important;
           overflow: hidden !important;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
         }
 
         .panel-card {
           padding: 1.25rem;
-          background: #1a222e;
+          background: #ffffff;
         }
 
         .panel-header {
@@ -2008,7 +3359,7 @@ function GraphCanvas({ caseId }) {
           align-items: flex-start;
           margin-bottom: 1rem;
           padding-bottom: 0.75rem;
-          border-bottom: 1px solid rgba(242, 247, 242, 0.1);
+          border-bottom: 1px solid #e2e8f0;
         }
 
         .panel-title-group {
@@ -2022,13 +3373,13 @@ function GraphCanvas({ caseId }) {
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          color: #35A7FF;
+          color: #2563eb;
         }
 
         .panel-entity-name {
           font-size: 1.1rem;
           font-weight: 700;
-          color: #F2F7F2;
+          color: #0f172a;
           line-height: 1.3;
           margin: 0;
         }
@@ -2036,14 +3387,14 @@ function GraphCanvas({ caseId }) {
         .close-panel-btn {
           background: transparent;
           border: none;
-          color: #c8d4cf;
+          color: #64748b;
           font-size: 1rem;
           cursor: pointer;
           padding: 0.2rem;
         }
 
         .close-panel-btn:hover {
-          color: #F2F7F2;
+          color: #0f172a;
         }
 
         .panel-body {
@@ -2060,12 +3411,12 @@ function GraphCanvas({ caseId }) {
         }
 
         .detail-key {
-          color: #c8d4cf;
+          color: #64748b;
           font-weight: 500;
         }
 
         .detail-val {
-          color: #F2F7F2;
+          color: #0f172a;
         }
 
         .entity-badge-pill {
@@ -2093,7 +3444,7 @@ function GraphCanvas({ caseId }) {
 
         .meta-section-label {
           font-weight: 600;
-          color: #c8d4cf;
+          color: #64748b;
           font-size: 0.72rem;
           text-transform: uppercase;
           letter-spacing: 0.03em;
@@ -2115,39 +3466,39 @@ function GraphCanvas({ caseId }) {
         }
 
         .alias-chip {
-          background: rgba(53, 167, 255, 0.15);
-          border: 1px solid rgba(53, 167, 255, 0.35);
-          color: #35A7FF;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          color: #1d4ed8;
         }
 
         .phone-chip {
-          background: rgba(252, 186, 4, 0.15);
-          border: 1px solid rgba(252, 186, 4, 0.35);
-          color: #FCBA04;
+          background: #f5f3ff;
+          border: 1px solid #ddd6fe;
+          color: #7c3aed;
         }
 
         .location-chip {
-          background: rgba(252, 186, 4, 0.15);
-          border: 1px solid rgba(252, 186, 4, 0.35);
-          color: #FCBA04;
+          background: #fff1f2;
+          border: 1px solid #fecdd3;
+          color: #be123c;
         }
 
         .vehicle-chip {
-          background: rgba(53, 167, 255, 0.15);
-          border: 1px solid rgba(53, 167, 255, 0.35);
-          color: #35A7FF;
+          background: #eef2ff;
+          border: 1px solid #c7d2fe;
+          color: #4338ca;
         }
 
         .org-chip {
-          background: rgba(242, 247, 242, 0.12);
-          border: 1px solid rgba(242, 247, 242, 0.25);
-          color: #F2F7F2;
+          background: #f1f5f9;
+          border: 1px solid #cbd5e1;
+          color: #334155;
         }
 
         .doc-chip {
-          background: rgba(252, 186, 4, 0.15);
-          border: 1px solid rgba(252, 186, 4, 0.35);
-          color: #FCBA04;
+          background: #fff7ed;
+          border: 1px solid #fed7aa;
+          color: #c2410c;
         }
 
         .evidence-snippets-stack {
@@ -2159,11 +3510,12 @@ function GraphCanvas({ caseId }) {
         .evidence-quote-small {
           margin: 0;
           padding: 0.45rem 0.65rem;
-          background: #171D1C;
-          border-left: 3px solid #35A7FF;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-left: 3px solid #2563eb;
           border-radius: 0 4px 4px 0;
           font-size: 0.72rem;
-          color: #F2F7F2;
+          color: #1e293b;
           font-style: italic;
           line-height: 1.4;
         }
@@ -2177,16 +3529,16 @@ function GraphCanvas({ caseId }) {
         .case-chip {
           font-size: 0.7rem;
           padding: 0.15rem 0.45rem;
-          background: rgba(53, 167, 255, 0.15);
-          border: 1px solid rgba(53, 167, 255, 0.35);
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
           border-radius: 4px;
-          color: #35A7FF;
+          color: #1d4ed8;
         }
 
         .details-loading-spinner,
         .no-data-text {
           font-size: 0.75rem;
-          color: #c8d4cf;
+          color: #64748b;
         }
 
         /* AI Node Action Button */
@@ -2201,19 +3553,19 @@ function GraphCanvas({ caseId }) {
           justify-content: center;
           gap: 0.45rem;
           padding: 0.6rem 0.85rem;
-          background: #35A7FF;
-          border: 1px solid #35A7FF;
+          background: #2563eb;
+          border: 1px solid #1d4ed8;
           border-radius: 8px;
-          color: #171D1C;
+          color: #ffffff;
           font-size: 0.8rem;
           font-weight: 750;
           cursor: pointer;
           transition: all 0.2s ease;
-          box-shadow: 0 2px 8px rgba(53, 167, 255, 0.3);
+          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
         }
 
         .ai-node-analyze-btn:hover:not(:disabled) {
-          background: #2392ea;
+          background: #1d4ed8;
           transform: translateY(-1px);
         }
 
@@ -2231,10 +3583,10 @@ function GraphCanvas({ caseId }) {
           justify-content: center;
           gap: 0.5rem;
           padding: 0.55rem 1rem;
-          background: #171D1C;
-          border: 1px solid rgba(242, 247, 242, 0.15);
+          background: #f8fafc;
+          border: 1px solid #cbd5e1;
           border-radius: 8px;
-          color: #F2F7F2;
+          color: #0f172a;
           font-size: 0.8rem;
           font-weight: 600;
           cursor: pointer;
@@ -2242,21 +3594,21 @@ function GraphCanvas({ caseId }) {
         }
 
         .expand-connections-btn:hover:not(:disabled) {
-          background: rgba(53, 167, 255, 0.15);
-          border-color: #35A7FF;
-          color: #35A7FF;
+          background: #eff6ff;
+          border-color: #2563eb;
+          color: #1d4ed8;
         }
 
         .expand-connections-btn:disabled {
-          opacity: 0.45;
+          opacity: 0.55;
           cursor: not-allowed;
         }
 
         .mini-spin {
           width: 12px;
           height: 12px;
-          border: 2px solid rgba(242, 247, 242, 0.2);
-          border-top-color: #35A7FF;
+          border: 2px solid #e2e8f0;
+          border-top-color: #2563eb;
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
         }
@@ -2273,21 +3625,21 @@ function GraphCanvas({ caseId }) {
         }
 
         .banner-success {
-          background: rgba(53, 167, 255, 0.15);
-          border: 1px solid rgba(53, 167, 255, 0.35);
-          color: #35A7FF;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          color: #1d4ed8;
         }
 
         .banner-info {
-          background: rgba(53, 167, 255, 0.15);
-          border: 1px solid rgba(53, 167, 255, 0.35);
-          color: #35A7FF;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          color: #1d4ed8;
         }
 
         .banner-error {
-          background: rgba(252, 186, 4, 0.15);
-          border: 1px solid rgba(252, 186, 4, 0.35);
-          color: #FCBA04;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #b91c1c;
         }
 
         /* Evidence */
@@ -2299,52 +3651,53 @@ function GraphCanvas({ caseId }) {
         }
 
         .badge-confirmed {
-          background: rgba(53, 167, 255, 0.15);
-          color: #35A7FF;
-          border: 1px solid rgba(53, 167, 255, 0.35);
+          background: #eff6ff;
+          color: #1d4ed8;
+          border: 1px solid #bfdbfe;
         }
 
         .badge-inferred {
-          background: rgba(252, 186, 4, 0.15);
-          color: #FCBA04;
-          border: 1px solid rgba(252, 186, 4, 0.35);
+          background: #fffbeb;
+          color: #b45309;
+          border: 1px solid #fde68a;
         }
 
         .badge-predicted {
-          background: rgba(252, 186, 4, 0.15);
-          color: #FCBA04;
-          border: 1px solid rgba(252, 186, 4, 0.35);
+          background: #fffbeb;
+          color: #b45309;
+          border: 1px solid #fde68a;
         }
 
         .evidence-snippet-section {
           margin-top: 0.5rem;
           padding-top: 0.75rem;
-          border-top: 1px solid rgba(242, 247, 242, 0.1);
+          border-top: 1px solid #e2e8f0;
         }
 
         .snippet-heading {
           display: block;
           font-size: 0.75rem;
           font-weight: 600;
-          color: #c8d4cf;
+          color: #64748b;
           margin-bottom: 0.5rem;
         }
 
         .evidence-quote {
-          background: #171D1C;
-          border-left: 3px solid #35A7FF;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-left: 3px solid #2563eb;
           border-radius: 0 6px 6px 0;
           padding: 0.75rem;
           font-size: 0.8rem;
           font-style: italic;
-          color: #F2F7F2;
+          color: #1e293b;
           line-height: 1.5;
           margin: 0;
         }
 
         .no-snippet-text {
           font-size: 0.75rem;
-          color: #c8d4cf;
+          color: #64748b;
           line-height: 1.4;
         }
 
@@ -2354,25 +3707,25 @@ function GraphCanvas({ caseId }) {
           flex-direction: column;
           align-items: center;
           text-align: center;
-          color: #c8d4cf;
+          color: #64748b;
           margin: auto 0;
         }
 
         .idle-icon {
-          color: #c8d4cf;
+          color: #94a3b8;
           margin-bottom: 0.85rem;
         }
 
         .idle-title {
           font-size: 0.95rem;
           font-weight: 600;
-          color: #F2F7F2;
+          color: #0f172a;
           margin-bottom: 0.35rem;
         }
 
         .idle-desc {
           font-size: 0.78rem;
-          color: #c8d4cf;
+          color: #64748b;
           line-height: 1.5;
         }
 
@@ -2383,8 +3736,8 @@ function GraphCanvas({ caseId }) {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(23, 29, 28, 0.85);
-          backdrop-filter: blur(6px);
+          background: rgba(15, 23, 42, 0.65);
+          backdrop-filter: blur(8px);
           z-index: 9999;
           display: flex;
           align-items: center;
@@ -2393,21 +3746,21 @@ function GraphCanvas({ caseId }) {
         }
 
         .ai-modal-container {
-          background: #171D1C;
-          border: 1px solid rgba(53, 167, 255, 0.35);
+          background: #ffffff;
+          border: 1.5px solid #0f172a;
           border-radius: 16px;
           width: 100%;
           max-width: 960px;
           max-height: 88vh;
           display: flex;
           flex-direction: column;
-          box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(53, 167, 255, 0.2);
+          box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(15, 23, 42, 0.05);
           overflow: hidden;
-          animation: modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          animation: modalPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         @keyframes modalPopIn {
-          from { opacity: 0; transform: scale(0.96) translateY(10px); }
+          from { opacity: 0; transform: scale(0.97) translateY(12px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
@@ -2415,71 +3768,68 @@ function GraphCanvas({ caseId }) {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          padding: 1.25rem 1.75rem;
-          background: #171D1C;
-          border-bottom: 1px solid rgba(242, 247, 242, 0.1);
+          padding: 1.35rem 1.75rem;
+          background: #f8fafc;
+          border-bottom: 1px solid #e2e8f0;
         }
 
         .ai-title-row {
           display: flex;
           align-items: center;
           gap: 0.65rem;
-          margin-bottom: 0.35rem;
+          margin-bottom: 0.4rem;
           flex-wrap: wrap;
         }
 
         .ai-badge-pulse {
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: #35A7FF;
+          font-size: 0.74rem;
+          font-weight: 750;
+          color: #1d4ed8;
           text-transform: uppercase;
           letter-spacing: 0.05em;
         }
 
         .ai-mode-pill {
-          background: rgba(53, 167, 255, 0.15);
-          border: 1px solid rgba(53, 167, 255, 0.4);
-          color: #35A7FF;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          color: #1d4ed8;
           font-size: 0.7rem;
-          font-weight: 600;
-          padding: 0.15rem 0.5rem;
-          border-radius: 9999px;
-        }
-
-        .ai-model-pill {
-          background: rgba(242, 247, 242, 0.08);
-          color: #c8d4cf;
-          font-size: 0.68rem;
-          padding: 0.15rem 0.5rem;
+          font-weight: 650;
+          padding: 0.15rem 0.55rem;
           border-radius: 9999px;
         }
 
         .ai-modal-heading {
-          font-size: 1.28rem;
-          font-weight: 700;
-          color: #F2F7F2;
+          font-size: 1.32rem;
+          font-weight: 750;
+          color: #0f172a;
           margin: 0;
+          letter-spacing: -0.01em;
         }
 
         .ai-modal-sub {
           font-size: 0.78rem;
-          color: #c8d4cf;
+          color: #475569;
           margin: 0.35rem 0 0 0;
+          font-weight: 500;
         }
 
         .ai-close-btn {
           background: transparent;
           border: none;
-          color: #c8d4cf;
+          color: #64748b;
           cursor: pointer;
-          padding: 0.35rem;
-          border-radius: 6px;
-          transition: all 0.15s;
+          padding: 0.4rem;
+          border-radius: 8px;
+          transition: all 0.15s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .ai-close-btn:hover {
-          color: #F2F7F2;
-          background: rgba(242, 247, 242, 0.08);
+          color: #0f172a;
+          background: #e2e8f0;
         }
 
         .ai-modal-body {
@@ -2488,29 +3838,33 @@ function GraphCanvas({ caseId }) {
           display: flex;
           flex-direction: column;
           gap: 1.25rem;
+          background: #ffffff;
         }
 
         .ai-card {
-          background: #141a22;
-          border: 1px solid rgba(220, 230, 242, 0.1);
-          border-radius: 10px;
-          padding: 1.15rem 1.25rem;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 1.25rem 1.35rem;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
         }
 
         .ai-summary-card {
-          border-left: 4px solid #35A7FF;
-          background: rgba(53, 167, 255, 0.06);
+          border: 1px solid #bfdbfe;
+          border-left: 4px solid #2563eb;
+          background: #f0f7ff;
         }
 
         .ai-anomalies-card {
-          border-left: 4px solid #FCBA04;
-          background: rgba(252, 186, 4, 0.06);
+          border: 1px solid #fde68a;
+          border-left: 4px solid #d97706;
+          background: #fffbeb;
         }
 
         .ai-card-title {
           font-size: 0.92rem;
           font-weight: 700;
-          color: #F2F7F2;
+          color: #0f172a;
           margin: 0 0 0.75rem 0;
           display: flex;
           align-items: center;
@@ -2526,9 +3880,10 @@ function GraphCanvas({ caseId }) {
 
         .ai-summary-text {
           font-size: 0.88rem;
-          color: #F2F7F2;
-          line-height: 1.6;
+          color: #1e293b;
+          line-height: 1.65;
           margin: 0;
+          font-weight: 500;
         }
 
         .ai-poi-grid {
@@ -2538,23 +3893,23 @@ function GraphCanvas({ caseId }) {
         }
 
         .ai-poi-card {
-          background: #171D1C;
-          border: 1px solid rgba(242, 247, 242, 0.1);
-          border-radius: 8px;
-          padding: 0.85rem 1rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 0.95rem 1.1rem;
           display: flex;
           flex-direction: column;
           gap: 0.45rem;
         }
 
         .ai-poi-card.threat-crit {
-          border-color: rgba(252, 186, 4, 0.6);
-          background: rgba(252, 186, 4, 0.08);
+          border-color: #fca5a5;
+          background: #fff5f5;
         }
 
         .ai-poi-card.threat-high {
-          border-color: rgba(252, 186, 4, 0.5);
-          background: rgba(252, 186, 4, 0.06);
+          border-color: #fde68a;
+          background: #fffbeb;
         }
 
         .ai-poi-header {
@@ -2565,55 +3920,56 @@ function GraphCanvas({ caseId }) {
 
         .ai-poi-name {
           font-size: 0.9rem;
-          font-weight: 700;
-          color: #F2F7F2;
+          font-weight: 750;
+          color: #0f172a;
         }
 
         .ai-threat-badge {
-          font-size: 0.65rem;
+          font-size: 0.64rem;
           font-weight: 800;
-          padding: 0.15rem 0.45rem;
+          padding: 0.15rem 0.5rem;
           border-radius: 4px;
           letter-spacing: 0.04em;
         }
 
         .ai-threat-badge.threat-crit {
-          background: #FCBA04;
-          color: #171D1C;
-          font-weight: 800;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #b91c1c;
         }
 
         .ai-threat-badge.threat-high {
-          background: #FCBA04;
-          color: #171D1C;
-          font-weight: 800;
+          background: #fffbeb;
+          border: 1px solid #fde68a;
+          color: #b45309;
         }
 
         .ai-threat-badge.threat-med {
-          background: #35A7FF;
-          color: #171D1C;
-          font-weight: 800;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          color: #1d4ed8;
         }
 
         .ai-poi-reason {
-          font-size: 0.78rem;
-          color: #c8d4cf;
+          font-size: 0.8rem;
+          color: #334155;
           margin: 0;
-          line-height: 1.45;
+          line-height: 1.5;
         }
 
         .ai-poi-evidence {
-          font-size: 0.72rem;
-          color: #c8d4cf;
+          font-size: 0.74rem;
+          color: #475569;
           font-style: italic;
-          background: #10151d;
-          padding: 0.35rem 0.5rem;
-          border-radius: 4px;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+          padding: 0.4rem 0.6rem;
+          border-radius: 6px;
         }
 
         .ev-tag {
           font-weight: 700;
-          color: #35A7FF;
+          color: #1d4ed8;
           margin-right: 4px;
         }
 
@@ -2623,26 +3979,26 @@ function GraphCanvas({ caseId }) {
           margin: 0;
           display: flex;
           flex-direction: column;
-          gap: 0.5rem;
+          gap: 0.55rem;
         }
 
         .ai-lead-item {
           display: flex;
           align-items: flex-start;
           gap: 0.75rem;
-          background: #171D1C;
-          padding: 0.6rem 0.85rem;
-          border-radius: 6px;
-          border: 1px solid rgba(242, 247, 242, 0.08);
+          background: #f8fafc;
+          padding: 0.75rem 0.95rem;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
         }
 
         .lead-number {
-          background: #35A7FF;
-          color: #171D1C;
+          background: #2563eb;
+          color: #ffffff;
           font-size: 0.7rem;
           font-weight: 800;
-          width: 20px;
-          height: 20px;
+          width: 22px;
+          height: 22px;
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -2652,9 +4008,10 @@ function GraphCanvas({ caseId }) {
         }
 
         .lead-text {
-          font-size: 0.82rem;
-          color: #F2F7F2;
-          line-height: 1.45;
+          font-size: 0.84rem;
+          color: #0f172a;
+          line-height: 1.5;
+          font-weight: 500;
         }
 
         .ai-evidence-grid {
@@ -2664,98 +4021,237 @@ function GraphCanvas({ caseId }) {
         }
 
         .ai-ev-item {
-          background: #171D1C;
-          padding: 0.65rem 0.85rem;
-          border-radius: 6px;
-          border-left: 3px solid #35A7FF;
+          background: #f8fafc;
+          padding: 0.75rem 1rem;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          border-left: 4px solid #2563eb;
         }
 
         .ai-ev-claim {
-          font-size: 0.75rem;
+          font-size: 0.76rem;
           font-weight: 700;
-          color: #35A7FF;
+          color: #1d4ed8;
           display: block;
           margin-bottom: 0.25rem;
         }
 
         .ai-ev-quote {
-          font-size: 0.78rem;
-          color: #c8d4cf;
+          font-size: 0.8rem;
+          color: #334155;
           margin: 0;
           font-style: italic;
-          line-height: 1.45;
+          line-height: 1.5;
         }
 
         .ai-anomalies-list {
           margin: 0;
           padding-left: 1.25rem;
-          font-size: 0.8rem;
-          color: #FCBA04;
+          font-size: 0.84rem;
+          color: #78350f;
+          font-weight: 500;
           line-height: 1.6;
+        }
+
+
+        .ai-card-actions {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .ai-pdf-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          background: #2563eb;
+          border: 1px solid #1d4ed8;
+          color: #ffffff;
+          font-size: 0.74rem;
+          font-weight: 700;
+          padding: 0.3rem 0.75rem;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          box-shadow: 0 1px 4px rgba(37, 99, 235, 0.2);
+        }
+
+        .ai-pdf-btn:hover {
+          background: #1d4ed8;
+          transform: translateY(-1px);
+          box-shadow: 0 3px 8px rgba(37, 99, 235, 0.35);
+        }
+
+        .ai-footer-actions {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .ai-footer-pdf-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          background: #ffffff;
+          border: 1.5px solid #2563eb;
+          color: #2563eb;
+          font-size: 0.82rem;
+          font-weight: 700;
+          padding: 0.5rem 1.1rem;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .ai-footer-pdf-btn:hover {
+          background: #eff6ff;
+          border-color: #1d4ed8;
+          color: #1d4ed8;
         }
 
         .ai-copy-btn {
-          background: #18202b;
-          border: 1px solid rgba(220, 230, 242, 0.15);
-          color: #F2F7F2;
-          font-size: 0.72rem;
-          font-weight: 600;
-          padding: 0.25rem 0.65rem;
-          border-radius: 5px;
+          background: #f1f5f9;
+          border: 1.5px solid #cbd5e1;
+          color: #0f172a;
+          font-size: 0.74rem;
+          font-weight: 650;
+          padding: 0.3rem 0.75rem;
+          border-radius: 6px;
           cursor: pointer;
-          transition: all 0.15s;
+          transition: all 0.15s ease;
         }
 
         .ai-copy-btn:hover {
-          background: #35A7FF;
-          color: #171D1C;
+          background: #2563eb;
+          color: #ffffff;
+          border-color: #2563eb;
         }
 
-        .ai-dossier-pre {
-          background: #171D1C;
-          border: 1px solid rgba(242, 247, 242, 0.1);
-          border-radius: 8px;
-          padding: 1rem;
-          font-size: 0.78rem;
-          color: #F2F7F2;
-          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-          white-space: pre-wrap;
-          word-break: break-word;
-          max-height: 360px;
+        .dossier-markdown-container {
+          background: #f8fafc;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 1.35rem 1.6rem;
+          max-height: 440px;
           overflow-y: auto;
-          line-height: 1.6;
-          margin: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 0.4rem;
+        }
+
+        .dossier-md-h1 {
+          font-size: 1.2rem;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0.2rem 0 0.7rem 0;
+          padding-bottom: 0.55rem;
+          border-bottom: 2px solid #e2e8f0;
+          letter-spacing: -0.01em;
+          line-height: 1.35;
+        }
+
+        .dossier-md-h2 {
+          font-size: 0.98rem;
+          font-weight: 750;
+          color: #1d4ed8;
+          margin: 0.85rem 0 0.35rem 0;
+          letter-spacing: 0.01em;
+          display: flex;
+          align-items: center;
+          gap: 0.45rem;
+        }
+
+        .dossier-md-h3 {
+          font-size: 0.88rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0.55rem 0 0.25rem 0;
+        }
+
+        .dossier-md-p {
+          font-size: 0.86rem;
+          line-height: 1.68;
+          color: #1e293b;
+          margin: 0 0 0.45rem 0;
+          font-weight: 450;
+        }
+
+        .dossier-md-ul,
+        .dossier-md-ol {
+          margin: 0 0 0.6rem 0;
+          padding-left: 1.35rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.3rem;
+        }
+
+        .dossier-md-li {
+          font-size: 0.85rem;
+          color: #1e293b;
+          line-height: 1.55;
+        }
+
+        .dossier-md-quote {
+          margin: 0.5rem 0;
+          padding: 0.6rem 1rem;
+          background: #eff6ff;
+          border-left: 4px solid #2563eb;
+          border-radius: 4px;
+          color: #1e40af;
+          font-style: italic;
+          font-size: 0.84rem;
+        }
+
+        .md-bold {
+          font-weight: 750;
+          color: #0f172a;
+        }
+
+        .md-italic {
+          color: #64748b;
+          font-style: italic;
+        }
+
+        .md-code {
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          background: #e2e8f0;
+          color: #0f172a;
+          padding: 0.12rem 0.4rem;
+          border-radius: 4px;
+          font-size: 0.8rem;
+          font-weight: 600;
         }
 
         .ai-modal-footer {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 1rem 1.75rem;
-          background: #171D1C;
-          border-top: 1px solid rgba(242, 247, 242, 0.1);
+          padding: 1.1rem 1.75rem;
+          background: #f8fafc;
+          border-top: 1px solid #e2e8f0;
         }
 
         .ai-footer-note {
-          font-size: 0.7rem;
-          color: #c8d4cf;
+          font-size: 0.74rem;
+          color: #64748b;
           font-style: italic;
         }
 
         .ai-done-btn {
-          background: #35A7FF;
-          color: #171D1C;
-          border: none;
-          font-size: 0.82rem;
+          background: #2563eb;
+          color: #ffffff;
+          border: 1px solid #1d4ed8;
+          font-size: 0.84rem;
           font-weight: 750;
-          padding: 0.45rem 1.25rem;
-          border-radius: 6px;
+          padding: 0.5rem 1.4rem;
+          border-radius: 8px;
           cursor: pointer;
-          transition: all 0.15s;
+          transition: all 0.15s ease;
         }
 
         .ai-done-btn:hover {
-          background: #2392ea;
+          background: #1d4ed8;
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
 
         .font-mono {
@@ -2786,10 +4282,10 @@ function GraphCanvas({ caseId }) {
 }
 
 // Wrapper providing ReactFlow context
-export default function CaseGraphView({ caseId }) {
+export default function CaseGraphView({ caseId, caseTitle }) {
   return (
     <ReactFlowProvider>
-      <GraphCanvas caseId={caseId} />
+      <GraphCanvas caseId={caseId} caseTitle={caseTitle} />
     </ReactFlowProvider>
   );
 }

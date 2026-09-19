@@ -637,11 +637,11 @@ export default function CaseDetailsPage() {
 
               {/* Workspace Layout with active tab content */}
               <div className={`case-workspace-layout ${isCopilotOpen ? "has-copilot-open" : ""}`}>
-              <div className="workspace-main-column">
+                <div className="workspace-main-column">
                 {/* TAB 1: NETWORK GRAPH INVESTIGATION */}
                 {(activeTab === "graph" || activeTab === "copilot") && (
                   <section className="graph-workspace-section">
-                    <CaseGraphView key={graphRefreshKey} caseId={caseId} />
+                    <CaseGraphView key={graphRefreshKey} caseId={caseId} caseTitle={caseData?.title} />
                   </section>
                 )}
 
@@ -664,39 +664,32 @@ export default function CaseDetailsPage() {
                   <section className="documents-section">
                     <div className="section-header-bar">
                       <div className="section-title-group">
-                        <div className="title-with-count">
-                          <h2 className="section-title">Evidence & Documents</h2>
-                      {!loadingDocs && (
-                        <span className="doc-count-badge">
-                          {documents.length} {documents.length === 1 ? "document" : "documents"}
-                        </span>
-                      )}
-                    </div>
-                  <p className="section-desc">
-                    Evidentiary files, seized records, and analysis inputs registered to this investigation.
-                  </p>
-                </div>
+                        <h2 className="section-title">Evidence & Documents</h2>
+                        <p className="section-desc">
+                          Evidentiary files, seized records, and analysis inputs registered to this investigation.
+                        </p>
+                      </div>
 
-                <button
-                  onClick={fetchDocuments}
-                  className="refresh-docs-btn"
-                  disabled={loadingDocs}
-                  title="Reload documents"
-                >
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className={loadingDocs ? "spinning" : ""}
-                  >
-                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
-                  </svg>
-                  <span>Sync</span>
-                </button>
-              </div>
+                      <button
+                        onClick={fetchDocuments}
+                        className="refresh-docs-btn"
+                        disabled={loadingDocs}
+                        title="Reload documents"
+                      >
+                        <svg
+                          width="15"
+                          height="15"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className={loadingDocs ? "spinning" : ""}
+                        >
+                          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                        </svg>
+                        <span>Sync</span>
+                      </button>
+                    </div>
 
               {/* UPLOAD EVIDENCE CARD */}
               <div className="upload-container-card">
@@ -890,7 +883,6 @@ export default function CaseDetailsPage() {
                         className="btn-batch-process-all"
                         title="Run AI extraction and intelligence pipeline on all documents"
                       >
-                        <span className="ai-spark-icon">⚡</span>
                         <span>{batchProcessing ? "Processing Documents..." : "Process All Documents with AI"}</span>
                       </button>
                     </div>
@@ -913,12 +905,17 @@ export default function CaseDetailsPage() {
                                   {doc.filename}
                                 </h4>
                                 <div className="doc-meta-row">
-                                  <span className="doc-id-text" title={`Document UUID: ${doc.id}`}>
-                                    ID: <span className="font-mono">{doc.id.slice(0, 8)}...</span>
+                                  <span className="doc-id-badge" title={`Document System UUID: ${doc.id}`}>
+                                    <span className="id-tag">ID</span>
+                                    <span className="id-val font-mono">{doc.id ? doc.id.slice(0, 8) : "—"}</span>
                                   </span>
                                   <span className="meta-separator">•</span>
                                   <span className="doc-date-text">
-                                    Uploaded: {formatDate(doc.uploaded_at)}
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="meta-clock-icon">
+                                      <circle cx="12" cy="12" r="10" />
+                                      <polyline points="12 6 12 12 16 14" />
+                                    </svg>
+                                    Uploaded {formatDate(doc.uploaded_at)}
                                   </span>
                                 </div>
                                 {/* Per-doc error message */}
@@ -963,10 +960,13 @@ export default function CaseDetailsPage() {
                               )}
 
                               {/* SHA-256 HASH VERIFICATION PILL */}
-                              <div className="doc-hash-wrapper" title={`Cryptographic SHA-256 Hash: ${doc.sha256_hash}`}>
+                              <div className="doc-hash-wrapper" title={`Forensic Cryptographic SHA-256 Hash: ${doc.sha256_hash || "Verified"}`}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="hash-shield-icon">
+                                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                </svg>
                                 <span className="hash-label">SHA-256</span>
                                 <span className="hash-value font-mono">
-                                  {doc.sha256_hash ? `${doc.sha256_hash.slice(0, 10)}...${doc.sha256_hash.slice(-8)}` : "Verified"}
+                                  {doc.sha256_hash ? `${doc.sha256_hash.slice(0, 8)}...${doc.sha256_hash.slice(-6)}` : "Verified"}
                                 </span>
                               </div>
                             </div>
@@ -977,46 +977,46 @@ export default function CaseDetailsPage() {
                   </div>
                 )}
               </div>
-            </section>
-          )}
-        </div>
+                    </section>
+                  )}
+                </div>
 
-        {/* COPILOT SIDEBAR DRAWER */}
-        {isCopilotOpen && (
-          <>
-            <div
-              className="copilot-mobile-backdrop"
-              onClick={() => setIsCopilotOpen(false)}
-              aria-hidden="true"
-            />
-            <aside className="workspace-copilot-sidebar">
-              <CaseCopilotView
-                caseId={caseId}
-                onClose={() => setIsCopilotOpen(false)}
-                isSidebar={true}
-              />
-            </aside>
-          </>
+                {/* COPILOT SIDEBAR DRAWER */}
+                {isCopilotOpen && (
+                  <>
+                    <div
+                      className="copilot-mobile-backdrop"
+                      onClick={() => setIsCopilotOpen(false)}
+                      aria-hidden="true"
+                    />
+                    <aside className="workspace-copilot-sidebar">
+                      <CaseCopilotView
+                        caseId={caseId}
+                        onClose={() => setIsCopilotOpen(false)}
+                        isSidebar={true}
+                      />
+                    </aside>
+                  </>
+                )}
+              </div>
+
+              {/* FLOATING QUICK-ACCESS TRIGGER */}
+              {!isCopilotOpen && (
+                <button
+                  onClick={() => setIsCopilotOpen(true)}
+                  className="floating-copilot-bubble-btn"
+                  title="Open AI Copilot & Network Sidebar"
+                >
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span>AI Copilot</span>
+                </button>
+              )}
+            </main>
+          </div>
         )}
       </div>
-
-      {/* FLOATING QUICK-ACCESS TRIGGER */}
-      {!isCopilotOpen && (
-        <button
-          onClick={() => setIsCopilotOpen(true)}
-          className="floating-copilot-bubble-btn"
-          title="Open AI Copilot & Network Sidebar"
-        >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          <span>AI Copilot</span>
-        </button>
-      )}
-    </main>
-  </div>
-)}
-</div>
 
       <style>{`
         .case-details-container {
@@ -2026,9 +2026,9 @@ export default function CaseDetailsPage() {
         }
 
         .dropzone-box {
-          border: 2px dashed rgba(242, 247, 242, 0.15);
-          background: #171d1c;
-          border-radius: 10px;
+          border: 2px dashed #cbd5e1;
+          background: #f8fafc;
+          border-radius: 12px;
           padding: 2rem 1.5rem;
           text-align: center;
           cursor: pointer;
@@ -2036,13 +2036,13 @@ export default function CaseDetailsPage() {
         }
 
         .dropzone-box:hover, .dropzone-dragging {
-          border-color: #35a7ff;
-          background: rgba(53, 167, 255, 0.06);
+          border-color: #2563eb;
+          background: #eff6ff;
         }
 
         .dropzone-has-file {
           border-style: solid;
-          border-color: rgba(53, 167, 255, 0.4);
+          border-color: #93c5fd;
           padding: 1.25rem;
         }
 
@@ -2058,15 +2058,15 @@ export default function CaseDetailsPage() {
         }
 
         .upload-icon-circle {
-          width: 44px;
-          height: 44px;
+          width: 46px;
+          height: 46px;
           border-radius: 50%;
-          background: rgba(53, 167, 255, 0.15);
-          border: 1px solid rgba(53, 167, 255, 0.35);
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #35a7ff;
+          color: #2563eb;
         }
 
         .dropzone-text-group {
@@ -2077,12 +2077,13 @@ export default function CaseDetailsPage() {
 
         .dropzone-main-text {
           font-size: 0.88rem;
-          color: #f2f7f2;
+          color: #0f172a;
+          font-weight: 600;
         }
 
         .dropzone-sub-text {
           font-size: 0.75rem;
-          color: rgba(242, 247, 242, 0.55);
+          color: #64748b;
         }
 
         .selected-file-display {
@@ -2156,20 +2157,20 @@ export default function CaseDetailsPage() {
           align-items: center;
           gap: 0.5rem;
           padding: 0.6rem 1.25rem;
-          background: linear-gradient(180deg, #35a7ff 0%, #1e8fe6 100%);
-          border: 1px solid rgba(255, 255, 255, 0.3);
+          background: #2563eb;
+          border: 1px solid #1d4ed8;
           border-radius: 8px;
-          color: #171d1c;
+          color: #ffffff;
           font-size: 0.85rem;
           font-weight: 750;
           cursor: pointer;
           transition: all 0.2s ease;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
         }
 
         .upload-submit-btn:hover:not(:disabled) {
-          background: linear-gradient(180deg, #4cb3ff 0%, #35a7ff 100%);
-          box-shadow: 0 4px 18px rgba(53, 167, 255, 0.35);
+          background: #1d4ed8;
+          box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
           transform: translateY(-1px);
         }
 
@@ -2182,8 +2183,8 @@ export default function CaseDetailsPage() {
         .mini-spinner {
           width: 14px;
           height: 14px;
-          border: 2px solid rgba(23, 29, 28, 0.3);
-          border-top-color: #171d1c;
+          border: 2px solid rgba(255, 255, 255, 0.35);
+          border-top-color: #ffffff;
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
         }
@@ -2238,21 +2239,23 @@ export default function CaseDetailsPage() {
         }
 
         .doc-item-card {
-          background: rgba(20, 26, 36, 0.7);
-          border: 1px solid rgba(220, 230, 242, 0.08);
-          border-radius: 10px;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
           padding: 1rem 1.25rem;
           display: flex;
           justify-content: space-between;
           align-items: center;
           gap: 1rem;
           transition: all 0.2s ease;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
         }
 
         .doc-item-card:hover {
-          border-color: rgba(53, 167, 255, 0.4);
-          background: rgba(28, 38, 52, 0.85);
-          transform: translateX(2px);
+          border-color: #93c5fd;
+          background: #f8fafc;
+          box-shadow: 0 4px 14px -2px rgba(37, 99, 235, 0.08);
+          transform: translateY(-1px);
         }
 
         .doc-primary-info {
@@ -2263,34 +2266,35 @@ export default function CaseDetailsPage() {
         }
 
         .doc-icon-badge {
-          width: 40px;
-          height: 40px;
-          border-radius: 8px;
+          width: 42px;
+          height: 42px;
+          border-radius: 10px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 0.72rem;
+          font-size: 0.74rem;
           font-weight: 800;
           font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
           flex-shrink: 0;
         }
 
         .badge-pdf {
-          background: rgba(252, 186, 4, 0.14);
-          border: 1px solid rgba(252, 186, 4, 0.35);
-          color: #fcba04;
+          background: #ef4444;
+          border: 1px solid #dc2626;
+          color: #ffffff;
+          box-shadow: 0 1px 3px rgba(220, 38, 38, 0.25);
         }
 
         .badge-csv {
-          background: rgba(53, 167, 255, 0.14);
-          border: 1px solid rgba(53, 167, 255, 0.35);
-          color: #35a7ff;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          color: #1d4ed8;
         }
 
         .badge-txt {
-          background: rgba(24, 32, 44, 0.8);
-          border: 1px solid rgba(220, 230, 242, 0.15);
-          color: #f1f5f9;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          color: #475569;
         }
 
         .doc-details-block {
@@ -2298,10 +2302,10 @@ export default function CaseDetailsPage() {
         }
 
         .doc-filename {
-          font-size: 0.92rem;
-          font-weight: 600;
-          color: #f2f7f2;
-          margin-bottom: 0.2rem;
+          font-size: 0.94rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin-bottom: 0.25rem;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -2310,38 +2314,104 @@ export default function CaseDetailsPage() {
         .doc-meta-row {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          font-size: 0.73rem;
-          color: rgba(242, 247, 242, 0.65);
+          gap: 0.55rem;
+          font-size: 0.74rem;
+          color: #64748b;
+          font-weight: 500;
+          margin-top: 0.2rem;
+          flex-wrap: wrap;
         }
 
-        .meta-separator {
-          color: rgba(242, 247, 242, 0.3);
-        }
-
-        /* HASH VERIFICATION */
-        .doc-hash-wrapper {
-          display: flex;
+        .doc-id-badge {
+          display: inline-flex;
           align-items: center;
-          gap: 0.5rem;
-          padding: 0.35rem 0.65rem;
-          background: #0d1218;
-          border: 1px solid #1f2836;
-          border-radius: 6px;
-          font-size: 0.7rem;
-          flex-shrink: 0;
+          gap: 0.3rem;
+          padding: 0.12rem 0.45rem;
+          background: rgba(100, 116, 139, 0.08);
+          border: 1px solid rgba(148, 163, 184, 0.22);
+          border-radius: 5px;
+          font-size: 0.68rem;
+          transition: all 0.15s ease;
         }
 
-        .hash-label {
-          font-weight: 700;
-          color: rgba(242, 247, 242, 0.5);
-          font-size: 0.65rem;
+        .doc-id-badge:hover {
+          background: rgba(37, 99, 235, 0.08);
+          border-color: rgba(37, 99, 235, 0.3);
+        }
+
+        .id-tag {
+          font-weight: 800;
+          color: #475569;
+          font-size: 0.62rem;
           letter-spacing: 0.04em;
         }
 
-        .hash-value {
-          color: #35a7ff;
+        .id-val {
+          color: #334155;
+          font-weight: 600;
+        }
+
+        .doc-date-text {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.3rem;
+          color: #64748b;
+        }
+
+        .meta-clock-icon {
+          opacity: 0.7;
+          color: #64748b;
+          flex-shrink: 0;
+        }
+
+        .meta-separator {
+          color: #cbd5e1;
+        }
+
+        /* HASH VERIFICATION (Transparent light blue glass badge) */
+        .doc-hash-wrapper {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.45rem;
+          padding: 0.32rem 0.75rem;
+          background: rgba(37, 99, 235, 0.05);
+          border: 1px solid rgba(37, 99, 235, 0.18);
+          border-radius: 8px;
           font-size: 0.72rem;
+          flex-shrink: 0;
+          transition: all 0.15s ease;
+          backdrop-filter: blur(4px);
+        }
+
+        .doc-hash-wrapper:hover {
+          background: rgba(37, 99, 235, 0.1);
+          border-color: rgba(37, 99, 235, 0.35);
+          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+        }
+
+        .hash-shield-icon {
+          color: #2563eb;
+          flex-shrink: 0;
+          opacity: 0.85;
+        }
+
+        .hash-label {
+          font-weight: 800;
+          color: #2563eb;
+          font-size: 0.65rem;
+          letter-spacing: 0.05em;
+          background: rgba(37, 99, 235, 0.1);
+          padding: 1.5px 5px;
+          border-radius: 4px;
+          border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .hash-value {
+          color: #1e40af;
+          font-size: 0.72rem;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          font-weight: 600;
+          letter-spacing: -0.01em;
         }
 
         /* PROCESS DOCUMENT BUTTON */
@@ -2355,28 +2425,29 @@ export default function CaseDetailsPage() {
         .doc-process-btn {
           display: inline-flex;
           align-items: center;
-          gap: 0.4rem;
-          padding: 0.35rem 0.8rem;
-          border-radius: 6px;
-          background: rgba(53, 167, 255, 0.14);
-          border: 1px solid rgba(53, 167, 255, 0.35);
-          color: #35a7ff;
-          font-size: 0.75rem;
+          gap: 0.45rem;
+          padding: 0.38rem 0.85rem;
+          border-radius: 8px;
+          background: #f0f7ff;
+          border: 1px solid #bfdbfe;
+          color: #1d4ed8;
+          font-size: 0.76rem;
           font-weight: 700;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.15s ease;
           white-space: nowrap;
         }
 
         .doc-process-btn:hover:not(:disabled) {
-          background: rgba(53, 167, 255, 0.28);
-          border-color: #35a7ff;
-          box-shadow: 0 0 10px rgba(53, 167, 255, 0.25);
+          background: #2563eb;
+          border-color: #1d4ed8;
+          color: #ffffff;
+          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
           transform: translateY(-1px);
         }
 
         .doc-process-btn:disabled {
-          opacity: 0.7;
+          opacity: 0.65;
           cursor: not-allowed;
           transform: none;
         }
@@ -2515,14 +2586,14 @@ export default function CaseDetailsPage() {
         }
 
         .staged-file-card {
-          background: #0d1218;
-          border: 1px solid #1f2836;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
           border-radius: 8px;
           padding: 0.55rem 0.75rem;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
         }
 
         .staged-file-left {
@@ -2538,15 +2609,15 @@ export default function CaseDetailsPage() {
           padding: 0.15rem 0.45rem;
           border-radius: 4px;
           letter-spacing: 0.04em;
-          background: rgba(24, 32, 44, 0.85);
-          color: #f1f5f9;
+          background: #f1f5f9;
+          color: #334155;
         }
 
-        .ext-pdf { background: rgba(252, 186, 4, 0.16); color: #fcba04; }
-        .ext-docx { background: rgba(53, 167, 255, 0.16); color: #35a7ff; }
-        .ext-csv { background: rgba(53, 167, 255, 0.16); color: #35a7ff; }
-        .ext-txt { background: rgba(24, 32, 44, 0.85); color: #f1f5f9; }
-        .ext-png, .ext-jpg, .ext-jpeg { background: rgba(252, 186, 4, 0.16); color: #fcba04; }
+        .ext-pdf { background: #ef4444; color: #ffffff; }
+        .ext-docx { background: #eff6ff; color: #1d4ed8; }
+        .ext-csv { background: #eff6ff; color: #1d4ed8; }
+        .ext-txt { background: #f1f5f9; color: #334155; }
+        .ext-png, .ext-jpg, .ext-jpeg { background: #fffbeb; color: #b45309; }
 
         .staged-meta {
           display: flex;
@@ -2556,8 +2627,8 @@ export default function CaseDetailsPage() {
 
         .staged-filename {
           font-size: 0.78rem;
-          font-weight: 600;
-          color: #f2f7f2;
+          font-weight: 700;
+          color: #0f172a;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -2566,7 +2637,7 @@ export default function CaseDetailsPage() {
 
         .staged-size {
           font-size: 0.7rem;
-          color: rgba(242, 247, 242, 0.6);
+          color: #64748b;
         }
 
         .staged-remove-btn {
@@ -2590,42 +2661,51 @@ export default function CaseDetailsPage() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 0.65rem 1rem;
-          background: #202726;
-          border-bottom: 1px solid rgba(242, 247, 242, 0.08);
-          margin-bottom: 0.5rem;
-          border-radius: 8px 8px 0 0;
+          padding: 0.75rem 1.15rem;
+          background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+          border: 1px solid #1d4ed8;
+          border-radius: 12px 12px 0 0;
+          margin-bottom: 0.65rem;
+          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
         }
 
         .docs-count-label {
-          font-size: 0.8rem;
+          font-size: 0.84rem;
           font-weight: 700;
-          color: #f2f7f2;
+          color: #ffffff;
+          letter-spacing: 0.01em;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
         }
 
         .btn-batch-process-all {
           display: inline-flex;
           align-items: center;
           gap: 0.45rem;
-          padding: 0.4rem 0.85rem;
-          background: linear-gradient(180deg, #35a7ff 0%, #1e8fe6 100%);
-          color: #171d1c;
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          border-radius: 6px;
-          font-size: 0.75rem;
+          padding: 0.42rem 0.95rem;
+          background: #ffffff;
+          color: #1d4ed8;
+          border: 1px solid #ffffff;
+          border-radius: 8px;
+          font-size: 0.78rem;
           font-weight: 750;
           cursor: pointer;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
           transition: all 0.15s ease;
         }
 
         .btn-batch-process-all:hover:not(:disabled) {
-          background: linear-gradient(180deg, #4cb3ff 0%, #35a7ff 100%);
+          background: #eff6ff;
+          color: #1e40af;
           transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
         }
 
         .btn-batch-process-all:disabled {
-          opacity: 0.6;
+          opacity: 0.65;
+          background: rgba(255, 255, 255, 0.5);
+          color: #64748b;
           cursor: not-allowed;
         }
 
