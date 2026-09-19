@@ -822,35 +822,172 @@ function buildInvestigationLayout(rfNodes, rawRels, focusNodeId = null, isFocusM
 }
 
 
-// Helper to format in-inspector chat messages with clean paragraphs and bold text
+// Helper to render inline formatting (bold text, citations, document pills) cleanly
+function renderInlineFormatted(str, keyPrefix = "") {
+  if (!str) return null;
+  const tokens = str.split(/(`[^`]+`|\*\*[^*]+\*\*)/g);
+  return tokens.map((part, idx) => {
+    const key = `${keyPrefix}-${idx}`;
+    if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
+      const codeContent = part.slice(1, -1);
+      const isDoc =
+        codeContent.toLowerCase().endsWith(".pdf") ||
+        codeContent.toLowerCase().endsWith(".doc") ||
+        codeContent.toLowerCase().endsWith(".docx") ||
+        codeContent.toLowerCase().endsWith(".txt") ||
+        codeContent.toLowerCase().includes("document");
+      return (
+        <span key={key} className={isDoc ? "chat-citation-doc-pill" : "chat-inline-code"}>
+          {isDoc && (
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              style={{ marginRight: "3px", verticalAlign: "middle" }}
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+          )}
+          {codeContent}
+        </span>
+      );
+    }
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return (
+        <strong key={key} className="chat-strong-text">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <span key={key}>{part}</span>;
+  });
+}
+
+// Helper to format in-inspector chat messages with clean structured layout
 function formatNodeChatMessage(text) {
   if (!text) return null;
-  const paragraphs = text.split("\n\n");
-  return paragraphs.map((para, pIdx) => {
-    const lines = para.split("\n");
-    return (
-      <p key={`para-${pIdx}`} style={{ margin: pIdx > 0 ? "0.45rem 0 0 0" : 0 }}>
-        {lines.map((line, lIdx) => {
-          const parts = line.split(/(\*\*[^*]+\*\*)/g);
+
+  const rawLines = text.split("\n");
+  const blocks = [];
+  let currentList = null;
+
+  const flushList = () => {
+    if (currentList && currentList.length > 0) {
+      blocks.push({ type: "list", items: currentList });
+      currentList = null;
+    }
+  };
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const rawLine = rawLines[i];
+    const trimmed = rawLine.trim();
+
+    if (!trimmed) {
+      flushList();
+      continue;
+    }
+
+    // Check if line is a bullet item: * , - , • , or 1. , 2. etc.
+    const bulletMatch = trimmed.match(/^(\*|-|•|\d+\.)\s+(.+)$/);
+    if (bulletMatch) {
+      if (!currentList) currentList = [];
+      currentList.push({
+        marker: bulletMatch[1],
+        content: bulletMatch[2],
+      });
+      continue;
+    }
+
+    // Check if line is a markdown header (### or ##)
+    const headerMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+    if (headerMatch) {
+      flushList();
+      blocks.push({
+        type: "header",
+        level: headerMatch[1].length,
+        content: headerMatch[2],
+      });
+      continue;
+    }
+
+    // Normal line
+    flushList();
+    blocks.push({
+      type: "paragraph",
+      content: trimmed,
+      isIntro: trimmed.endsWith(":") || trimmed.endsWith(":-"),
+    });
+  }
+  flushList();
+
+  return (
+    <div className="chat-structured-content">
+      {blocks.map((block, bIdx) => {
+        if (block.type === "header") {
           return (
-            <span key={`ln-${lIdx}`}>
-              {lIdx > 0 && <br />}
-              {parts.map((part, i) => {
-                if (part.startsWith("**") && part.endsWith("**")) {
-                  return (
-                    <strong key={i} style={{ color: "#0f172a", fontWeight: 750 }}>
-                      {part.slice(2, -2)}
-                    </strong>
-                  );
-                }
-                return part;
-              })}
-            </span>
+            <h4 key={`b-${bIdx}`} className="chat-section-header">
+              {renderInlineFormatted(block.content, `hdr-${bIdx}`)}
+            </h4>
           );
-        })}
-      </p>
-    );
-  });
+        }
+
+        if (block.type === "paragraph") {
+          return (
+            <p
+              key={`b-${bIdx}`}
+              className={block.isIntro ? "chat-intro-para" : "chat-body-para"}
+            >
+              {renderInlineFormatted(block.content, `p-${bIdx}`)}
+            </p>
+          );
+        }
+
+        if (block.type === "list") {
+          return (
+            <div key={`b-${bIdx}`} className="chat-items-list">
+              {block.items.map((item, iIdx) => {
+                let contentNode = null;
+                const boldPrefixMatch = item.content.match(/^(\*\*[^*]+\*\*[:]?)\s*(.*)$/);
+                const plainPrefixMatch = !boldPrefixMatch && item.content.match(/^([A-Za-z0-9\s/&-]{2,32}:)\s*(.*)$/);
+
+                if (boldPrefixMatch) {
+                  const label = boldPrefixMatch[1].replace(/\*\*/g, "");
+                  contentNode = (
+                    <>
+                      <strong className="chat-item-label">{label}</strong>{" "}
+                      {renderInlineFormatted(boldPrefixMatch[2], `li-${bIdx}-${iIdx}`)}
+                    </>
+                  );
+                } else if (plainPrefixMatch) {
+                  contentNode = (
+                    <>
+                      <strong className="chat-item-label">{plainPrefixMatch[1]}</strong>{" "}
+                      {renderInlineFormatted(plainPrefixMatch[2], `li-${bIdx}-${iIdx}`)}
+                    </>
+                  );
+                } else {
+                  contentNode = renderInlineFormatted(item.content, `li-${bIdx}-${iIdx}`);
+                }
+
+                return (
+                  <div key={`item-${iIdx}`} className="chat-structured-card">
+                    <div className="chat-card-bullet-dot" />
+                    <div className="chat-card-body">{contentNode}</div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }
+
+        return null;
+      })}
+    </div>
+  );
 }
 
 // Helper to escape HTML characters safely for printable reports
@@ -2138,12 +2275,13 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
   const handleOpenNodeChat = (customPrompt = null) => {
     setInspectorViewMode("chat");
     const name = selectedNodeData?.canonical_name || selectedNodeData?.name || selectedEdgeData?.relationship || "this item";
-    const type = selectedNodeData ? selectedNodeData.type : "Connection";
+    const rawType = selectedNodeData?.type || selectedNodeData?.entity_type;
+    const typeLabel = rawType && rawType !== "undefined" ? ` (${rawType})` : (selectedNodeData ? " (Entity)" : "");
     if (nodeChatMessages.length === 0) {
       setNodeChatMessages([
         {
           role: "assistant",
-          content: `I am your AI Investigation Assistant for **${name}** (${type}). Ask me about motives, evidentiary links, contradictions, or ties in this case.`,
+          content: `I am your AI Investigation Assistant for **${name}**${typeLabel}. Ask me about motives, evidentiary links, contradictions, or ties in this case.`,
         },
       ]);
     }
@@ -2159,7 +2297,8 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
     setNodeChatInput("");
 
     const name = selectedNodeData?.canonical_name || selectedNodeData?.name || selectedEdgeData?.relationship || "this item";
-    const type = selectedNodeData ? `Entity (${selectedNodeData.type})` : "Relationship link";
+    const rawType = selectedNodeData?.type || selectedNodeData?.entity_type;
+    const type = selectedNodeData ? `Entity (${rawType || "Item"})` : "Relationship link";
 
     const newHistory = [...nodeChatMessages, { role: "user", content: query }];
     setNodeChatMessages(newHistory);
@@ -2668,15 +2807,15 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
                   <div className="node-chat-title-box">
                     <div className="node-chat-badge-row">
                       <span className="node-chat-sparkle-badge">AI Assistant</span>
-                      {selectedNodeData && (
+                      {selectedNodeData && (selectedNodeData.type || selectedNodeData.entity_type) && (
                         <span
                           className="node-chat-type-pill"
                           style={{
-                            color: ENTITY_CONFIG[selectedNodeData.type]?.color || "#0ea5e9",
-                            background: ENTITY_CONFIG[selectedNodeData.type]?.bg || "rgba(14, 165, 233, 0.12)",
+                            color: ENTITY_CONFIG[selectedNodeData.type || selectedNodeData.entity_type]?.color || "#0ea5e9",
+                            background: ENTITY_CONFIG[selectedNodeData.type || selectedNodeData.entity_type]?.bg || "rgba(14, 165, 233, 0.12)",
                           }}
                         >
-                          {selectedNodeData.type}
+                          {selectedNodeData.type || selectedNodeData.entity_type}
                         </span>
                       )}
                     </div>
@@ -4476,11 +4615,121 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
         }
 
         .node-chat-bubble.assistant {
+          max-width: 96%;
+          width: 100%;
           background: #ffffff;
           color: #1e293b;
           border: 1px solid #e2e8f0;
           border-bottom-left-radius: 2px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+        }
+
+        /* Structured AI Chat formatting */
+        .chat-structured-content {
+          display: flex;
+          flex-direction: column;
+          gap: 0.45rem;
+          width: 100%;
+        }
+
+        .chat-section-header {
+          font-size: 0.84rem;
+          font-weight: 750;
+          color: #0f172a;
+          margin: 0.35rem 0 0.2rem 0;
+          padding-bottom: 0.2rem;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .chat-intro-para {
+          font-size: 0.79rem;
+          font-weight: 650;
+          color: #1e293b;
+          line-height: 1.48;
+          margin: 0;
+          padding-bottom: 0.2rem;
+        }
+
+        .chat-body-para {
+          font-size: 0.78rem;
+          color: #334155;
+          line-height: 1.48;
+          margin: 0;
+        }
+
+        .chat-items-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.45rem;
+          margin: 0.2rem 0;
+        }
+
+        .chat-structured-card {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.45rem;
+          padding: 0.5rem 0.65rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 7px;
+          transition: background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .chat-structured-card:hover {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+        }
+
+        .chat-card-bullet-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #2563eb;
+          margin-top: 6px;
+          flex-shrink: 0;
+        }
+
+        .chat-card-body {
+          font-size: 0.77rem;
+          color: #334155;
+          line-height: 1.45;
+          flex: 1;
+        }
+
+        .chat-item-label {
+          font-weight: 750;
+          color: #0f172a;
+          display: inline;
+        }
+
+        .chat-strong-text {
+          font-weight: 750;
+          color: #0f172a;
+        }
+
+        .chat-citation-doc-pill {
+          display: inline-flex;
+          align-items: center;
+          font-size: 0.68rem;
+          font-weight: 600;
+          color: #1d4ed8;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          border-radius: 4px;
+          padding: 1px 5px;
+          margin: 0 2px;
+          word-break: break-all;
+          vertical-align: baseline;
+        }
+
+        .chat-inline-code {
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          font-size: 0.72rem;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+          border-radius: 3px;
+          padding: 1px 4px;
+          color: #0f172a;
         }
 
         .node-chat-bubble.assistant.loading {
