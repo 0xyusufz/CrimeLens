@@ -822,6 +822,37 @@ function buildInvestigationLayout(rfNodes, rawRels, focusNodeId = null, isFocusM
 }
 
 
+// Helper to format in-inspector chat messages with clean paragraphs and bold text
+function formatNodeChatMessage(text) {
+  if (!text) return null;
+  const paragraphs = text.split("\n\n");
+  return paragraphs.map((para, pIdx) => {
+    const lines = para.split("\n");
+    return (
+      <p key={`para-${pIdx}`} style={{ margin: pIdx > 0 ? "0.45rem 0 0 0" : 0 }}>
+        {lines.map((line, lIdx) => {
+          const parts = line.split(/(\*\*[^*]+\*\*)/g);
+          return (
+            <span key={`ln-${lIdx}`}>
+              {lIdx > 0 && <br />}
+              {parts.map((part, i) => {
+                if (part.startsWith("**") && part.endsWith("**")) {
+                  return (
+                    <strong key={i} style={{ color: "#0f172a", fontWeight: 750 }}>
+                      {part.slice(2, -2)}
+                    </strong>
+                  );
+                }
+                return part;
+              })}
+            </span>
+          );
+        })}
+      </p>
+    );
+  });
+}
+
 // Helper to escape HTML characters safely for printable reports
 function escapeHtmlForReport(str) {
   if (!str) return "";
@@ -1696,6 +1727,19 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
   const [loadingEdgeEvidence, setLoadingEdgeEvidence] = useState(false);
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
 
+  // In-Sidebar Inspector View Mode: "details" | "chat"
+  const [inspectorViewMode, setInspectorViewMode] = useState("details");
+  const [nodeChatMessages, setNodeChatMessages] = useState([]);
+  const [nodeChatInput, setNodeChatInput] = useState("");
+  const [nodeChatLoading, setNodeChatLoading] = useState(false);
+  const nodeChatEndRef = useRef(null);
+
+  useEffect(() => {
+    if (inspectorViewMode === "chat") {
+      nodeChatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [nodeChatMessages, nodeChatLoading, inspectorViewMode]);
+
   // AI Deep Reasoning Analysis State
   const [analyzingAi, setAnalyzingAi] = useState(false);
   const [aiAnalysisResult, setAiAnalysisResult] = useState(null);
@@ -2012,6 +2056,9 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
     setAiClarification(null);
     setAiClarificationError(null);
     setClarifyingAi(false);
+    setInspectorViewMode("details");
+    setNodeChatMessages([]);
+    setNodeChatInput("");
     setSelectedNodeData({
       id: node.id,
       name: node.data.name,
@@ -2062,6 +2109,9 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
     setAiClarification(null);
     setAiClarificationError(null);
     setClarifyingAi(false);
+    setInspectorViewMode("details");
+    setNodeChatMessages([]);
+    setNodeChatInput("");
     setSelectedEdgeData({
       relationship_id: edge.id,
       relationship: edge.data?.relationship,
@@ -2081,6 +2131,68 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
       // Retain fallback data from edge.data
     } finally {
       setLoadingEdgeEvidence(false);
+    }
+  };
+
+  // Open dedicated in-sidebar AI chat for the selected entity or connection
+  const handleOpenNodeChat = (customPrompt = null) => {
+    setInspectorViewMode("chat");
+    const name = selectedNodeData?.canonical_name || selectedNodeData?.name || selectedEdgeData?.relationship || "this item";
+    const type = selectedNodeData ? selectedNodeData.type : "Connection";
+    if (nodeChatMessages.length === 0) {
+      setNodeChatMessages([
+        {
+          role: "assistant",
+          content: `I am your AI Investigation Assistant for **${name}** (${type}). Ask me about motives, evidentiary links, contradictions, or ties in this case.`,
+        },
+      ]);
+    }
+    if (customPrompt) {
+      handleSendNodeChatMessage(customPrompt);
+    }
+  };
+
+  // Send query to AI Copilot API in in-sidebar node chat mode
+  const handleSendNodeChatMessage = async (msgText = null) => {
+    const query = (msgText || nodeChatInput).trim();
+    if (!query || nodeChatLoading) return;
+    setNodeChatInput("");
+
+    const name = selectedNodeData?.canonical_name || selectedNodeData?.name || selectedEdgeData?.relationship || "this item";
+    const type = selectedNodeData ? `Entity (${selectedNodeData.type})` : "Relationship link";
+
+    const newHistory = [...nodeChatMessages, { role: "user", content: query }];
+    setNodeChatMessages(newHistory);
+    setNodeChatLoading(true);
+
+    const contextPrompt = `Context: ${type} named "${name}". Question: ${query}. Provide a concise, forensic answer strictly grounded in verified case evidence, citations, and connection graph.`;
+
+    try {
+      const res = await apiClient(`/api/cases/${caseId}/intelligence/copilot`, {
+        method: "POST",
+        body: JSON.stringify({
+          question: contextPrompt,
+          history: newHistory.map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+
+      setNodeChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: res.answer || "No response received from intelligence engine.",
+        },
+      ]);
+    } catch (err) {
+      setNodeChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Unable to query case intelligence. Please check your connection and retry.",
+        },
+      ]);
+    } finally {
+      setNodeChatLoading(false);
     }
   };
 
@@ -2521,346 +2633,503 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
         {/* 3. DETAILS SIDE PANEL (INSPECTOR) */}
         {isInspectorOpen && (
           <aside className="graph-details-sidebar">
-            {/* A. NODE DETAILS */}
-            {selectedNodeData && (
-              <div className="panel-card">
-                <div className="panel-header">
-                  <div className="panel-title-group">
-                    <span className="panel-type-label">Entity Details</span>
-                    <h3 className="panel-entity-name">{selectedNodeData.canonical_name || selectedNodeData.name}</h3>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setSelectedNodeData(null);
-                      setIsInspectorOpen(false);
-                    }}
-                    className="close-panel-btn"
-                    title="Close details panel"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="panel-body">
-                  {/* Type & ID */}
-                  <div className="detail-row">
-                    <span className="detail-key">Entity Type:</span>
-                    <span
-                      className="entity-badge-pill"
-                      style={{
-                        color: ENTITY_CONFIG[selectedNodeData.type]?.color || "#0ea5e9",
-                        background: ENTITY_CONFIG[selectedNodeData.type]?.bg || "rgba(14, 165, 233, 0.12)",
-                      }}
+            {inspectorViewMode === "chat" ? (
+              <div className="node-chat-panel">
+                {/* Chat Header */}
+                <div className="node-chat-header">
+                  <div className="node-chat-header-top">
+                    <button
+                      type="button"
+                      className="node-chat-back-btn"
+                      onClick={() => setInspectorViewMode("details")}
+                      title="Back to Inspect Details"
                     >
-                      {selectedNodeData.type}
-                    </span>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <line x1="19" y1="12" x2="5" y2="12" />
+                        <polyline points="12 19 5 12 12 5" />
+                      </svg>
+                      <span>Details</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedNodeData(null);
+                        setSelectedEdgeData(null);
+                        setIsInspectorOpen(false);
+                        setInspectorViewMode("details");
+                      }}
+                      className="close-panel-btn"
+                      title="Close panel"
+                    >
+                      ✕
+                    </button>
                   </div>
 
-                  <div className="detail-row">
-                    <span className="detail-key">UUID:</span>
-                    <span className="detail-val font-mono">{selectedNodeData.id?.slice(0, 16)}...</span>
+                  <div className="node-chat-title-box">
+                    <div className="node-chat-badge-row">
+                      <span className="node-chat-sparkle-badge">AI Assistant</span>
+                      {selectedNodeData && (
+                        <span
+                          className="node-chat-type-pill"
+                          style={{
+                            color: ENTITY_CONFIG[selectedNodeData.type]?.color || "#0ea5e9",
+                            background: ENTITY_CONFIG[selectedNodeData.type]?.bg || "rgba(14, 165, 233, 0.12)",
+                          }}
+                        >
+                          {selectedNodeData.type}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="node-chat-target-name">
+                      {selectedNodeData
+                        ? (selectedNodeData.canonical_name || selectedNodeData.name)
+                        : (selectedEdgeData?.relationship || "Connection")}
+                    </h3>
                   </div>
 
-                  {/* Associated Cases */}
-                  <div className="associated-cases-block">
-                    <span className="detail-key">Associated Cases ({selectedNodeData.cases?.length || 0}):</span>
-                    {loadingNodeDetails ? (
-                      <div className="details-loading-spinner">Loading case associations...</div>
-                    ) : selectedNodeData.cases?.length > 0 ? (
-                      <div className="case-chips-wrap">
-                        {selectedNodeData.cases.map((c) => (
-                          <span key={c.case_id} className="case-chip font-mono">
-                            {c.case_number}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="no-data-text">Current case record</span>
-                    )}
-                  </div>
-
-                  {/* 1. Aliases */}
-                  {selectedNodeData.attributes?.aliases?.length > 0 && (
-                    <div className="entity-meta-section">
-                      <span className="meta-section-label">Known Aliases:</span>
-                      <div className="meta-chips-wrap">
-                        {selectedNodeData.attributes.aliases.map((alias, idx) => (
-                          <span key={idx} className="meta-chip alias-chip">
-                            {alias}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 2. Phone Numbers */}
-                  {selectedNodeData.attributes?.phone_numbers?.length > 0 && (
-                    <div className="entity-meta-section">
-                      <span className="meta-section-label">Phone Numbers:</span>
-                      <div className="meta-chips-wrap">
-                        {selectedNodeData.attributes.phone_numbers.map((phone, idx) => (
-                          <span key={idx} className="meta-chip phone-chip font-mono">
-                            {phone}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 3. Locations */}
-                  {selectedNodeData.attributes?.locations?.length > 0 && (
-                    <div className="entity-meta-section">
-                      <span className="meta-section-label">Known Locations:</span>
-                      <div className="meta-chips-wrap">
-                        {selectedNodeData.attributes.locations.map((loc, idx) => (
-                          <span key={idx} className="meta-chip location-chip">
-                            {loc}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 4. Vehicles */}
-                  {selectedNodeData.attributes?.vehicles?.length > 0 && (
-                    <div className="entity-meta-section">
-                      <span className="meta-section-label">Vehicles:</span>
-                      <div className="meta-chips-wrap">
-                        {selectedNodeData.attributes.vehicles.map((veh, idx) => (
-                          <span key={idx} className="meta-chip vehicle-chip font-mono">
-                            {veh}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 5. Organizations */}
-                  {selectedNodeData.attributes?.organizations?.length > 0 && (
-                    <div className="entity-meta-section">
-                      <span className="meta-section-label">Affiliated Organizations:</span>
-                      <div className="meta-chips-wrap">
-                        {selectedNodeData.attributes.organizations.map((org, idx) => (
-                          <span key={idx} className="meta-chip org-chip">
-                            {org}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 6. Source Documents */}
-                  {selectedNodeData.attributes?.source_documents?.length > 0 && (
-                    <div className="entity-meta-section">
-                      <span className="meta-section-label">Source Evidence Documents:</span>
-                      <div className="meta-chips-wrap">
-                        {selectedNodeData.attributes.source_documents.map((doc, idx) => (
-                          <span key={idx} className="meta-chip doc-chip">
-                            {doc}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 7. Verbatim Evidence Snippets */}
-                  {selectedNodeData.attributes?.evidence_snippets?.length > 0 && (
-                    <div className="entity-meta-section">
-                      <span className="meta-section-label">Document Evidence Anchors:</span>
-                      <div className="evidence-snippets-stack">
-                        {selectedNodeData.attributes.evidence_snippets.slice(0, 3).map((snip, idx) => (
-                          <blockquote key={idx} className="evidence-quote-small">
-                            "{snip}"
-                          </blockquote>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 8. VERIFIED DIRECT CONNECTIONS & EVIDENCE */}
-                  <div className="entity-meta-section connections-meta-section">
-                    <div className="section-title-badge-row">
-                      <span className="meta-section-label">Verified Connections ({selectedNodeConnections.length}):</span>
-                    </div>
-
-                    {selectedNodeConnections.length > 0 ? (
-                      <div className="node-connections-list">
-                        {selectedNodeConnections.map((conn, idx) => (
-                          <div key={idx} className="node-connection-card">
-                            <div className="connection-header-row">
-                              <span className="connection-rel-tag">
-                                {conn.isOut ? "➔" : "⬅"} {conn.relationship}
-                              </span>
-                              {conn.confidence && (
-                                <span className="connection-conf-badge">
-                                  {Math.round(conn.confidence * 100)}%
-                                </span>
-                              )}
-                            </div>
-                            <div className="connection-target-row">
-                              <span className="target-indicator">•</span>
-                              <button
-                                type="button"
-                                className="target-entity-link"
-                                onClick={() => {
-                                  const targetNode = nodes.find((n) => n.id === conn.otherId);
-                                  if (targetNode) onNodeClick(null, targetNode);
-                                }}
-                                title="Click to inspect this entity"
-                              >
-                                {conn.otherName}
-                              </button>
-                              <span className="target-type-chip">{conn.otherType}</span>
-                            </div>
-                            {conn.evidenceSnippet && (
-                              <blockquote className="connection-snippet">
-                                "{conn.evidenceSnippet}"
-                              </blockquote>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="no-data-text">No direct connections recorded in current view.</span>
-                    )}
-                  </div>
-
-                  {/* 9. AI SIDE CHAT INQUIRY */}
-                  <div className="ai-entity-chat-card">
-                    <div className="entity-chat-content">
-                      <div className="entity-chat-badge">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5">
-                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                        </svg>
-                        <span>Ask AI Assistant</span>
-                      </div>
-                      <p className="entity-chat-desc">
-                        Ask AI about <strong>{selectedNodeData.canonical_name || selectedNodeData.name}</strong>, motives, and evidence.
-                      </p>
-                    </div>
-                    {onOpenCopilot && (
-                      <button
-                        type="button"
-                        onClick={() => onOpenCopilot(`What is known about ${selectedNodeData.canonical_name || selectedNodeData.name} and what evidence connects them?`)}
-                        className="entity-chat-btn"
-                        title="Open side chat assistant"
-                      >
-                        <span>Chat about this Entity</span>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <line x1="5" y1="12" x2="19" y2="12" />
-                          <polyline points="12 5 19 12 12 19" />
-                        </svg>
-                      </button>
-                    )}
+                  {/* Quick Question Chips */}
+                  <div className="node-chat-quick-chips">
+                    <button
+                      type="button"
+                      className="node-quick-chip"
+                      disabled={nodeChatLoading}
+                      onClick={() =>
+                        handleSendNodeChatMessage(
+                          `What direct evidence connects ${selectedNodeData?.canonical_name || selectedNodeData?.name || selectedEdgeData?.relationship} in this case?`
+                        )
+                      }
+                    >
+                      Evidence
+                    </button>
+                    <button
+                      type="button"
+                      className="node-quick-chip"
+                      disabled={nodeChatLoading}
+                      onClick={() =>
+                        handleSendNodeChatMessage(
+                          `What are the known motives or background of ${selectedNodeData?.canonical_name || selectedNodeData?.name || selectedEdgeData?.relationship}?`
+                        )
+                      }
+                    >
+                      Motives & Ties
+                    </button>
+                    <button
+                      type="button"
+                      className="node-quick-chip"
+                      disabled={nodeChatLoading}
+                      onClick={() =>
+                        handleSendNodeChatMessage(
+                          `Are there any contradictions or suspicious links involving ${selectedNodeData?.canonical_name || selectedNodeData?.name || selectedEdgeData?.relationship}?`
+                        )
+                      }
+                    >
+                      Contradictions
+                    </button>
                   </div>
                 </div>
-              </div>
-            )}
 
-            {/* B. RELATIONSHIP EVIDENCE PANEL */}
-            {selectedEdgeData && !selectedNodeData && (
-              <div className="panel-card">
-                <div className="panel-header">
-                  <div className="panel-title-group">
-                    <span className="panel-type-label">Relationship Evidence</span>
-                    <h3 className="panel-entity-name">{selectedEdgeData.relationship}</h3>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setSelectedEdgeData(null);
-                      setIsInspectorOpen(false);
+                {/* Messages Container */}
+                <div className="node-chat-messages-container">
+                  {nodeChatMessages.map((msg, idx) => (
+                    <div key={idx} className={`node-chat-bubble-row ${msg.role}`}>
+                      {msg.role === "assistant" && (
+                        <div className="node-chat-avatar">AI</div>
+                      )}
+                      <div className={`node-chat-bubble ${msg.role}`}>
+                        {msg.role === "assistant"
+                          ? formatNodeChatMessage(msg.content)
+                          : msg.content}
+                      </div>
+                    </div>
+                  ))}
+
+                  {nodeChatLoading && (
+                    <div className="node-chat-bubble-row assistant">
+                      <div className="node-chat-avatar">AI</div>
+                      <div className="node-chat-bubble assistant loading">
+                        <div className="node-chat-dots">
+                          <span className="dot" />
+                          <span className="dot" />
+                          <span className="dot" />
+                        </div>
+                        <span className="loading-label">Analyzing case graph...</span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={nodeChatEndRef} />
+                </div>
+
+                {/* Chat Input Bar */}
+                <div className="node-chat-input-bar">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleSendNodeChatMessage();
                     }}
-                    className="close-panel-btn"
-                    title="Close panel"
+                    className="node-chat-input-form"
                   >
-                    ✕
-                  </button>
+                    <input
+                      type="text"
+                      value={nodeChatInput}
+                      onChange={(e) => setNodeChatInput(e.target.value)}
+                      placeholder={`Ask about ${selectedNodeData ? (selectedNodeData.canonical_name || selectedNodeData.name) : "this connection"}...`}
+                      className="node-chat-input-field"
+                      disabled={nodeChatLoading}
+                    />
+                    <button
+                      type="submit"
+                      className="node-chat-send-btn"
+                      disabled={nodeChatLoading || !nodeChatInput.trim()}
+                      title="Send question"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <line x1="22" y1="2" x2="11" y2="13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                      </svg>
+                    </button>
+                  </form>
                 </div>
-
-                <div className="panel-body">
-                  <div className="detail-row">
-                    <span className="detail-key">Status:</span>
-                    <span className={`status-pill-small ${getStatusBadge(selectedEdgeData.status).className}`}>
-                      {selectedEdgeData.status}
-                    </span>
-                  </div>
-
-                  <div className="detail-row">
-                    <span className="detail-key">Confidence:</span>
-                    <span className="detail-val font-mono">
-                      {Math.round((selectedEdgeData.confidence || 1) * 100)}%
-                    </span>
-                  </div>
-
-                  {selectedEdgeData.source_document_id && (
-                    <div className="detail-row">
-                      <span className="detail-key">Source Doc ID:</span>
-                      <span className="detail-val font-mono">
-                        {selectedEdgeData.source_document_id.slice(0, 14)}...
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Verbatim Snippet */}
-                  <div className="evidence-snippet-section">
-                    <span className="snippet-heading">Verbatim Evidence Anchor:</span>
-                    {loadingEdgeEvidence ? (
-                      <div className="details-loading-spinner">Retrieving evidence text...</div>
-                    ) : selectedEdgeData.evidence_snippet ? (
-                      <blockquote className="evidence-quote">
-                        "{selectedEdgeData.evidence_snippet}"
-                      </blockquote>
-                    ) : (
-                      <span className="no-snippet-text">No verbatim text anchor cited.</span>
-                    )}
-                  </div>
-
-                  {/* AI SIDE CHAT INQUIRY */}
-                  <div className="ai-entity-chat-card">
-                    <div className="entity-chat-content">
-                      <div className="entity-chat-badge">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5">
-                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                        </svg>
-                        <span>Ask AI Assistant</span>
+              </div>
+            ) : (
+              <>
+                {/* A. NODE DETAILS */}
+                {selectedNodeData && (
+                  <div className="panel-card">
+                    <div className="panel-header">
+                      <div className="panel-title-group">
+                        <span className="panel-type-label">Entity Details</span>
+                        <h3 className="panel-entity-name">{selectedNodeData.canonical_name || selectedNodeData.name}</h3>
                       </div>
-                      <p className="entity-chat-desc">
-                        Ask AI why this <strong>{selectedEdgeData.relationship}</strong> connection is significant.
-                      </p>
-                    </div>
-                    {onOpenCopilot && (
                       <button
-                        type="button"
-                        onClick={() => onOpenCopilot(`Explain the significance of the ${selectedEdgeData.relationship} connection and its corroborating evidence.`)}
-                        className="entity-chat-btn"
-                        title="Open side chat for this connection"
+                        onClick={() => {
+                          setSelectedNodeData(null);
+                          setIsInspectorOpen(false);
+                        }}
+                        className="close-panel-btn"
+                        title="Close details panel"
                       >
-                        <span>Chat about this Link</span>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <line x1="5" y1="12" x2="19" y2="12" />
-                          <polyline points="12 5 19 12 12 19" />
-                        </svg>
+                        ✕
                       </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+                    </div>
 
-            {/* C. IDLE STATE */}
-            {!selectedNodeData && !selectedEdgeData && (
-              <div className="panel-idle-card">
-                <div className="idle-icon">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                </div>
-                <h4 className="idle-title">Select Network Element</h4>
-                <p className="idle-desc">
-                  Click any sphere node or relationship line to inspect its attributes, citations, and run AI Dossiers.
-                </p>
-              </div>
+                    <div className="panel-body">
+                      {/* Type & ID */}
+                      <div className="detail-row">
+                        <span className="detail-key">Entity Type:</span>
+                        <span
+                          className="entity-badge-pill"
+                          style={{
+                            color: ENTITY_CONFIG[selectedNodeData.type]?.color || "#0ea5e9",
+                            background: ENTITY_CONFIG[selectedNodeData.type]?.bg || "rgba(14, 165, 233, 0.12)",
+                          }}
+                        >
+                          {selectedNodeData.type}
+                        </span>
+                      </div>
+
+                      <div className="detail-row">
+                        <span className="detail-key">UUID:</span>
+                        <span className="detail-val font-mono">{selectedNodeData.id?.slice(0, 16)}...</span>
+                      </div>
+
+                      {/* Associated Cases */}
+                      <div className="associated-cases-block">
+                        <span className="detail-key">Associated Cases ({selectedNodeData.cases?.length || 0}):</span>
+                        {loadingNodeDetails ? (
+                          <div className="details-loading-spinner">Loading case associations...</div>
+                        ) : selectedNodeData.cases?.length > 0 ? (
+                          <div className="case-chips-wrap">
+                            {selectedNodeData.cases.map((c) => (
+                              <span key={c.case_id} className="case-chip font-mono">
+                                {c.case_number}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="no-data-text">Current case record</span>
+                        )}
+                      </div>
+
+                      {/* 1. Aliases */}
+                      {selectedNodeData.attributes?.aliases?.length > 0 && (
+                        <div className="entity-meta-section">
+                          <span className="meta-section-label">Known Aliases:</span>
+                          <div className="meta-chips-wrap">
+                            {selectedNodeData.attributes.aliases.map((alias, idx) => (
+                              <span key={idx} className="meta-chip alias-chip">
+                                {alias}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 2. Phone Numbers */}
+                      {selectedNodeData.attributes?.phone_numbers?.length > 0 && (
+                        <div className="entity-meta-section">
+                          <span className="meta-section-label">Phone Numbers:</span>
+                          <div className="meta-chips-wrap">
+                            {selectedNodeData.attributes.phone_numbers.map((phone, idx) => (
+                              <span key={idx} className="meta-chip phone-chip font-mono">
+                                {phone}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 3. Locations */}
+                      {selectedNodeData.attributes?.locations?.length > 0 && (
+                        <div className="entity-meta-section">
+                          <span className="meta-section-label">Known Locations:</span>
+                          <div className="meta-chips-wrap">
+                            {selectedNodeData.attributes.locations.map((loc, idx) => (
+                              <span key={idx} className="meta-chip location-chip">
+                                {loc}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 4. Vehicles */}
+                      {selectedNodeData.attributes?.vehicles?.length > 0 && (
+                        <div className="entity-meta-section">
+                          <span className="meta-section-label">Vehicles:</span>
+                          <div className="meta-chips-wrap">
+                            {selectedNodeData.attributes.vehicles.map((veh, idx) => (
+                              <span key={idx} className="meta-chip vehicle-chip font-mono">
+                                {veh}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 5. Organizations */}
+                      {selectedNodeData.attributes?.organizations?.length > 0 && (
+                        <div className="entity-meta-section">
+                          <span className="meta-section-label">Affiliated Organizations:</span>
+                          <div className="meta-chips-wrap">
+                            {selectedNodeData.attributes.organizations.map((org, idx) => (
+                              <span key={idx} className="meta-chip org-chip">
+                                {org}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 6. Source Documents */}
+                      {selectedNodeData.attributes?.source_documents?.length > 0 && (
+                        <div className="entity-meta-section">
+                          <span className="meta-section-label">Source Evidence Documents:</span>
+                          <div className="meta-chips-wrap">
+                            {selectedNodeData.attributes.source_documents.map((doc, idx) => (
+                              <span key={idx} className="meta-chip doc-chip">
+                                {doc}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 7. Verbatim Evidence Snippets */}
+                      {selectedNodeData.attributes?.evidence_snippets?.length > 0 && (
+                        <div className="entity-meta-section">
+                          <span className="meta-section-label">Document Evidence Anchors:</span>
+                          <div className="evidence-snippets-stack">
+                            {selectedNodeData.attributes.evidence_snippets.slice(0, 3).map((snip, idx) => (
+                              <blockquote key={idx} className="evidence-quote-small">
+                                "{snip}"
+                              </blockquote>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 8. VERIFIED DIRECT CONNECTIONS & EVIDENCE */}
+                      <div className="entity-meta-section connections-meta-section">
+                        <div className="section-title-badge-row">
+                          <span className="meta-section-label">Verified Connections ({selectedNodeConnections.length}):</span>
+                        </div>
+
+                        {selectedNodeConnections.length > 0 ? (
+                          <div className="node-connections-list">
+                            {selectedNodeConnections.map((conn, idx) => (
+                              <div key={idx} className="node-connection-card">
+                                <div className="connection-header-row">
+                                  <span className="connection-rel-tag">
+                                    {conn.isOut ? "➔" : "⬅"} {conn.relationship}
+                                  </span>
+                                  {conn.confidence && (
+                                    <span className="connection-conf-badge">
+                                      {Math.round(conn.confidence * 100)}%
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="connection-target-row">
+                                  <span className="target-indicator">•</span>
+                                  <button
+                                    type="button"
+                                    className="target-entity-link"
+                                    onClick={() => {
+                                      const targetNode = nodes.find((n) => n.id === conn.otherId);
+                                      if (targetNode) onNodeClick(null, targetNode);
+                                    }}
+                                    title="Click to inspect this entity"
+                                  >
+                                    {conn.otherName}
+                                  </button>
+                                  <span className="target-type-chip">{conn.otherType}</span>
+                                </div>
+                                {conn.evidenceSnippet && (
+                                  <blockquote className="connection-snippet">
+                                    "{conn.evidenceSnippet}"
+                                  </blockquote>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="no-data-text">No direct connections recorded in current view.</span>
+                        )}
+                      </div>
+
+                      {/* 9. AI SIDE CHAT INQUIRY */}
+                      <div className="ai-entity-chat-card">
+                        <div className="entity-chat-content">
+                          <div className="entity-chat-badge">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                            </svg>
+                            <span>Ask AI Assistant</span>
+                          </div>
+                          <p className="entity-chat-desc">
+                            Ask AI about <strong>{selectedNodeData.canonical_name || selectedNodeData.name}</strong>, motives, and evidence.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenNodeChat()}
+                          className="entity-chat-btn"
+                          title="Open chat for this entity"
+                        >
+                          <span>Chat about this Entity</span>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                            <polyline points="12 5 19 12 12 19" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* B. RELATIONSHIP EVIDENCE PANEL */}
+                {selectedEdgeData && !selectedNodeData && (
+                  <div className="panel-card">
+                    <div className="panel-header">
+                      <div className="panel-title-group">
+                        <span className="panel-type-label">Relationship Evidence</span>
+                        <h3 className="panel-entity-name">{selectedEdgeData.relationship}</h3>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedEdgeData(null);
+                          setIsInspectorOpen(false);
+                        }}
+                        className="close-panel-btn"
+                        title="Close panel"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div className="panel-body">
+                      <div className="detail-row">
+                        <span className="detail-key">Status:</span>
+                        <span className={`status-pill-small ${getStatusBadge(selectedEdgeData.status).className}`}>
+                          {selectedEdgeData.status}
+                        </span>
+                      </div>
+
+                      <div className="detail-row">
+                        <span className="detail-key">Confidence:</span>
+                        <span className="detail-val font-mono">
+                          {Math.round((selectedEdgeData.confidence || 1) * 100)}%
+                        </span>
+                      </div>
+
+                      {selectedEdgeData.source_document_id && (
+                        <div className="detail-row">
+                          <span className="detail-key">Source Doc ID:</span>
+                          <span className="detail-val font-mono">
+                            {selectedEdgeData.source_document_id.slice(0, 14)}...
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Verbatim Snippet */}
+                      <div className="evidence-snippet-section">
+                        <span className="snippet-heading">Verbatim Evidence Anchor:</span>
+                        {loadingEdgeEvidence ? (
+                          <div className="details-loading-spinner">Retrieving evidence text...</div>
+                        ) : selectedEdgeData.evidence_snippet ? (
+                          <blockquote className="evidence-quote">
+                            "{selectedEdgeData.evidence_snippet}"
+                          </blockquote>
+                        ) : (
+                          <span className="no-snippet-text">No verbatim text anchor cited.</span>
+                        )}
+                      </div>
+
+                      {/* AI SIDE CHAT INQUIRY */}
+                      <div className="ai-entity-chat-card">
+                        <div className="entity-chat-content">
+                          <div className="entity-chat-badge">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                            </svg>
+                            <span>Ask AI Assistant</span>
+                          </div>
+                          <p className="entity-chat-desc">
+                            Ask AI why this <strong>{selectedEdgeData.relationship}</strong> connection is significant.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenNodeChat()}
+                          className="entity-chat-btn"
+                          title="Open chat for this connection"
+                        >
+                          <span>Chat about this Link</span>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                            <polyline points="12 5 19 12 12 19" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* C. IDLE STATE */}
+                {!selectedNodeData && !selectedEdgeData && (
+                  <div className="panel-idle-card">
+                    <div className="idle-icon">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                      </svg>
+                    </div>
+                    <h4 className="idle-title">Select Network Element</h4>
+                    <p className="idle-desc">
+                      Click any sphere node or relationship line to inspect its attributes, citations, and run AI Dossiers.
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </aside>
         )}
@@ -4031,6 +4300,298 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+
+        /* In-Sidebar Node AI Chat Panel */
+        .node-chat-panel {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          min-height: 520px;
+          background: #ffffff;
+        }
+
+        .node-chat-header {
+          padding: 0.85rem 1rem 0.65rem 1rem;
+          background: #f8fafc;
+          border-bottom: 1px solid #e2e8f0;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          flex-shrink: 0;
+        }
+
+        .node-chat-header-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .node-chat-back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.25rem 0.6rem;
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          color: #2563eb;
+          font-size: 0.75rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .node-chat-back-btn:hover {
+          background: #eff6ff;
+          border-color: #93c5fd;
+        }
+
+        .node-chat-title-box {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .node-chat-badge-row {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+        }
+
+        .node-chat-sparkle-badge {
+          font-size: 0.65rem;
+          font-weight: 800;
+          color: #2563eb;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
+        .node-chat-type-pill {
+          font-size: 0.62rem;
+          font-weight: 700;
+          padding: 1px 6px;
+          border-radius: 4px;
+          text-transform: uppercase;
+        }
+
+        .node-chat-target-name {
+          font-size: 0.95rem;
+          font-weight: 750;
+          color: #0f172a;
+          margin: 0;
+          line-height: 1.25;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .node-chat-quick-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.35rem;
+          margin-top: 0.2rem;
+        }
+
+        .node-quick-chip {
+          font-size: 0.68rem;
+          font-weight: 600;
+          color: #334155;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          padding: 0.2rem 0.45rem;
+          border-radius: 5px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          white-space: nowrap;
+        }
+
+        .node-quick-chip:hover:not(:disabled) {
+          background: #eff6ff;
+          border-color: #93c5fd;
+          color: #1d4ed8;
+        }
+
+        .node-quick-chip:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .node-chat-messages-container {
+          flex: 1;
+          overflow-y: auto;
+          padding: 0.85rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+          background: #fcfdfe;
+        }
+
+        .node-chat-bubble-row {
+          display: flex;
+          gap: 0.45rem;
+          width: 100%;
+        }
+
+        .node-chat-bubble-row.user {
+          justify-content: flex-end;
+        }
+
+        .node-chat-bubble-row.assistant {
+          justify-content: flex-start;
+          align-items: flex-start;
+        }
+
+        .node-chat-avatar {
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+          color: #ffffff;
+          font-size: 0.6rem;
+          font-weight: 800;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          margin-top: 2px;
+          box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+        }
+
+        .node-chat-bubble {
+          max-width: 86%;
+          padding: 0.55rem 0.75rem;
+          font-size: 0.8rem;
+          line-height: 1.45;
+          border-radius: 8px;
+          word-break: break-word;
+        }
+
+        .node-chat-bubble.user {
+          background: #2563eb;
+          color: #ffffff;
+          border-bottom-right-radius: 2px;
+          font-weight: 500;
+          box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+        }
+
+        .node-chat-bubble.assistant {
+          background: #ffffff;
+          color: #1e293b;
+          border: 1px solid #e2e8f0;
+          border-bottom-left-radius: 2px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+        }
+
+        .node-chat-bubble.assistant.loading {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: #64748b;
+          font-size: 0.74rem;
+          padding: 0.5rem 0.75rem;
+        }
+
+        .node-chat-dots {
+          display: flex;
+          align-items: center;
+          gap: 3px;
+        }
+
+        .node-chat-dots .dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: #2563eb;
+          animation: dotBounce 1.2s infinite ease-in-out;
+        }
+
+        .node-chat-dots .dot:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+
+        .node-chat-dots .dot:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+
+        @keyframes dotBounce {
+          0%, 80%, 100% {
+            transform: scale(0.6);
+            opacity: 0.5;
+          }
+          40% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
+        .loading-label {
+          font-size: 0.72rem;
+          font-style: italic;
+        }
+
+        .node-chat-input-bar {
+          padding: 0.65rem 0.85rem;
+          background: #ffffff;
+          border-top: 1px solid #e2e8f0;
+          flex-shrink: 0;
+        }
+
+        .node-chat-input-form {
+          display: flex;
+          align-items: center;
+          gap: 0.45rem;
+          position: relative;
+        }
+
+        .node-chat-input-field {
+          flex: 1;
+          background: #f8fafc;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          padding: 0.5rem 0.65rem;
+          font-size: 0.78rem;
+          color: #0f172a;
+          outline: none;
+          transition: all 0.15s ease;
+        }
+
+        .node-chat-input-field:focus {
+          background: #ffffff;
+          border-color: #2563eb;
+          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+        }
+
+        .node-chat-input-field::placeholder {
+          color: #94a3b8;
+          font-size: 0.75rem;
+        }
+
+        .node-chat-send-btn {
+          width: 34px;
+          height: 34px;
+          border-radius: 8px;
+          background: #2563eb;
+          color: #ffffff;
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          flex-shrink: 0;
+        }
+
+        .node-chat-send-btn:hover:not(:disabled) {
+          background: #1d4ed8;
+          transform: translateY(-1px);
+        }
+
+        .node-chat-send-btn:disabled {
+          background: #e2e8f0;
+          color: #94a3b8;
+          cursor: not-allowed;
+          transform: none;
         }
 
         .panel-idle-card {
