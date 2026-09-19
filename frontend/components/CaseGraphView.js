@@ -2369,10 +2369,6 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
                   <path d="M12 2a10 10 0 0 1 10 10" />
                 </svg>
               </span>
-            ) : savedAiStatus.hasSavedReport && !savedAiStatus.isNetworkChanged ? (
-              <span className="ai-status-dot saved-dot" />
-            ) : savedAiStatus.hasSavedReport && savedAiStatus.isNetworkChanged ? (
-              <span className="ai-status-dot changed-dot" />
             ) : null}
             <span>
               {analyzingAi
@@ -2729,167 +2725,32 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
                     )}
                   </div>
 
-                  {/* 9. AI DOUBT CLARIFIER SECTION */}
-                  <div className="ai-doubt-clarifier-section">
-                    <div className="clarifier-header">
-                      <div className="clarifier-badge">
+                  {/* 9. AI SIDE CHAT INQUIRY */}
+                  <div className="ai-entity-chat-card">
+                    <div className="entity-chat-content">
+                      <div className="entity-chat-badge">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5">
                           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                         </svg>
-                        <span>Clarify Doubts with AI</span>
+                        <span>Ask AI Assistant</span>
                       </div>
-                      {onOpenCopilot && (
-                        <button
-                          type="button"
-                          onClick={onOpenCopilot}
-                          className="open-assistant-btn"
-                          title="Open full conversation in Investigation Assistant"
-                        >
-                          Full Chat ↗
-                        </button>
-                      )}
+                      <p className="entity-chat-desc">
+                        Ask AI about <strong>{selectedNodeData.canonical_name || selectedNodeData.name}</strong>, motives, and evidence.
+                      </p>
                     </div>
-
-                    <p className="clarifier-desc">
-                      Ask AI anything about <strong>{selectedNodeData.canonical_name || selectedNodeData.name}</strong>, its motives, evidence, or ties.
-                    </p>
-
-                    {/* Quick Clarification Chips */}
-                    <div className="doubt-quick-chips">
+                    {onOpenCopilot && (
                       <button
                         type="button"
-                        className="doubt-chip"
-                        onClick={() => handleClarifyDoubt(`What is the direct forensic evidence against this entity?`)}
-                        disabled={clarifyingAi}
+                        onClick={() => onOpenCopilot(`What is known about ${selectedNodeData.canonical_name || selectedNodeData.name} and what evidence connects them?`)}
+                        className="entity-chat-btn"
+                        title="Open side chat assistant"
                       >
-                        🔍 Evidence against entity
+                        <span>Chat about this Entity</span>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                          <polyline points="12 5 19 12 12 19" />
+                        </svg>
                       </button>
-                      <button
-                        type="button"
-                        className="doubt-chip"
-                        onClick={() => handleClarifyDoubt(`Explain the key relationships and motives connecting this entity to others in the case.`)}
-                        disabled={clarifyingAi}
-                      >
-                        🔗 Explain connections
-                      </button>
-                      <button
-                        type="button"
-                        className="doubt-chip"
-                        onClick={() => handleClarifyDoubt(`Are there any financial transactions or anomalies involving this entity?`)}
-                        disabled={clarifyingAi}
-                      >
-                        💳 Financial anomalies
-                      </button>
-                    </div>
-
-                    {/* Custom Question Input */}
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        handleClarifyDoubt();
-                      }}
-                      className="doubt-form-row"
-                    >
-                      <input
-                        type="text"
-                        value={doubtQuery}
-                        onChange={(e) => setDoubtQuery(e.target.value)}
-                        placeholder={`Ask AI a doubt about ${selectedNodeData.canonical_name || selectedNodeData.name}…`}
-                        disabled={clarifyingAi}
-                        className="doubt-input"
-                      />
-                      <button
-                        type="submit"
-                        disabled={clarifyingAi || !doubtQuery.trim()}
-                        className="doubt-submit-btn"
-                      >
-                        {clarifyingAi ? "…" : "Ask"}
-                      </button>
-                    </form>
-
-                    {/* Loading State */}
-                    {clarifyingAi && (
-                      <div className="doubt-thinking-box">
-                        <span className="mini-spin" />
-                        <span>Consulting case files & relationship graph…</span>
-                      </div>
-                    )}
-
-                    {/* Error State */}
-                    {aiClarificationError && (
-                      <div className="doubt-error-box">{aiClarificationError}</div>
-                    )}
-
-                    {/* Answer Card */}
-                    {aiClarification && (
-                      <div className="doubt-result-card">
-                        <div className="result-header">
-                          <span className="result-tag">AI Clarification</span>
-                          <button
-                            type="button"
-                            onClick={() => setAiClarification(null)}
-                            className="result-dismiss-btn"
-                            title="Dismiss answer"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                        <p className="result-question">“{aiClarification.question}”</p>
-                        <div className="result-answer-body">{aiClarification.answer}</div>
-                        <div className="result-footer-evidence">
-                          <span>🛡️ Grounded in Verified Case Evidence</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* AI NODE DOSSIER ACTION */}
-                  <div className="ai-node-action-box">
-                    <button
-                      onClick={() => handleRunAiAnalysis("node", selectedNodeData.id)}
-                      className="ai-node-analyze-btn"
-                      disabled={analyzingAi}
-                      title="Synthesize 2-hop criminal intelligence dossier for this entity"
-                    >
-                      {analyzingAi && (
-                        <span className="ai-spark-icon">
-                          <svg className="spinning" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-                            <path d="M12 2a10 10 0 0 1 10 10" />
-                          </svg>
-                        </span>
-                      )}
-                      <span>{analyzingAi ? "Synthesizing Dossier..." : "AI Intelligence Dossier"}</span>
-                    </button>
-                  </div>
-
-                  {/* EXPAND CONNECTIONS ACTION */}
-                  <div className="expansion-action-box">
-                    <button
-                      onClick={handleExpandConnections}
-                      className="expand-connections-btn"
-                      disabled={expanding}
-                    >
-                      {expanding ? (
-                        <>
-                          <span className="mini-spin" />
-                          <span>Querying 1-Hop Network...</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="3" />
-                            <path d="M12 3v3m0 12v3m9-9h-3m-12 0H3" />
-                          </svg>
-                          <span>Expand Connections</span>
-                        </>
-                      )}
-                    </button>
-
-                    {expandFeedback && (
-                      <div className={`feedback-banner banner-${expandFeedback.type}`}>
-                        {expandFeedback.text}
-                      </div>
                     )}
                   </div>
                 </div>
@@ -2954,104 +2815,32 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
                     )}
                   </div>
 
-                  {/* AI DOUBT CLARIFIER FOR RELATIONSHIP */}
-                  <div className="ai-doubt-clarifier-section">
-                    <div className="clarifier-header">
-                      <div className="clarifier-badge">
+                  {/* AI SIDE CHAT INQUIRY */}
+                  <div className="ai-entity-chat-card">
+                    <div className="entity-chat-content">
+                      <div className="entity-chat-badge">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5">
                           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                         </svg>
-                        <span>Clarify Doubts with AI</span>
+                        <span>Ask AI Assistant</span>
                       </div>
-                      {onOpenCopilot && (
-                        <button
-                          type="button"
-                          onClick={onOpenCopilot}
-                          className="open-assistant-btn"
-                          title="Open full conversation in Investigation Assistant"
-                        >
-                          Full Chat ↗
-                        </button>
-                      )}
+                      <p className="entity-chat-desc">
+                        Ask AI why this <strong>{selectedEdgeData.relationship}</strong> connection is significant.
+                      </p>
                     </div>
-
-                    <p className="clarifier-desc">
-                      Clarify why this <strong>{selectedEdgeData.relationship}</strong> connection is significant and its corroborating evidence.
-                    </p>
-
-                    <div className="doubt-quick-chips">
+                    {onOpenCopilot && (
                       <button
                         type="button"
-                        className="doubt-chip"
-                        onClick={() => handleClarifyDoubt(`Why is this ${selectedEdgeData.relationship} connection crucial to the investigation?`)}
-                        disabled={clarifyingAi}
+                        onClick={() => onOpenCopilot(`Explain the significance of the ${selectedEdgeData.relationship} connection and its corroborating evidence.`)}
+                        className="entity-chat-btn"
+                        title="Open side chat for this connection"
                       >
-                        🔍 Why is this link crucial?
+                        <span>Chat about this Link</span>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                          <polyline points="12 5 19 12 12 19" />
+                        </svg>
                       </button>
-                      <button
-                        type="button"
-                        className="doubt-chip"
-                        onClick={() => handleClarifyDoubt(`What specific evidence or testimony supports this ${selectedEdgeData.relationship} link?`)}
-                        disabled={clarifyingAi}
-                      >
-                        📄 Corroborating evidence
-                      </button>
-                    </div>
-
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        handleClarifyDoubt();
-                      }}
-                      className="doubt-form-row"
-                    >
-                      <input
-                        type="text"
-                        value={doubtQuery}
-                        onChange={(e) => setDoubtQuery(e.target.value)}
-                        placeholder="Ask AI a doubt about this connection…"
-                        disabled={clarifyingAi}
-                        className="doubt-input"
-                      />
-                      <button
-                        type="submit"
-                        disabled={clarifyingAi || !doubtQuery.trim()}
-                        className="doubt-submit-btn"
-                      >
-                        {clarifyingAi ? "…" : "Ask"}
-                      </button>
-                    </form>
-
-                    {clarifyingAi && (
-                      <div className="doubt-thinking-box">
-                        <span className="mini-spin" />
-                        <span>Analyzing connection evidence & testimony…</span>
-                      </div>
-                    )}
-
-                    {aiClarificationError && (
-                      <div className="doubt-error-box">{aiClarificationError}</div>
-                    )}
-
-                    {aiClarification && (
-                      <div className="doubt-result-card">
-                        <div className="result-header">
-                          <span className="result-tag">AI Clarification</span>
-                          <button
-                            type="button"
-                            onClick={() => setAiClarification(null)}
-                            className="result-dismiss-btn"
-                            title="Dismiss answer"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                        <p className="result-question">“{aiClarification.question}”</p>
-                        <div className="result-answer-body">{aiClarification.answer}</div>
-                        <div className="result-footer-evidence">
-                          <span>🛡️ Grounded in Verified Case Evidence</span>
-                        </div>
-                      </div>
                     )}
                   </div>
                 </div>
@@ -4173,8 +3962,8 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
           line-height: 1.35;
         }
 
-        /* AI Doubt Clarifier Section in Inspector */
-        .ai-doubt-clarifier-section {
+        /* AI Entity Side Chat Card in Inspector */
+        .ai-entity-chat-card {
           margin-top: 1rem;
           padding: 0.85rem;
           background: #f8fafc;
@@ -4182,210 +3971,66 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
           border-radius: 10px;
           display: flex;
           flex-direction: column;
-          gap: 0.55rem;
-        }
-
-        .clarifier-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 0.5rem;
-        }
-
-        .clarifier-badge {
-          display: flex;
-          align-items: center;
-          gap: 0.4rem;
-          font-size: 0.72rem;
-          font-weight: 750;
-          color: #1d4ed8;
-        }
-
-        .open-assistant-btn {
-          background: #ffffff;
-          border: 1px solid #cbd5e1;
-          color: #2563eb;
-          font-size: 0.64rem;
-          font-weight: 700;
-          padding: 2px 7px;
-          border-radius: 4px;
-          cursor: pointer;
-          transition: all 0.15s ease;
-        }
-
-        .open-assistant-btn:hover {
-          background: #2563eb;
-          color: #ffffff;
-          border-color: #2563eb;
-        }
-
-        .clarifier-desc {
-          font-size: 0.71rem;
-          color: #64748b;
-          margin: 0;
-          line-height: 1.4;
-        }
-
-        .doubt-quick-chips {
-          display: flex;
-          flex-direction: column;
-          gap: 0.3rem;
-        }
-
-        .doubt-chip {
-          display: block;
-          text-align: left;
-          padding: 0.35rem 0.6rem;
-          background: #ffffff;
-          border: 1px solid #e2e8f0;
-          border-radius: 6px;
-          font-size: 0.7rem;
-          font-weight: 600;
-          color: #1e293b;
-          cursor: pointer;
-          transition: all 0.15s ease;
-        }
-
-        .doubt-chip:hover:not(:disabled) {
-          background: #eff6ff;
-          border-color: #bfdbfe;
-          color: #1d4ed8;
-          transform: translateX(2px);
-        }
-
-        .doubt-form-row {
-          display: flex;
-          gap: 0.35rem;
-          margin-top: 0.2rem;
-        }
-
-        .doubt-input {
-          flex: 1;
-          min-width: 0;
-          height: 32px;
-          padding: 0 0.65rem;
-          background: #ffffff;
-          border: 1px solid #cbd5e1;
-          border-radius: 6px;
-          font-size: 0.73rem;
-          color: #0f172a;
-          outline: none;
+          gap: 0.65rem;
           transition: border-color 0.15s ease;
         }
 
-        .doubt-input:focus {
-          border-color: #2563eb;
-          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+        .ai-entity-chat-card:hover {
+          border-color: #cbd5e1;
         }
 
-        .doubt-submit-btn {
-          height: 32px;
-          padding: 0 0.75rem;
+        .entity-chat-content {
+          display: flex;
+          flex-direction: column;
+          gap: 0.35rem;
+        }
+
+        .entity-chat-badge {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          font-size: 0.74rem;
+          font-weight: 750;
+          color: #1d4ed8;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+        }
+
+        .entity-chat-desc {
+          font-size: 0.76rem;
+          color: #475569;
+          margin: 0;
+          line-height: 1.45;
+        }
+
+        .entity-chat-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.5rem;
+          width: 100%;
+          padding: 0.55rem 0.85rem;
           background: #2563eb;
           color: #ffffff;
           border: none;
-          border-radius: 6px;
-          font-size: 0.72rem;
-          font-weight: 750;
+          border-radius: 7px;
+          font-size: 0.75rem;
+          font-weight: 700;
           cursor: pointer;
           transition: all 0.15s ease;
-          flex-shrink: 0;
+          box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
         }
 
-        .doubt-submit-btn:hover:not(:disabled) {
+        .entity-chat-btn:hover {
           background: #1d4ed8;
+          transform: translateY(-1px);
+          box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
         }
 
-        .doubt-submit-btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .doubt-thinking-box {
-          display: flex;
-          align-items: center;
-          gap: 0.4rem;
-          padding: 0.45rem 0.65rem;
-          background: #eff6ff;
-          border: 1px solid #bfdbfe;
-          border-radius: 6px;
-          font-size: 0.7rem;
-          color: #1d4ed8;
-          font-weight: 600;
-        }
-
-        .doubt-error-box {
-          padding: 0.45rem 0.65rem;
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          border-radius: 6px;
-          font-size: 0.7rem;
-          color: #dc2626;
-        }
-
-        .doubt-result-card {
-          padding: 0.65rem 0.75rem;
-          background: #ffffff;
-          border: 1px solid #bfdbfe;
-          border-radius: 8px;
-          display: flex;
-          flex-direction: column;
-          gap: 0.4rem;
-          box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08);
-        }
-
-        .result-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-
-        .result-tag {
-          font-size: 0.62rem;
-          font-weight: 800;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          color: #2563eb;
-        }
-
-        .result-dismiss-btn {
-          background: none;
-          border: none;
-          padding: 0;
-          color: #94a3b8;
-          font-size: 0.75rem;
-          cursor: pointer;
-        }
-
-        .result-dismiss-btn:hover {
-          color: #0f172a;
-        }
-
-        .result-question {
-          margin: 0;
-          font-size: 0.72rem;
-          font-weight: 650;
-          color: #475569;
-          font-style: italic;
-        }
-
-        .result-answer-body {
-          font-size: 0.78rem;
-          line-height: 1.5;
-          color: #0f172a;
-          white-space: pre-wrap;
-          word-break: break-word;
-        }
-
-        .result-footer-evidence {
-          display: flex;
-          align-items: center;
-          gap: 0.35rem;
-          font-size: 0.6rem;
-          font-weight: 700;
-          color: #15803d;
-          padding-top: 0.3rem;
-          border-top: 1px dashed #e2e8f0;
+        .entity-chat-btn span {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .panel-idle-card {
@@ -4731,21 +4376,6 @@ function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
         }
 
 
-        .ai-status-dot {
-          width: 7px;
-          height: 7px;
-          border-radius: 50%;
-          display: inline-block;
-          margin-right: 2px;
-        }
-        .ai-status-dot.saved-dot {
-          background: #10b981;
-          box-shadow: 0 0 6px #10b981;
-        }
-        .ai-status-dot.changed-dot {
-          background: #f59e0b;
-          box-shadow: 0 0 6px #f59e0b;
-        }
         .ai-header-actions {
           display: flex;
           align-items: center;

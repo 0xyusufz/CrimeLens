@@ -61,6 +61,7 @@ export default function CaseDetailsPage() {
   // Workspace Tab: "graph" | "documents" | "path" | "insights"
   const [activeTab, setActiveTab] = useState("graph");
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const [copilotInitialQuery, setCopilotInitialQuery] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Case data states
@@ -646,7 +647,10 @@ export default function CaseDetailsPage() {
                       key={graphRefreshKey}
                       caseId={caseId}
                       caseTitle={caseData?.title}
-                      onOpenCopilot={() => setIsCopilotOpen(true)}
+                      onOpenCopilot={(q) => {
+                        if (typeof q === "string" && q) setCopilotInitialQuery(q);
+                        setIsCopilotOpen(true);
+                      }}
                     />
                   </section>
                 )}
@@ -1005,6 +1009,7 @@ export default function CaseDetailsPage() {
                         caseId={caseId}
                         onClose={() => setIsCopilotOpen(false)}
                         isSidebar={true}
+                        initialQuery={copilotInitialQuery}
                       />
                     </aside>
                   </>

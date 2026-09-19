@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { apiClient } from "../lib/apiClient";
 import CrimeLensLogo from "./CrimeLensLogo";
 
-export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
+export default function CaseCopilotView({ caseId, onClose, isSidebar = true, initialQuery = "" }) {
   const [documents, setDocuments] = useState([]);
   const [messages, setMessages] = useState([
     {
@@ -14,9 +14,15 @@ export default function CaseCopilotView({ caseId, onClose, isSidebar = true }) {
       referencedDocs: [],
     },
   ]);
-  const [inputQuery, setInputQuery] = useState("");
+  const [inputQuery, setInputQuery] = useState(initialQuery || "");
   const [isQuerying, setIsQuerying] = useState(false);
   const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    if (initialQuery) {
+      setInputQuery(initialQuery);
+    }
+  }, [initialQuery]);
 
   // Fetch registered case evidence documents
   const fetchCaseDocuments = useCallback(async () => {
