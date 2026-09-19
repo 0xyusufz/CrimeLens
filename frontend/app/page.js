@@ -544,9 +544,9 @@ export function CategoryFilterDropdown({
 }
 
 export const CASE_STATUS_OPTIONS = [
-  { id: "ACTIVE", label: "Active", dotColor: "#2563eb", textColor: "#1d4ed8", bg: "#eff6ff" },
-  { id: "ON_HOLD", label: "On Hold", dotColor: "#d97706", textColor: "#b45309", bg: "#fffbeb" },
-  { id: "SOLVED", label: "Solved", dotColor: "#059669", textColor: "#047857", bg: "#ecfdf5" },
+  { id: "ACTIVE", label: "Active", dotColor: "#38bdf8", textColor: "#ffffff", bg: "#0f172a" },
+  { id: "ON_HOLD", label: "On Hold", dotColor: "#fbbf24", textColor: "#ffffff", bg: "#0f172a" },
+  { id: "SOLVED", label: "Solved", dotColor: "#34d399", textColor: "#ffffff", bg: "#0f172a" },
 ];
 
 function CaseStatusDropdown({ value, onChange, disabled }) {
@@ -600,11 +600,12 @@ function CaseStatusDropdown({ value, onChange, disabled }) {
         onClick={handleToggle}
         disabled={disabled}
         title="Change Case Status"
+        style={{
+          background: "#ffffff",
+          color: "#0f172a",
+          border: isOpen ? "1px solid #2563eb" : "1px solid #cbd5e1",
+        }}
       >
-        <span
-          className="status-dropdown-dot"
-          style={{ backgroundColor: currentOption.dotColor }}
-        />
         <span className="status-dropdown-text">{currentOption.label}</span>
         <svg
           className={`status-dropdown-chevron ${isOpen ? "rotate" : ""}`}
@@ -644,10 +645,6 @@ function CaseStatusDropdown({ value, onChange, disabled }) {
                     setIsOpen(false);
                   }}
                 >
-                  <span
-                    className="status-dropdown-dot"
-                    style={{ backgroundColor: opt.dotColor }}
-                  />
                   <span className="status-dropdown-item-label">{opt.label}</span>
                   {isSelected && (
                     <svg
@@ -671,7 +668,7 @@ function CaseStatusDropdown({ value, onChange, disabled }) {
         </div>
       )}
 
-      <style>{`
+      <style jsx>{`
         .custom-status-dropdown-root {
           position: relative;
           display: inline-block;
@@ -685,14 +682,14 @@ function CaseStatusDropdown({ value, onChange, disabled }) {
           display: inline-flex;
           align-items: center;
           gap: 0.45rem;
-          height: 30px;
-          padding: 0 0.65rem;
-          border-radius: 6px;
+          height: 32px;
+          padding: 0 0.75rem;
+          border-radius: 7px;
           border: 1px solid #cbd5e1;
           background: #ffffff;
           color: #0f172a;
-          font-size: 0.74rem;
-          font-weight: 650;
+          font-size: 0.76rem;
+          font-weight: 600;
           cursor: pointer;
           transition: all 0.15s ease;
           box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -701,54 +698,38 @@ function CaseStatusDropdown({ value, onChange, disabled }) {
         }
 
         .status-dropdown-trigger:hover:not(:disabled) {
-          transform: translateY(-0.5px);
+          background: #f8fafc;
+          border-color: #94a3b8;
+          color: #0f172a;
           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
         }
 
-        .status-dropdown-trigger.status-variant-active {
-          background: #eff6ff;
-          border-color: #bfdbfe;
-          color: #1d4ed8;
-        }
-        .status-dropdown-trigger.status-variant-active:hover:not(:disabled) {
-          background: #dbeafe;
-          border-color: #93c5fd;
-        }
-
-        .status-dropdown-trigger.status-variant-on_hold {
-          background: #fffbeb;
-          border-color: #fde68a;
-          color: #b45309;
-        }
-        .status-dropdown-trigger.status-variant-on_hold:hover:not(:disabled) {
-          background: #fef3c7;
-          border-color: #fcd34d;
-        }
-
+        .status-dropdown-trigger.status-variant-active,
+        .status-dropdown-trigger.status-variant-on_hold,
         .status-dropdown-trigger.status-variant-solved {
-          background: #ecfdf5;
-          border-color: #a7f3d0;
-          color: #047857;
+          background: #ffffff;
+          border-color: #cbd5e1;
+          color: #0f172a;
         }
+
+        .status-dropdown-trigger.status-variant-active:hover:not(:disabled),
+        .status-dropdown-trigger.status-variant-on_hold:hover:not(:disabled),
         .status-dropdown-trigger.status-variant-solved:hover:not(:disabled) {
-          background: #d1fae5;
-          border-color: #6ee7b7;
+          background: #f8fafc;
+          border-color: #94a3b8;
+          color: #0f172a;
         }
 
         .status-dropdown-trigger.is-open {
-          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+          border-color: #2563eb !important;
+          background: #ffffff !important;
+          color: #0f172a !important;
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
         }
 
         .status-dropdown-trigger:disabled {
           opacity: 0.55;
           cursor: not-allowed;
-        }
-
-        .status-dropdown-dot {
-          width: 6.5px;
-          height: 6.5px;
-          border-radius: 50%;
-          flex-shrink: 0;
         }
 
         .status-dropdown-text {
@@ -758,24 +739,24 @@ function CaseStatusDropdown({ value, onChange, disabled }) {
         }
 
         .status-dropdown-chevron {
-          color: currentColor;
-          opacity: 0.7;
+          color: #64748b;
           transition: transform 0.18s ease;
           flex-shrink: 0;
         }
 
         .status-dropdown-chevron.rotate {
           transform: rotate(180deg);
+          color: #0f172a;
         }
 
         .status-dropdown-menu {
           position: absolute;
           right: 0;
-          min-width: 145px;
+          min-width: 140px;
           background: #ffffff;
-          border: 1.5px solid #cbd5e1;
+          border: 1px solid #e2e8f0;
           border-radius: 8px;
-          box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.14), 0 4px 8px -2px rgba(15, 23, 42, 0.06);
+          box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.1), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
           padding: 0.35rem;
           z-index: 999;
           animation: statusDropAnim 0.14s cubic-bezier(0.16, 1, 0.3, 1);
@@ -822,13 +803,13 @@ function CaseStatusDropdown({ value, onChange, disabled }) {
           align-items: center;
           gap: 0.5rem;
           width: 100%;
-          padding: 0.42rem 0.55rem;
+          padding: 0.45rem 0.6rem;
           border-radius: 6px;
           border: none;
           background: transparent;
           font-size: 0.76rem;
-          font-weight: 600;
-          color: #1e293b;
+          font-weight: 500;
+          color: #334155;
           cursor: pointer;
           text-align: left;
           transition: all 0.12s ease;
@@ -845,14 +826,10 @@ function CaseStatusDropdown({ value, onChange, disabled }) {
           font-weight: 700;
         }
 
-        .status-dropdown-item.status-item-on_hold.is-selected {
-          background: #fffbeb;
-          color: #b45309;
-        }
-
+        .status-dropdown-item.status-item-on_hold.is-selected,
         .status-dropdown-item.status-item-solved.is-selected {
-          background: #ecfdf5;
-          color: #047857;
+          background: #eff6ff;
+          color: #1d4ed8;
         }
 
         .status-dropdown-item-label {
@@ -862,7 +839,7 @@ function CaseStatusDropdown({ value, onChange, disabled }) {
         .status-dropdown-check {
           margin-left: auto;
           flex-shrink: 0;
-          color: currentColor;
+          color: #2563eb;
         }
       `}</style>
     </div>
@@ -1219,18 +1196,17 @@ export default function Dashboard() {
 
   return (
     <AuthLayout>
-      <div className="dashboard-root">
-        {/* FEEDBACK BANNER */}
-        {feedbackBanner && (
-          <div className={`notification-pill ${feedbackBanner.type === "error" ? "notif-error" : "notif-success"}`}>
-            <span>{feedbackBanner.text}</span>
-            <button onClick={() => setFeedbackBanner(null)}>✕</button>
+      <div className="dashboard-page-wrapper">
+        {/* FULL WIDTH DASHBOARD HERO BANNER (FLUSH AGAINST NAVBAR) */}
+        <div className="dashboard-hero-banner">
+          <div className="hero-banner-backdrop">
+            <div className="hero-banner-bg" />
+            <div className="hero-banner-overlay" />
           </div>
-        )}
-
-        {/* 1. CENTRALIZED HEADER */}
-        <header className="central-command-hero">
-          <h1 className="central-hero-title">Investigation Case Files</h1>
+          <div className="hero-banner-content">
+            {/* 1. CENTRALIZED HEADER */}
+            <header className="central-command-hero">
+              <h1 className="central-hero-title">Investigation Case Files</h1>
 
           <p className="central-hero-desc">
             Authorized departmental dossiers, evidence records, and criminal network intelligence.
@@ -1443,6 +1419,20 @@ export default function Dashboard() {
             </div>
           </section>
         )}
+          </div>
+        </div>
+
+        {/* 3. MAIN DASHBOARD CONTENT (MAX-WIDTH CONTAINER FOR CASES & MODALS) */}
+        <div className="dashboard-root">
+          {/* FEEDBACK BANNER */}
+          {feedbackBanner && (
+            <div className="dashboard-feedback-container">
+              <div className={`notification-pill ${feedbackBanner.type === "error" ? "notif-error" : "notif-success"}`}>
+                <span>{feedbackBanner.text}</span>
+                <button onClick={() => setFeedbackBanner(null)}>✕</button>
+              </div>
+            </div>
+          )}
 
         {/* 4. CONTENT AREA: ERROR / LOADING / EMPTY / GRID */}
         {errorState && (
@@ -1826,15 +1816,12 @@ export default function Dashboard() {
               <div className="delete-dialog-body">
                 {deleteError && <div className="modal-error-notice">{deleteError}</div>}
 
-                <div className="delete-warning-card">
-                  <p>
-                    Are you sure you want to permanently delete case record{" "}
-                    <strong>"{caseToDelete.title}"</strong> ({caseToDelete.case_number})?
-                  </p>
-                  <p className="delete-critical-notice">
-                    ⚠️ This action cannot be undone. All associated documents, extracted entities, relationships, and forensic ledger blocks for this case will be permanently removed.
-                  </p>
-                </div>
+                <p className="delete-confirm-text">
+                  Are you sure you want to delete <strong>"{caseToDelete.title}"</strong> ({caseToDelete.case_number})?
+                </p>
+                <p className="delete-sub-text">
+                  This action cannot be undone. All associated documents, entities, and case data will be permanently removed.
+                </p>
 
                 <div className="modal-action-buttons-bar">
                   <button
@@ -1851,25 +1838,40 @@ export default function Dashboard() {
                     className="modal-danger-confirm-btn"
                     disabled={deleteSubmitting}
                   >
-                    {deleteSubmitting ? "Deleting Case…" : "Confirm Permanent Deletion"}
+                    {deleteSubmitting ? "Deleting…" : "Delete Case"}
                   </button>
                 </div>
               </div>
             </div>
           </div>
         )}
+        </div>
 
         <style jsx>{`
+          .dashboard-page-wrapper {
+            width: 100%;
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+            padding: 0;
+          }
+
           .dashboard-root {
+            width: 100%;
             max-width: 1440px;
             margin: 0 auto;
-            padding: 1.5rem clamp(1.25rem, 3.5vw, 2.5rem) 4rem;
+            padding: 2rem clamp(1.25rem, 3.5vw, 2.5rem) 4rem;
             display: flex;
             flex-direction: column;
             gap: 1.75rem;
           }
 
           /* FEEDBACK NOTIFICATION */
+          .dashboard-feedback-container {
+            width: 100%;
+          }
+
           .notification-pill {
             display: flex;
             align-items: center;
@@ -1900,6 +1902,65 @@ export default function Dashboard() {
             font-size: 0.9rem;
           }
 
+          /* DASHBOARD HERO BANNER (100% FULL-WIDTH FLUSH DIRECTLY AGAINST NAVBAR) */
+          .dashboard-hero-banner {
+            position: relative;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            border-radius: 0;
+            background-color: #f8fafc;
+          }
+
+          .hero-banner-backdrop {
+            position: absolute;
+            inset: 0;
+            border-radius: 0;
+            overflow: hidden;
+            border: none;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+            pointer-events: none;
+            z-index: 1;
+          }
+
+          .hero-banner-bg {
+            position: absolute;
+            inset: 0;
+            background-image: url('/images/investigation-hero.jpg');
+            background-size: cover;
+            background-position: center 30%;
+            background-repeat: no-repeat;
+            filter: blur(2.5px);
+            transform: scale(1.03);
+            opacity: 0.92;
+          }
+
+          .hero-banner-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+              180deg,
+              rgba(255, 255, 255, 0.72) 0%,
+              rgba(248, 250, 252, 0.84) 50%,
+              rgba(241, 245, 249, 0.96) 100%
+            );
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+          }
+
+          .hero-banner-content {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3.25rem clamp(1.25rem, 3.5vw, 2.5rem) 2.25rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+          }
+
           /* 1. CENTRALIZED HEADER */
           .central-command-hero {
             display: flex;
@@ -1907,26 +1968,33 @@ export default function Dashboard() {
             align-items: center;
             justify-content: center;
             text-align: center;
-            max-width: 780px;
-            margin: 1rem auto 0;
+            max-width: 820px;
+            margin: 0 auto;
             padding: 0 1rem;
           }
 
           .central-hero-title {
             margin: 0;
-            font-size: clamp(1.65rem, 2.8vw, 2.2rem);
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            color: #0f172a;
-            line-height: 1.2;
+            font-family: 'Plus Jakarta Sans', var(--font-sans);
+            font-size: clamp(2.1rem, 3.4vw, 2.75rem);
+            font-weight: 850;
+            letter-spacing: -0.035em;
+            line-height: 1.15;
+            background: linear-gradient(180deg, #090e17 0%, #1e293b 88%, #334155 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: none;
           }
 
           .central-hero-desc {
-            margin: 0.55rem 0 1.25rem;
-            font-size: 0.9rem;
-            line-height: 1.5;
+            margin: 0.75rem 0 1.6rem;
+            font-size: 1.02rem;
+            line-height: 1.6;
             color: #475569;
-            max-width: 580px;
+            font-weight: 500;
+            max-width: 640px;
+            letter-spacing: -0.012em;
+            text-shadow: none;
           }
 
           .central-hero-actions {
@@ -1995,7 +2063,7 @@ export default function Dashboard() {
             width: 100%;
             display: flex;
             justify-content: center;
-            margin: 1.5rem auto 1.5rem;
+            margin: 1.5rem auto 0;
           }
 
           .unified-search-filter-box {
@@ -2004,11 +2072,13 @@ export default function Dashboard() {
             align-items: center;
             width: 100%;
             max-width: 820px;
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid #cbd5e1;
             border-radius: 16px;
             padding: 0.45rem 0.6rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
             gap: 0.6rem;
             transition: all 0.2s ease;
           }
@@ -2485,12 +2555,13 @@ export default function Dashboard() {
             align-self: flex-start;
             font-size: 0.7rem;
             font-weight: 750;
-            color: #ffffff;
-            background: #0f172a;
+            color: #1d4ed8;
+            background: #eff6ff;
             padding: 0.15rem 0.55rem;
-            border-radius: 5px;
-            border: 1.5px solid #0f172a;
-            letter-spacing: 0.03em;
+            border-radius: 6px;
+            border: 1px solid #bfdbfe;
+            letter-spacing: 0.04em;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.05);
           }
 
           .card-title-link {
@@ -2596,41 +2667,38 @@ export default function Dashboard() {
             display: inline-flex;
             align-items: center;
             gap: 0.45rem;
-            height: 34px;
+            height: 32px;
             padding: 0 0.75rem;
-            border-radius: 9px;
-            border: 1.5px solid #cbd5e1;
+            border-radius: 7px;
+            border: 1px solid #cbd5e1;
             background: #ffffff;
             color: #0f172a;
             font-size: 0.76rem;
-            font-weight: 650;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.15s ease;
             outline: none;
             user-select: none;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
           }
 
           .status-dropdown-trigger:hover:not(:disabled) {
             border-color: #94a3b8;
             background: #f8fafc;
+            color: #0f172a;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
           }
 
           .status-dropdown-trigger.is-open {
-            border-color: #0f172a !important;
+            border-color: #2563eb !important;
             background: #ffffff !important;
-            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+            color: #0f172a !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
           }
 
           .status-dropdown-trigger:disabled {
             opacity: 0.55;
             cursor: not-allowed;
-          }
-
-          .status-dropdown-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            flex-shrink: 0;
           }
 
           .status-dropdown-text {
@@ -2655,9 +2723,9 @@ export default function Dashboard() {
             z-index: 200;
             min-width: 130px;
             background: #ffffff;
-            border: 1.5px solid #0f172a;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.16), 0 4px 6px -2px rgba(15, 23, 42, 0.06);
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.1), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
             padding: 0.35rem;
             display: flex;
             flex-direction: column;
@@ -2667,7 +2735,7 @@ export default function Dashboard() {
 
           .status-dropdown-menu-up {
             bottom: calc(100% + 5px);
-            box-shadow: 0 -10px 25px -4px rgba(15, 23, 42, 0.16), 0 -4px 6px -2px rgba(15, 23, 42, 0.06);
+            box-shadow: 0 -10px 25px -4px rgba(15, 23, 42, 0.1), 0 -4px 6px -2px rgba(15, 23, 42, 0.04);
           }
 
           .status-dropdown-menu-down {
@@ -2705,9 +2773,9 @@ export default function Dashboard() {
             border-radius: 6px;
             border: none;
             background: transparent;
-            color: #1e293b;
+            color: #334155;
             font-size: 0.78rem;
-            font-weight: 600;
+            font-weight: 500;
             text-align: left;
             cursor: pointer;
             transition: all 0.12s ease;
@@ -2715,12 +2783,17 @@ export default function Dashboard() {
 
           .status-dropdown-item:hover {
             background: #f1f5f9;
+            color: #0f172a;
           }
 
           .status-dropdown-item.is-selected {
             background: #eff6ff;
             color: #1d4ed8;
             font-weight: 700;
+          }
+
+          .status-dropdown-item.is-selected .status-dropdown-check {
+            color: #2563eb;
           }
 
           .status-dropdown-item-label {
@@ -2731,6 +2804,7 @@ export default function Dashboard() {
           .status-dropdown-check {
             margin-left: auto;
             flex-shrink: 0;
+            color: #2563eb;
           }
 
           .delete-case-btn {
@@ -3046,21 +3120,23 @@ export default function Dashboard() {
             gap: 1rem;
           }
 
-          .delete-warning-card {
-            padding: 1rem;
-            border-radius: 8px;
-            background: #fffbeb;
-            border: 1px solid #fde68a;
-            color: #b45309;
-            font-size: 0.84rem;
+          .delete-confirm-text {
+            margin: 0;
+            font-size: 0.94rem;
+            color: #1e293b;
             line-height: 1.5;
           }
 
-          .delete-critical-notice {
-            margin: 0.5rem 0 0;
-            font-size: 0.76rem;
-            color: #b45309;
-            font-weight: 600;
+          .delete-confirm-text strong {
+            color: #0f172a;
+            font-weight: 700;
+          }
+
+          .delete-sub-text {
+            margin: 0;
+            font-size: 0.82rem;
+            color: #64748b;
+            line-height: 1.45;
           }
 
           .modal-danger-confirm-btn {

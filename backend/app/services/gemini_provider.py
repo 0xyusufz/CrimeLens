@@ -24,15 +24,19 @@ from app.models.case import Case
 from app.models.entity import Entity, EntityCaseLink
 from app.models.relationship import RelationshipStaging
 
+from app.models.document import Document
+from app.services.documents import stored_file_path
+
 load_dotenv()
 
 logger = logging.getLogger("crimelens.gemini")
 
 GEMINI_MODELS = [
-    "gemini-3.6-flash",
-    "gemini-3.8-flash",
     "gemini-3.5-flash",
+    "gemini-3.6-flash",
     "gemini-3-flash-preview",
+    "gemini-flash-latest",
+    "gemini-3.8-flash",
 ]
 
 
@@ -64,21 +68,22 @@ class GeminiIntelligenceEngine:
         # 2. Resilient fallback to Groq if Gemini free tier quota is exhausted
         groq_key = os.getenv("GROQ_API_KEY")
         if groq_key:
-            try:
-                from groq import Groq
-                g_client = Groq(api_key=groq_key)
-                g_res = g_client.chat.completions.create(
-                    model="openai/gpt-oss-20b",
-                    messages=[{"role": "user", "content": prompt_or_contents}],
-                    max_completion_tokens=2048,
-                    temperature=0.3,
-                    reasoning_effort="medium",
-                )
-                if g_res.choices and g_res.choices[0].message:
-                    self.model = "groq/openai/gpt-oss-20b (fallback)"
-                    return g_res.choices[0].message.content or ""
-            except Exception as g_err:
-                logger.error(f"Groq fallback failed: {g_err}")
+            for g_model in ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "openai/gpt-oss-20b"]:
+                try:
+                    from groq import Groq
+                    g_client = Groq(api_key=groq_key)
+                    g_res = g_client.chat.completions.create(
+                        model=g_model,
+                        messages=[{"role": "user", "content": prompt_or_contents}],
+                        max_completion_tokens=2048,
+                        temperature=0.3,
+                    )
+                    if g_res.choices and g_res.choices[0].message:
+                        self.model = f"groq/{g_model} (fallback)"
+                        return g_res.choices[0].message.content or ""
+                except Exception as g_err:
+                    logger.warning(f"Groq fallback with {g_model} failed: {g_err}. Trying next...")
+                    continue
 
         return "Intelligence synthesis currently unavailable due to rate limits. Please retry in a few moments."
 
@@ -347,6 +352,47 @@ CRITICAL INSTRUCTIONS:
 
         return parsed
 
+    def extract_case_documents_text(
+        self,
+        session: Session,
+        case_id: uuid.UUID,
+        max_chars_per_doc: int = 4000,
+    ) -> str:
+        """Extracts verbatim text excerpts from all case evidence documents for deep grounding."""
+        docs_stmt = select(Document).where(Document.case_id == case_id).order_by(Document.uploaded_at.asc())
+        documents = list(session.scalars(docs_stmt).all())
+        if not documents:
+            return "_No raw documents attached to this case file yet._"
+
+        sections = []
+        for doc in documents:
+            doc_file = stored_file_path(doc.id)
+            extracted_text = ""
+            if doc_file.exists():
+                fn_lower = doc.filename.lower()
+                try:
+                    if fn_lower.endswith(".pdf"):
+                        import pypdf
+                        reader = pypdf.PdfReader(str(doc_file))
+                        pages_text = []
+                        for page in reader.pages[:8]:
+                            t = page.extract_text() or ""
+                            if t.strip():
+                                pages_text.append(t.strip())
+                        extracted_text = "\n".join(pages_text)
+                    elif fn_lower.endswith((".txt", ".csv", ".json")):
+                        extracted_text = doc_file.read_text(encoding="utf-8", errors="replace")
+                except Exception as ex:
+                    logger.warning(f"Failed extracting text for {doc.filename}: {ex}")
+
+            cleaned_snippet = (extracted_text[:max_chars_per_doc] if extracted_text else "Binary/forensic document registered.").strip()
+            sections.append(
+                f"### FILE: {doc.filename}\n"
+                f"{cleaned_snippet}"
+            )
+
+        return "\n\n".join(sections)
+
     def chat_copilot(
         self,
         session: Session,
@@ -354,37 +400,89 @@ CRITICAL INSTRUCTIONS:
         question: str,
         chat_history: Optional[list[dict[str, str]]] = None,
     ) -> str:
-        """Interactive investigator Copilot query against the case tables and relationships."""
+        """Interactive investigator Copilot query against the case documents, tables, and relationships."""
         if not self.is_available():
             return "Gemini API key is not configured."
 
         case = session.get(Case, case_id)
         case_title = case.title if case else f"Case {case_id}"
+        case_number = getattr(case, "case_number", "N/A")
+        case_narrative = getattr(case, "narrative", "") or getattr(case, "description", "") or "No narrative provided."
+        case_location = getattr(case, "location", "Unspecified")
+        case_category = getattr(case, "category", "General Investigation")
+
+        docs_stmt = select(Document).where(Document.case_id == case_id).order_by(Document.uploaded_at.asc())
+        documents = list(session.scalars(docs_stmt).all())
+        files_list_md = "\n".join(
+            [f"{i}. **{d.filename}**" for i, d in enumerate(documents, 1)]
+        ) if documents else "No documents uploaded."
 
         tables = self.build_case_tables(session, case_id)
+        docs_text = self.extract_case_documents_text(session, case_id)
 
-        system_instruction = f"""You are CrimeLens AI Copilot, a senior intelligence analyst assistant.
-You have direct, real-time access to the case's verified Entity and Relationship Tables below:
+        system_instruction = f"""You are the CrimeLens AI Case Intelligence Assistant, working as an active pair-investigator with the Detective on this case: "{case_title}".
 
-### CASE ENTITIES ({tables['entities_count']} Total)
+### ACTIVE CASE DOSSIER
+- Case Title: {case_title}
+- Crime Classification: {case_category}
+- Jurisdiction / Location: {case_location}
+- Investigator Summary: {case_narrative}
+
+### REGISTERED CASE FILES ({len(documents)} Total Files Uploaded):
+{files_list_md}
+
+### CASE EVIDENTIARY DOCUMENTS (RAW TEXT & FINDINGS)
+{docs_text}
+
+### EXTRACTED NETWORK ENTITIES ({tables['entities_count']} Total)
 {tables['entities_table_md']}
 
-### CASE RELATIONSHIPS ({tables['relationships_count']} Total)
+### EXTRACTED NETWORK RELATIONSHIPS ({tables['relationships_count']} Total)
 {tables['relationships_table_md']}
 
-RULES:
-- Always base your answers strictly on the entities and relationships present in the tables above.
-- When explaining connections, cite the exact relationship type, confidence, and verbatim evidence snippets.
-- If asked about a person, vehicle, phone, or transaction, look up their exact connections across the table.
-- If an entity is not connected to another in the table, explicitly state that no direct link is recorded in the evidence.
-- Maintain an investigative, clear, and objective tone.
+### CRITICAL INVESTIGATOR RULES (STRICT COMPLIANCE REQUIRED):
+
+1. STRICT LANGUAGE REQUIREMENT (ALWAYS ENGLISH):
+   - You MUST ALWAYS respond in clean, fluent, professional English.
+   - Even if the user asks questions in Hinglish or Hindi (e.g., "bhai culprit kon lagta hai?", "kitne log involve hain?"), your reply MUST be entirely in clear, professional English.
+
+2. INPUT-AWARE ADAPTIVE RESPONSE LENGTH (REPLY MUCH WHEN NEEDED, REPLY LITTLE WHEN NOT):
+   - ALWAYS gauge the user's intent and calibrate your answer length accordingly:
+     * **Simple / Single-Fact Queries** (e.g., "Who was the victim?", "When was FIR lodged?", "Where was parcel booked?"):
+       -> Reply in **1 to 2 concise sentences**. Directly answer the question without fluff or unsolicited background.
+     * **Medium Queries / Lists / Summaries** (e.g., "What docs do we have?", "Summarize the case in brief", "What are the key clues?"):
+       -> Reply in **4 to 6 clean, structured bullet points**. Keep each point brief.
+     * **Deep Investigative / Deductive Queries** (e.g., "Who is the primary culprit and why?", "Break down the suspect's alibi vs evidence", "What are the timeline contradictions?"):
+       -> Provide a **thorough, methodical, evidence-backed breakdown**:
+          a) Person of Interest / Accused
+          b) Incriminating evidence vs alibis
+          c) Direct forensic proof vs circumstantial links
+          d) Missing evidence needed to prove guilt
+     * **Greetings & Small Talk** (e.g., "Hello", "Hi", "Good morning"):
+       -> Reply in **1 polite line**: "Hello Detective. How can I assist your investigation with {case_title} today?"
+
+3. CLEAN, POLISHED PRESENTATION (NO FLUFF OR ROBOTIC PREAMBLES):
+   - **Start directly with the answer**: Never waste space on boilerplate intros like "Certainly Detective, let me analyze the dossier for you..." or "As your senior intelligence assistant...".
+   - **No repetitive closing boilerplate**: Do not tack on generic sign-offs to every message.
+   - Use clean, well-spaced bullet points. Bold only crucial names, dates, or terms for fast scannability.
+   - Output must feel crisp, modern, and human-like — just like Claude or ChatGPT.
+
+4. STRICT CASE SCOPE & ZERO HALLUCINATION:
+   - Stay strictly within this case ("{case_title}").
+   - If the user asks something completely off-topic (unrelated to the case):
+     Politely decline in 1 line: "I am dedicated exclusively to investigating this case. Let's focus on the case evidence and documents."
+   - Never invent or fabricate evidence. If a fact is absent from the files, state: "The current evidence files do not contain records of that."
+
+5. EXACT FILE NAMES (NO HASHES / NO INTERNAL UUIDs):
+   - Always refer to case files by their exact human-readable names (e.g., `CORE POLICE DOCUMENT.pdf`, `FORENSIC DOCUMENTS.pdf`).
+   - NEVER output raw database UUIDs or SHA-256 hashes (do NOT say 'ff068970...' or 'Case ID {case_id}').
 """
 
         formatted_contents = []
         formatted_contents.append(f"SYSTEM CONTEXT:\n{system_instruction}\n")
 
         if chat_history:
-            for msg in chat_history[-6:]:  # Keep recent turns
+            for msg in chat_history[-8:]:  # Keep recent turns
                 role = msg.get("role", "user")
                 text = msg.get("content", "")
                 formatted_contents.append(f"{role.upper()}: {text}")

@@ -33,6 +33,7 @@ export default function CrimeLensLogo({
   size = 36,
   iconSize = null,
   withBadge = true,
+  color = null,
   className = "",
 }) {
   const calculatedIconSize = iconSize || Math.round(size * 0.62);
@@ -41,7 +42,7 @@ export default function CrimeLensLogo({
     return (
       <CrimeLensStar
         size={size}
-        color="#ffffff"
+        color={color || "#2563eb"}
         className={className}
       />
     );

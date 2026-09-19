@@ -833,8 +833,27 @@ function escapeHtmlForReport(str) {
     .replace(/'/g, "&#039;");
 }
 
+// Highlight specific important words (e.g. suspect names, key entities, critical threats) with a yellow highlighter mark
+function highlightImportantTerms(text, terms = []) {
+  if (!text || typeof text !== "string") return "";
+  const validTerms = [...terms]
+    .filter((t) => t && typeof t === "string" && t.trim().length > 1)
+    .map((t) => t.trim())
+    .sort((a, b) => b.length - a.length);
+
+  if (validTerms.length === 0) return text;
+
+  const escapedTerms = validTerms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const pattern = new RegExp(`(<[^>]+>)|\\b(${escapedTerms.join("|")})\\b`, "gi");
+
+  return text.replace(pattern, (match, tag, word) => {
+    if (tag) return tag; // preserve existing HTML tag untouched
+    return `<mark class="pdf-highlight">${word}</mark>`;
+  });
+}
+
 // Convert markdown to clean, semantic HTML elements for print output
-function convertMarkdownToPrintableHtml(markdown) {
+function convertMarkdownToPrintableHtml(markdown, importantTerms = []) {
   if (!markdown || typeof markdown !== "string") return "";
   const lines = markdown.split("\n");
   const htmlParts = [];
@@ -848,7 +867,11 @@ function convertMarkdownToPrintableHtml(markdown) {
     let escaped = escapeHtmlForReport(text);
     escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong class="pdf-bold">$1</strong>');
     escaped = escaped.replace(/\*([^*]+)\*/g, '<em class="pdf-italic">$1</em>');
+    escaped = escaped.replace(/==([^=]+)==/g, '<mark class="pdf-highlight">$1</mark>');
     escaped = escaped.replace(/`([^`]+)`/g, '<code class="pdf-code">$1</code>');
+    if (importantTerms.length > 0) {
+      escaped = highlightImportantTerms(escaped, importantTerms);
+    }
     return escaped;
   };
 
@@ -908,16 +931,33 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
   const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const reportId = "DOSSIER-" + (caseId ? String(caseId).slice(0, 8).toUpperCase() : "INTEL") + "-" + Math.floor(1000 + Math.random() * 9000);
 
+  // Extract key terms (suspect names, key entities, critical threats) to specifically highlight in yellow text
+  const poiNames = (analysis.potential_persons_of_interest || [])
+    .map((p) => p.name)
+    .filter(Boolean);
+  const keyEntities = (analysis.key_entities || [])
+    .map((e) => e.name)
+    .filter(Boolean);
+  const criticalThreatTerms = [
+    "CRITICAL THREAT",
+    "HIGH THREAT",
+    "CRITICAL",
+    "PRIMARY SUSPECT",
+    "PERPETRATOR",
+    "FLIGHT RISK"
+  ];
+  const importantTerms = [...new Set([...poiNames, ...keyEntities, ...criticalThreatTerms])];
+
   let summaryHtml = "";
   if (analysis.case_summary) {
     summaryHtml = `
       <section class="report-section">
         <div class="section-heading">
-          <span class="sec-num">01</span>
+          <span class="sec-num">01.</span>
           <h2>Executive Intelligence Summary</h2>
         </div>
-        <div class="summary-box">
-          <p class="summary-text">${escapeHtmlForReport(analysis.case_summary)}</p>
+        <div class="summary-content">
+          <p class="summary-text">${highlightImportantTerms(escapeHtmlForReport(analysis.case_summary), importantTerms)}</p>
         </div>
       </section>
     `;
@@ -928,25 +968,23 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
     poisHtml = `
       <section class="report-section">
         <div class="section-heading">
-          <span class="sec-num">02</span>
+          <span class="sec-num">02.</span>
           <h2>Identified Persons of Interest & Key Subjects</h2>
         </div>
-        <div class="poi-grid">
+        <div class="poi-list">
           ${analysis.potential_persons_of_interest.map((poi) => {
             const threat = (poi.threat_level || "MEDIUM").toUpperCase();
-            const threatBadgeClass = threat.includes("CRIT") ? "badge-critical" : threat.includes("HIGH") ? "badge-high" : "badge-medium";
+            const isHighOrCrit = threat.includes("CRITICAL") || threat.includes("HIGH");
             return `
-              <div class="poi-card ${threatBadgeClass}">
-                <div class="poi-card-header">
-                  <div class="poi-name-role">
-                    <span class="poi-name">${escapeHtmlForReport(poi.name)}</span>
-                    ${poi.role ? `<span class="poi-role">${escapeHtmlForReport(poi.role)}</span>` : ""}
-                  </div>
-                  <span class="threat-badge ${threatBadgeClass}">${escapeHtmlForReport(threat)} THREAT</span>
+              <div class="poi-entry">
+                <div class="poi-entry-header">
+                  <span class="poi-name"><mark class="pdf-highlight">${escapeHtmlForReport(poi.name)}</mark></span>
+                  ${poi.role ? `<span class="poi-role">— ${escapeHtmlForReport(poi.role)}</span>` : ""}
+                  <span class="threat-text">${isHighOrCrit ? `[<mark class="pdf-highlight">${escapeHtmlForReport(threat)} THREAT</mark>]` : `[${escapeHtmlForReport(threat)} THREAT]`}</span>
                 </div>
                 <div class="poi-body">
-                  <p class="poi-justification"><strong>Forensic Rationale:</strong> ${escapeHtmlForReport(poi.reason || poi.justification || "Identified key entity in criminal graph.")}</p>
-                  ${poi.evidence ? `<div class="poi-ev-box"><strong>Corroborating Evidence:</strong> "${escapeHtmlForReport(poi.evidence)}"</div>` : ""}
+                  <p class="poi-justification"><strong>Forensic Rationale:</strong> ${highlightImportantTerms(escapeHtmlForReport(poi.reason || poi.justification || "Identified key entity in criminal graph."), importantTerms)}</p>
+                  ${poi.evidence ? `<p class="poi-evidence"><strong>Corroborating Evidence:</strong> "${highlightImportantTerms(escapeHtmlForReport(poi.evidence), importantTerms)}"</p>` : ""}
                 </div>
               </div>
             `;
@@ -961,17 +999,14 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
     leadsHtml = `
       <section class="report-section">
         <div class="section-heading">
-          <span class="sec-num">03</span>
+          <span class="sec-num">03.</span>
           <h2>Actionable Investigative Leads & Next Steps</h2>
         </div>
-        <div class="leads-container">
-          ${analysis.investigative_leads.map((lead, idx) => `
-            <div class="lead-row">
-              <div class="lead-idx">${idx + 1}</div>
-              <div class="lead-content">${escapeHtmlForReport(lead)}</div>
-            </div>
+        <ol class="leads-list">
+          ${analysis.investigative_leads.map((lead) => `
+            <li class="lead-item">${highlightImportantTerms(escapeHtmlForReport(lead), importantTerms)}</li>
           `).join("")}
-        </div>
+        </ol>
       </section>
     `;
   }
@@ -981,15 +1016,15 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
     evidenceHtml = `
       <section class="report-section">
         <div class="section-heading">
-          <span class="sec-num">04</span>
+          <span class="sec-num">04.</span>
           <h2>Evidentiary Citations & Fact Verifications</h2>
         </div>
-        <div class="evidence-grid">
+        <div class="evidence-list">
           ${analysis.supporting_evidence.map((ev) => `
-            <div class="ev-card">
-              <div class="ev-claim">${escapeHtmlForReport(ev.claim || "Corroborated Fact")}</div>
-              <blockquote class="ev-quote">"${escapeHtmlForReport(ev.quote)}"</blockquote>
-              ${ev.source_document_id ? `<div class="ev-source">Source Doc Ref: ${escapeHtmlForReport(ev.source_document_id)}</div>` : ""}
+            <div class="ev-entry">
+              <div class="ev-claim">• <strong>Fact:</strong> ${highlightImportantTerms(escapeHtmlForReport(ev.claim || "Corroborated Fact"), importantTerms)}</div>
+              <blockquote class="ev-quote">"${highlightImportantTerms(escapeHtmlForReport(ev.quote), importantTerms)}"</blockquote>
+              ${ev.source_document_id ? `<div class="ev-source">Document Ref: ${escapeHtmlForReport(ev.source_document_id)}</div>` : ""}
             </div>
           `).join("")}
         </div>
@@ -1002,25 +1037,25 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
     anomaliesHtml = `
       <section class="report-section">
         <div class="section-heading heading-alert">
-          <span class="sec-num">05</span>
+          <span class="sec-num">05.</span>
           <h2>Evidentiary Inconsistencies & Anomalies</h2>
         </div>
-        <div class="anomaly-box">
-          <ul class="anomaly-list">
-            ${analysis.contradictions_or_anomalies.map((ano) => `<li>${escapeHtmlForReport(ano)}</li>`).join("")}
-          </ul>
-        </div>
+        <ul class="anomaly-list">
+          ${analysis.contradictions_or_anomalies.map((ano) => `
+            <li>${highlightImportantTerms(escapeHtmlForReport(ano), importantTerms)}</li>
+          `).join("")}
+        </ul>
       </section>
     `;
   }
 
   let dossierBodyHtml = "";
   if (analysis.dossier_markdown) {
-    const formatted = convertMarkdownToPrintableHtml(analysis.dossier_markdown);
+    const formatted = convertMarkdownToPrintableHtml(analysis.dossier_markdown, importantTerms);
     dossierBodyHtml = `
       <section class="report-section">
         <div class="section-heading">
-          <span class="sec-num">06</span>
+          <span class="sec-num">06.</span>
           <h2>Comprehensive Dossier Analysis & Detailed Intelligence</h2>
         </div>
         <div class="dossier-rendered-content">
@@ -1125,19 +1160,17 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
     /* Printable Document Container */
     .document-wrapper {
       max-width: 860px;
-      margin: 2rem auto 4rem auto;
+      margin: 1.5rem auto 3rem auto;
       background: #ffffff;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-      padding: 3rem 3.25rem;
+      padding: 2.5rem 3rem;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
     }
 
     /* Official Department Header */
     .report-header {
-      border-bottom: 2.5px solid #0f172a;
-      padding-bottom: 1.5rem;
-      margin-bottom: 2rem;
+      border-bottom: 1px solid #cbd5e1;
+      padding-bottom: 1.25rem;
+      margin-bottom: 1.5rem;
     }
 
     .agency-banner {
@@ -1154,54 +1187,48 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
     }
 
     .agency-logo-icon {
-      width: 44px;
-      height: 44px;
-      background: #0f172a;
-      color: #ffffff;
-      border-radius: 8px;
+      width: 38px;
+      height: 38px;
+      background: transparent !important;
+      border: 1.5px solid #0f172a;
+      border-radius: 6px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 900;
-      font-size: 1.3rem;
-      letter-spacing: -0.05em;
+      flex-shrink: 0;
     }
 
     .agency-titles h1 {
-      font-size: 1.15rem;
-      font-weight: 850;
-      color: #0f172a;
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: #000000;
       letter-spacing: 0.04em;
       text-transform: uppercase;
       line-height: 1.2;
     }
 
     .agency-titles p {
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: #2563eb;
-      letter-spacing: 0.08em;
+      font-size: 0.74rem;
+      font-weight: 750;
+      color: #475569;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
-      margin-top: 2px;
+      margin-top: 3px;
     }
 
     .security-badge {
       display: inline-block;
-      background: #fef2f2;
-      border: 1.5px solid #ef4444;
-      color: #b91c1c;
-      font-size: 0.68rem;
+      color: #475569;
+      font-size: 0.72rem;
       font-weight: 800;
-      letter-spacing: 0.06em;
-      padding: 0.35rem 0.75rem;
-      border-radius: 4px;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       text-align: right;
     }
 
     .case-title-row {
       margin-top: 1rem;
-      padding-top: 1rem;
+      padding-top: 0.75rem;
       border-top: 1px solid #e2e8f0;
       display: flex;
       justify-content: space-between;
@@ -1211,8 +1238,8 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
 
     .case-title-col h2 {
       font-size: 1.45rem;
-      font-weight: 850;
-      color: #0f172a;
+      font-weight: 900;
+      color: #000000;
       letter-spacing: -0.02em;
       line-height: 1.25;
     }
@@ -1220,12 +1247,11 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
     .case-meta-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 0.75rem 1.25rem;
+      gap: 0.75rem 1.5rem;
       margin-top: 1.25rem;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      padding: 0.85rem 1.15rem;
-      border-radius: 6px;
+      padding: 0.85rem 0;
+      border-top: 1px solid #cbd5e1;
+      border-bottom: 1px solid #cbd5e1;
     }
 
     .meta-item {
@@ -1235,275 +1261,185 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
     }
 
     .meta-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      color: #64748b;
+      font-size: 0.68rem;
+      font-weight: 750;
+      color: #475569;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
 
     .meta-value {
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: #0f172a;
+      font-size: 0.86rem;
+      font-weight: 750;
+      color: #000000;
       font-family: 'JetBrains Mono', monospace;
     }
 
     /* Section Styles */
     .report-section {
-      margin-bottom: 2rem;
+      margin-bottom: 1.75rem;
       page-break-inside: avoid;
       break-inside: avoid;
     }
 
     .section-heading {
       display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      padding-bottom: 0.45rem;
-      border-bottom: 1.5px solid #cbd5e1;
-      margin-bottom: 0.85rem;
-    }
-
-    .section-heading.heading-alert {
-      border-bottom-color: #f59e0b;
+      align-items: baseline;
+      gap: 0.5rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 0.75rem;
     }
 
     .sec-num {
-      background: #0f172a;
-      color: #ffffff;
-      font-size: 0.68rem;
+      color: #64748b;
+      font-size: 0.82rem;
       font-weight: 800;
-      padding: 0.15rem 0.45rem;
-      border-radius: 4px;
       font-family: 'JetBrains Mono', monospace;
     }
 
-    .heading-alert .sec-num {
-      background: #d97706;
-    }
-
     .section-heading h2 {
-      font-size: 0.96rem;
-      font-weight: 800;
-      color: #0f172a;
-      letter-spacing: 0.01em;
+      font-size: 0.98rem;
+      font-weight: 850;
+      color: #000000;
+      letter-spacing: 0.02em;
       text-transform: uppercase;
     }
 
-    .summary-box {
-      background: #f8fafc;
-      border-left: 4px solid #2563eb;
-      border-right: 1px solid #e2e8f0;
-      border-top: 1px solid #e2e8f0;
-      border-bottom: 1px solid #e2e8f0;
-      border-radius: 0 6px 6px 0;
-      padding: 0.95rem 1.25rem;
+    .summary-content {
+      padding: 0.25rem 0;
     }
 
     .summary-text {
       font-size: 0.88rem;
-      color: #1e293b;
+      color: #000000;
       line-height: 1.65;
-      font-weight: 500;
+      font-weight: 450;
     }
 
-    /* POI Cards */
-    .poi-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 0.75rem;
-    }
-
-    .poi-card {
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      padding: 0.85rem 1.15rem;
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    .poi-card.badge-critical {
-      border-left: 4px solid #dc2626;
-      background: #fffafa;
-    }
-
-    .poi-card.badge-high {
-      border-left: 4px solid #ea580c;
-      background: #fffbf7;
-    }
-
-    .poi-card.badge-medium {
-      border-left: 4px solid #2563eb;
-    }
-
-    .poi-card-header {
+    /* POI Entries */
+    .poi-list {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.45rem;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .poi-entry {
+      padding: 0.55rem 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .poi-entry:last-child {
+      border-bottom: none;
+    }
+
+    .poi-entry-header {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      flex-wrap: wrap;
     }
 
     .poi-name {
-      font-size: 0.92rem;
+      font-size: 0.95rem;
       font-weight: 800;
-      color: #0f172a;
+      color: #000000;
     }
 
     .poi-role {
-      font-size: 0.75rem;
+      font-size: 0.82rem;
       color: #475569;
       font-weight: 600;
-      margin-left: 0.5rem;
     }
 
-    .threat-badge {
-      font-size: 0.65rem;
+    .threat-text {
+      font-size: 0.74rem;
       font-weight: 800;
-      padding: 0.2rem 0.55rem;
-      border-radius: 4px;
-      letter-spacing: 0.04em;
-    }
-
-    .threat-badge.badge-critical {
-      background: #fee2e2;
-      color: #991b1b;
-      border: 1px solid #f87171;
-    }
-
-    .threat-badge.badge-high {
-      background: #ffedd5;
-      color: #9a3412;
-      border: 1px solid #fb923c;
-    }
-
-    .threat-badge.badge-medium {
-      background: #eff6ff;
-      color: #1e40af;
-      border: 1px solid #93c5fd;
+      margin-left: 0.4rem;
     }
 
     .poi-justification {
-      font-size: 0.82rem;
-      color: #334155;
-      line-height: 1.5;
+      font-size: 0.84rem;
+      color: #000000;
+      line-height: 1.55;
+      margin-top: 0.25rem;
     }
 
-    .poi-ev-box {
-      margin-top: 0.4rem;
-      font-size: 0.78rem;
-      color: #1e293b;
-      background: #f1f5f9;
-      padding: 0.35rem 0.65rem;
-      border-radius: 4px;
+    .poi-evidence {
+      font-size: 0.82rem;
+      color: #334155;
       font-style: italic;
+      margin-top: 0.25rem;
     }
 
     /* Leads */
-    .leads-container {
+    .leads-list {
+      padding-left: 1.4rem;
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.45rem;
     }
 
-    .lead-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      padding: 0.65rem 0.85rem;
-      border-radius: 6px;
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    .lead-idx {
-      background: #2563eb;
-      color: #ffffff;
-      font-weight: 800;
-      font-size: 0.7rem;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      margin-top: 1px;
-    }
-
-    .lead-content {
-      font-size: 0.84rem;
-      color: #1e293b;
-      font-weight: 550;
-      line-height: 1.5;
+    .lead-item {
+      font-size: 0.85rem;
+      color: #000000;
+      line-height: 1.55;
+      font-weight: 500;
     }
 
     /* Evidence Citations */
-    .evidence-grid {
+    .evidence-list {
       display: flex;
       flex-direction: column;
-      gap: 0.65rem;
+      gap: 0.75rem;
     }
 
-    .ev-card {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-left: 3.5px solid #0284c7;
-      padding: 0.65rem 0.95rem;
-      border-radius: 4px;
-      page-break-inside: avoid;
-      break-inside: avoid;
+    .ev-entry {
+      padding: 0.35rem 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .ev-entry:last-child {
+      border-bottom: none;
     }
 
     .ev-claim {
-      font-size: 0.76rem;
-      font-weight: 750;
-      color: #0369a1;
-      margin-bottom: 0.25rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #000000;
+      margin-bottom: 0.2rem;
     }
 
     .ev-quote {
-      font-size: 0.8rem;
-      color: #334155;
+      font-size: 0.83rem;
+      color: #1e293b;
       font-style: italic;
-      line-height: 1.45;
+      line-height: 1.5;
+      border-left: 3px solid #94a3b8;
+      padding-left: 0.65rem;
+      margin: 0.25rem 0;
     }
 
     .ev-source {
-      font-size: 0.68rem;
+      font-size: 0.7rem;
       color: #64748b;
-      margin-top: 0.35rem;
       font-family: 'JetBrains Mono', monospace;
     }
 
     /* Anomalies */
-    .anomaly-box {
-      background: #fffbeb;
-      border: 1.5px solid #fde68a;
-      border-left: 4px solid #d97706;
-      border-radius: 6px;
-      padding: 0.85rem 1.25rem;
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
     .anomaly-list {
-      padding-left: 1.2rem;
-      color: #92400e;
-      font-size: 0.83rem;
-      font-weight: 600;
-      line-height: 1.6;
+      padding-left: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      color: #000000;
+      font-size: 0.85rem;
+      line-height: 1.55;
     }
 
     /* Rendered Markdown Dossier */
     .dossier-rendered-content {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      padding: 1.25rem 1.45rem;
+      padding: 0.25rem 0;
       display: flex;
       flex-direction: column;
       gap: 0.45rem;
@@ -1511,31 +1447,29 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
 
     .pdf-h1 {
       font-size: 1.12rem;
-      font-weight: 850;
-      color: #0f172a;
-      margin: 0.75rem 0 0.35rem 0;
-      padding-bottom: 0.35rem;
-      border-bottom: 1.5px solid #e2e8f0;
+      font-weight: 800;
+      color: #000000;
+      margin: 0.9rem 0 0.35rem 0;
     }
 
     .pdf-h2 {
-      font-size: 0.95rem;
+      font-size: 0.98rem;
       font-weight: 750;
-      color: #1d4ed8;
-      margin: 0.7rem 0 0.25rem 0;
+      color: #000000;
+      margin: 0.75rem 0 0.3rem 0;
     }
 
     .pdf-h3 {
       font-size: 0.88rem;
       font-weight: 700;
-      color: #0f172a;
-      margin: 0.5rem 0 0.2rem 0;
+      color: #1e293b;
+      margin: 0.6rem 0 0.2rem 0;
     }
 
     .pdf-p {
-      font-size: 0.84rem;
+      font-size: 0.85rem;
       line-height: 1.62;
-      color: #1e293b;
+      color: #000000;
       margin-bottom: 0.4rem;
     }
 
@@ -1548,19 +1482,30 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
     }
 
     .pdf-li {
-      font-size: 0.83rem;
-      color: #1e293b;
+      font-size: 0.85rem;
+      color: #000000;
       line-height: 1.5;
     }
 
     .pdf-bold {
-      font-weight: 750;
-      color: #0f172a;
+      font-weight: 800;
+      color: #000000;
     }
 
     .pdf-italic {
       font-style: italic;
-      color: #475569;
+      color: #000000;
+    }
+
+    /* Yellow Highlighter Mark on specific terms only */
+    .pdf-highlight {
+      background-color: #fef08a !important;
+      color: #000000 !important;
+      padding: 0.1em 0.32em;
+      border-radius: 2px;
+      font-weight: 750;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
 
     .pdf-code {
@@ -1569,29 +1514,30 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
       color: #0f172a;
       padding: 0.1rem 0.35rem;
       border-radius: 3px;
-      font-size: 0.78rem;
+      font-size: 0.8rem;
     }
 
     .pdf-quote {
-      border-left: 3.5px solid #2563eb;
-      background: #eff6ff;
-      padding: 0.5rem 0.85rem;
+      border-left: 3px solid #94a3b8;
+      background: transparent;
+      padding: 0.4rem 0.75rem;
       font-style: italic;
-      color: #1e40af;
+      color: #1e293b;
       margin: 0.4rem 0;
-      font-size: 0.82rem;
+      font-size: 0.83rem;
     }
 
     /* Certification Footer */
     .report-footer {
       margin-top: 2.5rem;
       padding-top: 1.25rem;
-      border-top: 1.5px solid #cbd5e1;
+      border-top: 1px solid #e2e8f0;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.72rem;
-      color: #64748b;
+      font-size: 0.74rem;
+      color: #475569;
+      font-weight: 600;
     }
 
     .footer-disclaimer {
@@ -1660,7 +1606,11 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
     <header class="report-header">
       <div class="agency-banner">
         <div class="agency-identity">
-          <div class="agency-logo-icon">CL</div>
+          <div class="agency-logo-icon" title="CrimeLens">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2.5V21.5M2.5 12H21.5M5.28 5.28L18.72 18.72M5.28 18.72L18.72 5.28" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round"/>
+            </svg>
+          </div>
           <div class="agency-titles">
             <h1>CrimeLens Forensic Intelligence Platform</h1>
             <p>Criminal Network Analysis & Evidence Synthesis Division</p>
@@ -1722,7 +1672,7 @@ function buildPrintableDossierHtml({ caseId, caseTitle, analysis }) {
 }
 
 // Inner Graph Canvas Component
-function GraphCanvas({ caseId, caseTitle }) {
+function GraphCanvas({ caseId, caseTitle, onOpenCopilot }) {
   const reactFlowInstance = useReactFlow();
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -1750,9 +1700,108 @@ function GraphCanvas({ caseId, caseTitle }) {
   const [analyzingAi, setAnalyzingAi] = useState(false);
   const [aiAnalysisResult, setAiAnalysisResult] = useState(null);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [savedAiStatus, setSavedAiStatus] = useState({
+    hasSavedReport: false,
+    isNetworkChanged: false,
+    savedAt: null,
+  });
+
+  // Check if a saved network intelligence report exists in backend store
+  const checkAiReportStatus = useCallback(async () => {
+    if (!caseId) return;
+    try {
+      const st = await apiClient(`/api/cases/${caseId}/intelligence/analyze/status?mode=full`);
+      if (st?.has_saved_report) {
+        setSavedAiStatus({
+          hasSavedReport: true,
+          isNetworkChanged: !!st.is_network_changed,
+          savedAt: st.saved_at,
+        });
+        if (st.analysis) {
+          setAiAnalysisResult(st.analysis);
+        }
+      } else {
+        setSavedAiStatus({
+          hasSavedReport: false,
+          isNetworkChanged: false,
+          savedAt: null,
+        });
+      }
+    } catch (e) {
+      console.warn("Failed checking AI report status:", e);
+    }
+  }, [caseId]);
+
+  useEffect(() => {
+    checkAiReportStatus();
+  }, [checkAiReportStatus]);
 
   // Fullscreen / Expanded Canvas Mode
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // AI Doubt Clarification state for selected element (node or edge)
+  const [doubtQuery, setDoubtQuery] = useState("");
+  const [clarifyingAi, setClarifyingAi] = useState(false);
+  const [aiClarification, setAiClarification] = useState(null);
+  const [aiClarificationError, setAiClarificationError] = useState(null);
+
+  // Compute direct connections for the currently selected node
+  const selectedNodeConnections = useMemo(() => {
+    if (!selectedNodeData?.id || !edges.length) return [];
+    return edges
+      .filter((e) => e.source === selectedNodeData.id || e.target === selectedNodeData.id)
+      .map((e) => {
+        const isOut = e.source === selectedNodeData.id;
+        const otherNodeId = isOut ? e.target : e.source;
+        const otherNode = nodes.find((n) => n.id === otherNodeId);
+        return {
+          edgeId: e.id,
+          relationship: e.data?.relationship || "CONNECTED_TO",
+          status: e.data?.status || "PREDICTED",
+          confidence: e.data?.confidence,
+          isOut,
+          otherId: otherNodeId,
+          otherName: otherNode?.data?.name || "Unknown Entity",
+          otherType: otherNode?.data?.type || "Entity",
+          evidenceSnippet: e.data?.evidenceSnippet,
+          sourceDocumentId: e.data?.sourceDocumentId,
+        };
+      });
+  }, [selectedNodeData, edges, nodes]);
+
+  const handleClarifyDoubt = async (customQuestion = null) => {
+    const q = (customQuestion || doubtQuery).trim();
+    if (!q || clarifyingAi) return;
+
+    setClarifyingAi(true);
+    setAiClarificationError(null);
+
+    let contextPrompt = "";
+    if (selectedNodeData) {
+      contextPrompt = `Regarding entity "${selectedNodeData.canonical_name || selectedNodeData.name}" (${selectedNodeData.type}): ${q}. Please answer clearly, citing verified case evidence, connections, and document sources.`;
+    } else if (selectedEdgeData) {
+      contextPrompt = `Regarding the relationship "${selectedEdgeData.relationship}" between entities in this case: ${q}. Please explain the evidence anchor, confidence, and investigative significance.`;
+    }
+
+    try {
+      const res = await apiClient(`/api/cases/${caseId}/intelligence/copilot`, {
+        method: "POST",
+        body: JSON.stringify({
+          question: contextPrompt,
+          history: [],
+        }),
+      });
+      setAiClarification({
+        question: q,
+        answer: res.answer || "No response received from intelligence engine.",
+      });
+      setDoubtQuery("");
+    } catch (err) {
+      setAiClarificationError("Could not clarify doubt at this time. Please retry.");
+    } finally {
+      setClarifyingAi(false);
+    }
+  };
 
   const handleToggleExpand = useCallback(() => {
     setIsExpanded((prev) => {
@@ -1959,6 +2008,10 @@ function GraphCanvas({ caseId, caseTitle }) {
     setSelectedEdgeData(null);
     setExpandFeedback(null);
     setIsInspectorOpen(true);
+    setDoubtQuery("");
+    setAiClarification(null);
+    setAiClarificationError(null);
+    setClarifyingAi(false);
     setSelectedNodeData({
       id: node.id,
       name: node.data.name,
@@ -2005,6 +2058,10 @@ function GraphCanvas({ caseId, caseTitle }) {
     setSelectedNodeData(null);
     setExpandFeedback(null);
     setIsInspectorOpen(true);
+    setDoubtQuery("");
+    setAiClarification(null);
+    setAiClarificationError(null);
+    setClarifyingAi(false);
     setSelectedEdgeData({
       relationship_id: edge.id,
       relationship: edge.data?.relationship,
@@ -2164,8 +2221,22 @@ function GraphCanvas({ caseId, caseTitle }) {
   };
 
   // Trigger Deep AI Reasoning Analysis (Mode A or Mode B)
-  const handleRunAiAnalysis = async (mode = "full", targetNodeId = null) => {
+  const handleRunAiAnalysis = async (mode = "full", targetNodeId = null, forceRefresh = false) => {
     if (!caseId) return;
+
+    // Instant open if report is already saved and network has not changed
+    if (
+      mode === "full" &&
+      !targetNodeId &&
+      !forceRefresh &&
+      savedAiStatus.hasSavedReport &&
+      !savedAiStatus.isNetworkChanged &&
+      aiAnalysisResult
+    ) {
+      setIsAiModalOpen(true);
+      return;
+    }
+
     setAnalyzingAi(true);
     try {
       const selectedIds = targetNodeId
@@ -2177,9 +2248,17 @@ function GraphCanvas({ caseId, caseTitle }) {
           mode,
           selected_node_ids: selectedIds,
           hops: 2,
+          force_refresh: forceRefresh,
         }),
       });
       setAiAnalysisResult(result);
+      if (mode === "full" && !targetNodeId) {
+        setSavedAiStatus({
+          hasSavedReport: true,
+          isNetworkChanged: false,
+          savedAt: result.saved_at || new Date().toISOString(),
+        });
+      }
       setIsAiModalOpen(true);
     } catch (err) {
       alert("AI analysis failed: " + (err?.message || "Please check backend connection"));
@@ -2273,19 +2352,37 @@ function GraphCanvas({ caseId, caseTitle }) {
           {/* AI Network Analysis Button */}
           <button
             onClick={() => handleRunAiAnalysis("full")}
-            className="tool-btn tool-btn-primary"
+            className={`tool-btn tool-btn-primary ${savedAiStatus.hasSavedReport && !savedAiStatus.isNetworkChanged ? "tool-btn-saved" : ""}`}
             disabled={analyzingAi}
-            title="Run Gemini/Groq Deep Intelligence Reasoning over the Network"
+            title={
+              savedAiStatus.hasSavedReport && !savedAiStatus.isNetworkChanged
+                ? "Saved Analysis Report (Network Synced) - Click to view"
+                : savedAiStatus.hasSavedReport && savedAiStatus.isNetworkChanged
+                ? "Network modified since last analysis - Click to update report"
+                : "Analyze Network with Gemini"
+            }
           >
-            {analyzingAi && (
+            {analyzingAi ? (
               <span className="ai-spark-icon">
                 <svg className="spinning" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
                   <path d="M12 2a10 10 0 0 1 10 10" />
                 </svg>
               </span>
-            )}
-            <span>{analyzingAi ? "Analyzing Network..." : "AI Network Analysis"}</span>
+            ) : savedAiStatus.hasSavedReport && !savedAiStatus.isNetworkChanged ? (
+              <span className="ai-status-dot saved-dot" />
+            ) : savedAiStatus.hasSavedReport && savedAiStatus.isNetworkChanged ? (
+              <span className="ai-status-dot changed-dot" />
+            ) : null}
+            <span>
+              {analyzingAi
+                ? "Analyzing Network..."
+                : savedAiStatus.hasSavedReport && !savedAiStatus.isNetworkChanged
+                ? "AI Network Report"
+                : savedAiStatus.hasSavedReport && savedAiStatus.isNetworkChanged
+                ? "Update AI Analysis"
+                : "AI Network Analysis"}
+            </span>
           </button>
 
           <div className="toolbar-divider action-divider" />
@@ -2353,24 +2450,8 @@ function GraphCanvas({ caseId, caseTitle }) {
 
       {/* 2. MAIN GRAPH CANVAS & SIDEBAR */}
       <div className="graph-main-split">
-        {/* GRAPH VIEWPORT */}
-        <div className="graph-viewport-area">
-          {/* Floating Back Button in Fullscreen Mode */}
-          {isExpanded && (
-            <div className="fullscreen-floating-back">
-              <button
-                onClick={handleToggleExpand}
-                className="fullscreen-floating-back-btn"
-                title="Exit full screen (or press Esc)"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 12H5M12 19l-7-7 7-7" />
-                </svg>
-                <span>Back</span>
-                <kbd className="fs-kbd-pill">ESC</kbd>
-              </button>
-            </div>
-          )}
+          {/* GRAPH VIEWPORT */}
+          <div className="graph-viewport-area">
           {loading && (
             <div className="graph-overlay-loading">
               <div className="mini-radar-pulse" />
@@ -2600,6 +2681,168 @@ function GraphCanvas({ caseId, caseTitle }) {
                     </div>
                   )}
 
+                  {/* 8. VERIFIED DIRECT CONNECTIONS & EVIDENCE */}
+                  <div className="entity-meta-section connections-meta-section">
+                    <div className="section-title-badge-row">
+                      <span className="meta-section-label">Verified Connections ({selectedNodeConnections.length}):</span>
+                    </div>
+
+                    {selectedNodeConnections.length > 0 ? (
+                      <div className="node-connections-list">
+                        {selectedNodeConnections.map((conn, idx) => (
+                          <div key={idx} className="node-connection-card">
+                            <div className="connection-header-row">
+                              <span className="connection-rel-tag">
+                                {conn.isOut ? "➔" : "⬅"} {conn.relationship}
+                              </span>
+                              {conn.confidence && (
+                                <span className="connection-conf-badge">
+                                  {Math.round(conn.confidence * 100)}%
+                                </span>
+                              )}
+                            </div>
+                            <div className="connection-target-row">
+                              <span className="target-indicator">•</span>
+                              <button
+                                type="button"
+                                className="target-entity-link"
+                                onClick={() => {
+                                  const targetNode = nodes.find((n) => n.id === conn.otherId);
+                                  if (targetNode) onNodeClick(null, targetNode);
+                                }}
+                                title="Click to inspect this entity"
+                              >
+                                {conn.otherName}
+                              </button>
+                              <span className="target-type-chip">{conn.otherType}</span>
+                            </div>
+                            {conn.evidenceSnippet && (
+                              <blockquote className="connection-snippet">
+                                "{conn.evidenceSnippet}"
+                              </blockquote>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="no-data-text">No direct connections recorded in current view.</span>
+                    )}
+                  </div>
+
+                  {/* 9. AI DOUBT CLARIFIER SECTION */}
+                  <div className="ai-doubt-clarifier-section">
+                    <div className="clarifier-header">
+                      <div className="clarifier-badge">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5">
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                        <span>Clarify Doubts with AI</span>
+                      </div>
+                      {onOpenCopilot && (
+                        <button
+                          type="button"
+                          onClick={onOpenCopilot}
+                          className="open-assistant-btn"
+                          title="Open full conversation in Investigation Assistant"
+                        >
+                          Full Chat ↗
+                        </button>
+                      )}
+                    </div>
+
+                    <p className="clarifier-desc">
+                      Ask AI anything about <strong>{selectedNodeData.canonical_name || selectedNodeData.name}</strong>, its motives, evidence, or ties.
+                    </p>
+
+                    {/* Quick Clarification Chips */}
+                    <div className="doubt-quick-chips">
+                      <button
+                        type="button"
+                        className="doubt-chip"
+                        onClick={() => handleClarifyDoubt(`What is the direct forensic evidence against this entity?`)}
+                        disabled={clarifyingAi}
+                      >
+                        🔍 Evidence against entity
+                      </button>
+                      <button
+                        type="button"
+                        className="doubt-chip"
+                        onClick={() => handleClarifyDoubt(`Explain the key relationships and motives connecting this entity to others in the case.`)}
+                        disabled={clarifyingAi}
+                      >
+                        🔗 Explain connections
+                      </button>
+                      <button
+                        type="button"
+                        className="doubt-chip"
+                        onClick={() => handleClarifyDoubt(`Are there any financial transactions or anomalies involving this entity?`)}
+                        disabled={clarifyingAi}
+                      >
+                        💳 Financial anomalies
+                      </button>
+                    </div>
+
+                    {/* Custom Question Input */}
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleClarifyDoubt();
+                      }}
+                      className="doubt-form-row"
+                    >
+                      <input
+                        type="text"
+                        value={doubtQuery}
+                        onChange={(e) => setDoubtQuery(e.target.value)}
+                        placeholder={`Ask AI a doubt about ${selectedNodeData.canonical_name || selectedNodeData.name}…`}
+                        disabled={clarifyingAi}
+                        className="doubt-input"
+                      />
+                      <button
+                        type="submit"
+                        disabled={clarifyingAi || !doubtQuery.trim()}
+                        className="doubt-submit-btn"
+                      >
+                        {clarifyingAi ? "…" : "Ask"}
+                      </button>
+                    </form>
+
+                    {/* Loading State */}
+                    {clarifyingAi && (
+                      <div className="doubt-thinking-box">
+                        <span className="mini-spin" />
+                        <span>Consulting case files & relationship graph…</span>
+                      </div>
+                    )}
+
+                    {/* Error State */}
+                    {aiClarificationError && (
+                      <div className="doubt-error-box">{aiClarificationError}</div>
+                    )}
+
+                    {/* Answer Card */}
+                    {aiClarification && (
+                      <div className="doubt-result-card">
+                        <div className="result-header">
+                          <span className="result-tag">AI Clarification</span>
+                          <button
+                            type="button"
+                            onClick={() => setAiClarification(null)}
+                            className="result-dismiss-btn"
+                            title="Dismiss answer"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <p className="result-question">“{aiClarification.question}”</p>
+                        <div className="result-answer-body">{aiClarification.answer}</div>
+                        <div className="result-footer-evidence">
+                          <span>🛡️ Grounded in Verified Case Evidence</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* AI NODE DOSSIER ACTION */}
                   <div className="ai-node-action-box">
                     <button
@@ -2710,6 +2953,107 @@ function GraphCanvas({ caseId, caseTitle }) {
                       <span className="no-snippet-text">No verbatim text anchor cited.</span>
                     )}
                   </div>
+
+                  {/* AI DOUBT CLARIFIER FOR RELATIONSHIP */}
+                  <div className="ai-doubt-clarifier-section">
+                    <div className="clarifier-header">
+                      <div className="clarifier-badge">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5">
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                        <span>Clarify Doubts with AI</span>
+                      </div>
+                      {onOpenCopilot && (
+                        <button
+                          type="button"
+                          onClick={onOpenCopilot}
+                          className="open-assistant-btn"
+                          title="Open full conversation in Investigation Assistant"
+                        >
+                          Full Chat ↗
+                        </button>
+                      )}
+                    </div>
+
+                    <p className="clarifier-desc">
+                      Clarify why this <strong>{selectedEdgeData.relationship}</strong> connection is significant and its corroborating evidence.
+                    </p>
+
+                    <div className="doubt-quick-chips">
+                      <button
+                        type="button"
+                        className="doubt-chip"
+                        onClick={() => handleClarifyDoubt(`Why is this ${selectedEdgeData.relationship} connection crucial to the investigation?`)}
+                        disabled={clarifyingAi}
+                      >
+                        🔍 Why is this link crucial?
+                      </button>
+                      <button
+                        type="button"
+                        className="doubt-chip"
+                        onClick={() => handleClarifyDoubt(`What specific evidence or testimony supports this ${selectedEdgeData.relationship} link?`)}
+                        disabled={clarifyingAi}
+                      >
+                        📄 Corroborating evidence
+                      </button>
+                    </div>
+
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleClarifyDoubt();
+                      }}
+                      className="doubt-form-row"
+                    >
+                      <input
+                        type="text"
+                        value={doubtQuery}
+                        onChange={(e) => setDoubtQuery(e.target.value)}
+                        placeholder="Ask AI a doubt about this connection…"
+                        disabled={clarifyingAi}
+                        className="doubt-input"
+                      />
+                      <button
+                        type="submit"
+                        disabled={clarifyingAi || !doubtQuery.trim()}
+                        className="doubt-submit-btn"
+                      >
+                        {clarifyingAi ? "…" : "Ask"}
+                      </button>
+                    </form>
+
+                    {clarifyingAi && (
+                      <div className="doubt-thinking-box">
+                        <span className="mini-spin" />
+                        <span>Analyzing connection evidence & testimony…</span>
+                      </div>
+                    )}
+
+                    {aiClarificationError && (
+                      <div className="doubt-error-box">{aiClarificationError}</div>
+                    )}
+
+                    {aiClarification && (
+                      <div className="doubt-result-card">
+                        <div className="result-header">
+                          <span className="result-tag">AI Clarification</span>
+                          <button
+                            type="button"
+                            onClick={() => setAiClarification(null)}
+                            className="result-dismiss-btn"
+                            title="Dismiss answer"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <p className="result-question">“{aiClarification.question}”</p>
+                        <div className="result-answer-body">{aiClarification.answer}</div>
+                        <div className="result-footer-evidence">
+                          <span>🛡️ Grounded in Verified Case Evidence</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -2742,9 +3086,6 @@ function GraphCanvas({ caseId, caseTitle }) {
               <div className="ai-modal-title-group">
                 <div className="ai-title-row">
                   <span className="ai-badge-pulse">CrimeLens Intelligence Engine</span>
-                  <span className="ai-mode-pill">
-                    {aiAnalysisResult.mode === "node" ? "Focused Node (2-Hop)" : "Full Network Analysis"}
-                  </span>
                 </div>
                 <h2 className="ai-modal-heading">
                   {aiAnalysisResult.mode === "node" && selectedNodeData
@@ -2753,13 +3094,30 @@ function GraphCanvas({ caseId, caseTitle }) {
                 </h2>
                 <p className="ai-modal-sub">
                   In-Scope: {aiAnalysisResult.in_scope_entities || 0} Entities • {aiAnalysisResult.in_scope_relationships || 0} Relationships • Confidence {Math.round((aiAnalysisResult.confidence_score || 0.85) * 100)}%
+                  {savedAiStatus.savedAt && ` • Saved ${new Date(savedAiStatus.savedAt).toLocaleDateString()} ${new Date(savedAiStatus.savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
                 </p>
               </div>
-              <button onClick={() => setIsAiModalOpen(false)} className="ai-close-btn" title="Close Dossier">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
-              </button>
+
+              <div className="ai-header-actions">
+                <button
+                  type="button"
+                  onClick={() => handleRunAiAnalysis("full", null, true)}
+                  className="ai-modal-reanalyze-btn"
+                  disabled={analyzingAi}
+                  title="Re-analyze and update the saved report"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                  </svg>
+                  <span>{analyzingAi ? "Analyzing..." : "Re-analyze"}</span>
+                </button>
+
+                <button onClick={() => setIsAiModalOpen(false)} className="ai-close-btn" title="Close Dossier">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             {/* Modal Body */}
@@ -3701,6 +4059,335 @@ function GraphCanvas({ caseId, caseTitle }) {
           line-height: 1.4;
         }
 
+        /* Direct Connections List in Node Inspector */
+        .connections-meta-section {
+          margin-top: 0.75rem;
+          padding-top: 0.75rem;
+          border-top: 1px solid #e2e8f0;
+        }
+
+        .section-title-badge-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 0.4rem;
+        }
+
+        .node-connections-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.45rem;
+          margin-top: 0.35rem;
+        }
+
+        .node-connection-card {
+          padding: 0.5rem 0.65rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 7px;
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+          transition: all 0.15s ease;
+        }
+
+        .node-connection-card:hover {
+          border-color: #bfdbfe;
+          background: #f0fdf4;
+        }
+
+        .connection-header-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.4rem;
+        }
+
+        .connection-rel-tag {
+          font-size: 0.64rem;
+          font-weight: 750;
+          color: #2563eb;
+          letter-spacing: 0.03em;
+        }
+
+        .connection-conf-badge {
+          font-size: 0.6rem;
+          font-weight: 700;
+          color: #15803d;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          padding: 1px 5px;
+          border-radius: 3px;
+        }
+
+        .connection-target-row {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          flex-wrap: wrap;
+        }
+
+        .target-indicator {
+          color: #94a3b8;
+          font-weight: bold;
+        }
+
+        .target-entity-link {
+          background: none;
+          border: none;
+          padding: 0;
+          color: #0f172a;
+          font-size: 0.76rem;
+          font-weight: 650;
+          cursor: pointer;
+          text-decoration: underline;
+          text-decoration-color: #cbd5e1;
+          transition: color 0.15s ease;
+          text-align: left;
+        }
+
+        .target-entity-link:hover {
+          color: #2563eb;
+          text-decoration-color: #2563eb;
+        }
+
+        .target-type-chip {
+          font-size: 0.58rem;
+          font-weight: 700;
+          padding: 1px 5px;
+          background: #e2e8f0;
+          color: #475569;
+          border-radius: 3px;
+          text-transform: uppercase;
+        }
+
+        .connection-snippet {
+          margin: 0.15rem 0 0;
+          padding: 0.25rem 0.45rem;
+          background: #ffffff;
+          border-left: 2.5px solid #2563eb;
+          border-radius: 0 3px 3px 0;
+          font-size: 0.68rem;
+          color: #334155;
+          font-style: italic;
+          line-height: 1.35;
+        }
+
+        /* AI Doubt Clarifier Section in Inspector */
+        .ai-doubt-clarifier-section {
+          margin-top: 1rem;
+          padding: 0.85rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 0.55rem;
+        }
+
+        .clarifier-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.5rem;
+        }
+
+        .clarifier-badge {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          font-size: 0.72rem;
+          font-weight: 750;
+          color: #1d4ed8;
+        }
+
+        .open-assistant-btn {
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          color: #2563eb;
+          font-size: 0.64rem;
+          font-weight: 700;
+          padding: 2px 7px;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .open-assistant-btn:hover {
+          background: #2563eb;
+          color: #ffffff;
+          border-color: #2563eb;
+        }
+
+        .clarifier-desc {
+          font-size: 0.71rem;
+          color: #64748b;
+          margin: 0;
+          line-height: 1.4;
+        }
+
+        .doubt-quick-chips {
+          display: flex;
+          flex-direction: column;
+          gap: 0.3rem;
+        }
+
+        .doubt-chip {
+          display: block;
+          text-align: left;
+          padding: 0.35rem 0.6rem;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: #1e293b;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .doubt-chip:hover:not(:disabled) {
+          background: #eff6ff;
+          border-color: #bfdbfe;
+          color: #1d4ed8;
+          transform: translateX(2px);
+        }
+
+        .doubt-form-row {
+          display: flex;
+          gap: 0.35rem;
+          margin-top: 0.2rem;
+        }
+
+        .doubt-input {
+          flex: 1;
+          min-width: 0;
+          height: 32px;
+          padding: 0 0.65rem;
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          font-size: 0.73rem;
+          color: #0f172a;
+          outline: none;
+          transition: border-color 0.15s ease;
+        }
+
+        .doubt-input:focus {
+          border-color: #2563eb;
+          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+        }
+
+        .doubt-submit-btn {
+          height: 32px;
+          padding: 0 0.75rem;
+          background: #2563eb;
+          color: #ffffff;
+          border: none;
+          border-radius: 6px;
+          font-size: 0.72rem;
+          font-weight: 750;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          flex-shrink: 0;
+        }
+
+        .doubt-submit-btn:hover:not(:disabled) {
+          background: #1d4ed8;
+        }
+
+        .doubt-submit-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .doubt-thinking-box {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.45rem 0.65rem;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          border-radius: 6px;
+          font-size: 0.7rem;
+          color: #1d4ed8;
+          font-weight: 600;
+        }
+
+        .doubt-error-box {
+          padding: 0.45rem 0.65rem;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          border-radius: 6px;
+          font-size: 0.7rem;
+          color: #dc2626;
+        }
+
+        .doubt-result-card {
+          padding: 0.65rem 0.75rem;
+          background: #ffffff;
+          border: 1px solid #bfdbfe;
+          border-radius: 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 0.4rem;
+          box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08);
+        }
+
+        .result-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .result-tag {
+          font-size: 0.62rem;
+          font-weight: 800;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          color: #2563eb;
+        }
+
+        .result-dismiss-btn {
+          background: none;
+          border: none;
+          padding: 0;
+          color: #94a3b8;
+          font-size: 0.75rem;
+          cursor: pointer;
+        }
+
+        .result-dismiss-btn:hover {
+          color: #0f172a;
+        }
+
+        .result-question {
+          margin: 0;
+          font-size: 0.72rem;
+          font-weight: 650;
+          color: #475569;
+          font-style: italic;
+        }
+
+        .result-answer-body {
+          font-size: 0.78rem;
+          line-height: 1.5;
+          color: #0f172a;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+
+        .result-footer-evidence {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          font-size: 0.6rem;
+          font-weight: 700;
+          color: #15803d;
+          padding-top: 0.3rem;
+          border-top: 1px dashed #e2e8f0;
+        }
+
         .panel-idle-card {
           padding: 3rem 1.5rem;
           display: flex;
@@ -3787,16 +4474,6 @@ function GraphCanvas({ caseId, caseTitle }) {
           color: #1d4ed8;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-        }
-
-        .ai-mode-pill {
-          background: #eff6ff;
-          border: 1px solid #bfdbfe;
-          color: #1d4ed8;
-          font-size: 0.7rem;
-          font-weight: 650;
-          padding: 0.15rem 0.55rem;
-          border-radius: 9999px;
         }
 
         .ai-modal-heading {
@@ -4054,6 +4731,48 @@ function GraphCanvas({ caseId, caseTitle }) {
         }
 
 
+        .ai-status-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          display: inline-block;
+          margin-right: 2px;
+        }
+        .ai-status-dot.saved-dot {
+          background: #10b981;
+          box-shadow: 0 0 6px #10b981;
+        }
+        .ai-status-dot.changed-dot {
+          background: #f59e0b;
+          box-shadow: 0 0 6px #f59e0b;
+        }
+        .ai-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+        }
+        .ai-modal-reanalyze-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          background: #f1f5f9;
+          border: 1px solid #cbd5e1;
+          color: #0f172a;
+          font-size: 0.74rem;
+          font-weight: 700;
+          padding: 0.35rem 0.75rem;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .ai-modal-reanalyze-btn:hover:not(:disabled) {
+          background: #e2e8f0;
+          border-color: #94a3b8;
+        }
+        .ai-modal-reanalyze-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
         .ai-card-actions {
           display: flex;
           align-items: center;
@@ -4282,10 +5001,10 @@ function GraphCanvas({ caseId, caseTitle }) {
 }
 
 // Wrapper providing ReactFlow context
-export default function CaseGraphView({ caseId, caseTitle }) {
+export default function CaseGraphView({ caseId, caseTitle, onOpenCopilot }) {
   return (
     <ReactFlowProvider>
-      <GraphCanvas caseId={caseId} caseTitle={caseTitle} />
+      <GraphCanvas caseId={caseId} caseTitle={caseTitle} onOpenCopilot={onOpenCopilot} />
     </ReactFlowProvider>
   );
 }

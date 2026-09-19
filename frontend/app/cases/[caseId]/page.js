@@ -9,6 +9,7 @@ import CaseGraphView from "../../../components/CaseGraphView";
 import InvestigationPathView from "../../../components/InvestigationPathView";
 import CaseInsightsView from "../../../components/CaseInsightsView";
 import CaseCopilotView from "../../../components/CaseCopilotView";
+import CaseInvestigatorChatView from "../../../components/CaseInvestigatorChatView";
 
 export function parseCaseMeta(caseItem) {
   let meta = {
@@ -588,10 +589,10 @@ export default function CaseDetailsPage() {
                     >
                       <div className="nav-item-icon">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                         </svg>
                       </div>
-                      <span className="nav-item-label">Intelligence</span>
+                      <span className="nav-item-label">Intelligence Assistant</span>
                     </button>
                   </nav>
                 </div>
@@ -641,7 +642,12 @@ export default function CaseDetailsPage() {
                 {/* TAB 1: NETWORK GRAPH INVESTIGATION */}
                 {(activeTab === "graph" || activeTab === "copilot") && (
                   <section className="graph-workspace-section">
-                    <CaseGraphView key={graphRefreshKey} caseId={caseId} caseTitle={caseData?.title} />
+                    <CaseGraphView
+                      key={graphRefreshKey}
+                      caseId={caseId}
+                      caseTitle={caseData?.title}
+                      onOpenCopilot={() => setIsCopilotOpen(true)}
+                    />
                   </section>
                 )}
 
@@ -652,10 +658,15 @@ export default function CaseDetailsPage() {
                   </section>
                 )}
 
-                {/* TAB 4: INTELLIGENCE / INSIGHTS */}
+                {/* TAB 4: INTELLIGENCE ASSISTANT & CHAT WORKSPACE */}
                 {activeTab === "insights" && (
-                  <section className="graph-workspace-section">
-                    <CaseInsightsView key={graphRefreshKey} caseId={caseId} />
+                  <section className="graph-workspace-section" style={{ padding: 0, height: "100%" }}>
+                    <CaseInvestigatorChatView
+                      key={graphRefreshKey}
+                      caseId={caseId}
+                      caseData={caseData}
+                      documents={documents}
+                    />
                   </section>
                 )}
 
@@ -1000,8 +1011,8 @@ export default function CaseDetailsPage() {
                 )}
               </div>
 
-              {/* FLOATING QUICK-ACCESS TRIGGER */}
-              {!isCopilotOpen && (
+              {/* FLOATING QUICK-ACCESS TRIGGER (HIDDEN ON NETWORK PATH & EVIDENCE & DOCUMENTS) */}
+              {!isCopilotOpen && activeTab === "graph" && (
                 <button
                   onClick={() => setIsCopilotOpen(true)}
                   className="floating-copilot-bubble-btn"
@@ -1010,7 +1021,7 @@ export default function CaseDetailsPage() {
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
-                  <span>AI Copilot</span>
+                  <span>Investigation Assistant</span>
                 </button>
               )}
             </main>
@@ -1136,12 +1147,13 @@ export default function CaseDetailsPage() {
           font-family: 'JetBrains Mono', monospace;
           font-size: 0.72rem;
           font-weight: 700;
-          color: #ffffff !important;
-          background: #0f172a !important;
-          border: 1px solid #0f172a !important;
+          color: #1d4ed8 !important;
+          background: #eff6ff !important;
+          border: 1px solid #bfdbfe !important;
           padding: 2.5px 8px;
-          border-radius: 5px;
-          letter-spacing: 0.03em;
+          border-radius: 6px;
+          letter-spacing: 0.04em;
+          box-shadow: 0 1px 2px rgba(37, 99, 235, 0.05);
         }
 
         .badges-right-group {
@@ -1559,10 +1571,9 @@ export default function CaseDetailsPage() {
           max-height: calc(100vh - 110px);
           overflow: hidden;
           border-radius: 12px;
-          border: 1px solid #1f2836;
-          border-top: 1px solid rgba(255, 255, 255, 0.18);
-          background: rgba(18, 24, 34, 0.96);
-          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          box-shadow: 0 12px 36px rgba(15, 23, 42, 0.12);
           display: flex;
           flex-direction: column;
           z-index: 40;
@@ -1578,7 +1589,7 @@ export default function CaseDetailsPage() {
             max-height: 100vh;
             border-radius: 0;
             z-index: 1000;
-            box-shadow: -10px 0 35px rgba(0, 0, 0, 0.75);
+            box-shadow: -10px 0 35px rgba(0, 0, 0, 0.25);
           }
 
           .copilot-mobile-backdrop {
@@ -1587,7 +1598,7 @@ export default function CaseDetailsPage() {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(18, 23, 22, 0.75);
+            background: rgba(15, 23, 42, 0.45);
             backdrop-filter: blur(4px);
             z-index: 999;
           }
@@ -1603,10 +1614,10 @@ export default function CaseDetailsPage() {
           gap: 0.5rem;
           padding: 0.65rem 1.1rem;
           border-radius: 30px;
-          background: linear-gradient(180deg, #35a7ff 0%, #1e8fe6 100%);
-          color: #171d1c;
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+          background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+          color: #ffffff;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
           font-size: 0.82rem;
           font-weight: 750;
           cursor: pointer;
@@ -1614,9 +1625,9 @@ export default function CaseDetailsPage() {
         }
 
         .floating-copilot-bubble-btn:hover {
-          background: linear-gradient(180deg, #4cb3ff 0%, #35a7ff 100%);
+          background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
           transform: translateY(-2px);
-          box-shadow: 0 12px 28px rgba(53, 167, 255, 0.4);
+          box-shadow: 0 12px 28px rgba(37, 99, 235, 0.45);
         }
 
         .bubble-live-dot {
@@ -1783,11 +1794,12 @@ export default function CaseDetailsPage() {
           font-size: 0.8rem;
           font-weight: 700;
           letter-spacing: 0.04em;
-          color: #35a7ff;
-          background: rgba(53, 167, 255, 0.12);
-          border: 1px solid rgba(53, 167, 255, 0.28);
-          border-radius: 5px;
+          color: #1d4ed8;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          border-radius: 6px;
           padding: 0.2rem 0.6rem;
+          box-shadow: 0 1px 2px rgba(37, 99, 235, 0.05);
         }
 
         .status-pill {

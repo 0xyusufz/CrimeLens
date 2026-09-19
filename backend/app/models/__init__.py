@@ -13,6 +13,7 @@ from app.models.enums import (
     RelationshipType,
     UserRole,
 )
+from app.models.chat import CaseChatMessage
 from app.models.evidence import EvidenceBlock
 from app.models.intelligence import IntelligenceOutput
 from app.models.relationship import RelationshipStaging
@@ -23,6 +24,7 @@ __all__ = [
     "AuditLog",
     "AuditResult",
     "Case",
+    "CaseChatMessage",
     "CaseMember",
     "CaseStatus",
     "Document",

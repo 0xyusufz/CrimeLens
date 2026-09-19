@@ -116,6 +116,38 @@ function PathRelationshipArrow({ rel, onClick, isSelected }) {
   );
 }
 
+function PathVerticalArrow({ rel, onClick, isSelected }) {
+  const cfg = RELATIONSHIP_COLORS[rel.status] || RELATIONSHIP_COLORS.CONFIRMED;
+  const confidence = rel.confidence != null ? Math.round(rel.confidence * 100) : null;
+
+  return (
+    <div className="path-vert-connector-wrap">
+      <button
+        className={`path-vert-arrow-btn${isSelected ? " path-vert-arrow-active" : ""}`}
+        onClick={() => onClick(rel)}
+        style={{ "--rel-color": cfg.stroke }}
+        title="Click to view evidence details"
+      >
+        <div className="vert-arrow-stem-top" />
+        <div className="path-rel-pill vert-rel-pill">
+          <span className="path-rel-type">{rel.relationship}</span>
+          {confidence != null && (
+            <span className="path-rel-confidence" style={{ color: cfg.stroke }}>
+              {confidence}%
+            </span>
+          )}
+        </div>
+        <div className="vert-arrow-stem-bottom">
+          <div className="vert-arrow-bar" />
+          <svg width="18" height="15" viewBox="0 0 14 11" className="vert-arrowhead">
+            <polygon points="1,1 13,1 7,10" fill={cfg.stroke} />
+          </svg>
+        </div>
+      </button>
+    </div>
+  );
+}
+
 function CustomEntitySelect({ value, onChange, entities, placeholder = "Select entity...", disabled = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [openUpwards, setOpenUpwards] = useState(false);
@@ -299,6 +331,7 @@ export default function InvestigationPathView({ caseId }) {
   const [evidenceData, setEvidenceData] = useState(null);
   const [loadingEvidence, setLoadingEvidence] = useState(false);
   const [evidenceError, setEvidenceError] = useState(null);
+  const [flowLayout, setFlowLayout] = useState("vertical");
 
   const loadEntities = useCallback(async () => {
     if (!caseId) return;
@@ -752,8 +785,8 @@ export default function InvestigationPathView({ caseId }) {
         }
         .path-chain-container {
           overflow-x: auto;
-          padding: 1.5rem 1rem;
-          background: #f1f5f9;
+          padding: 1.25rem 1.15rem;
+          background: #f8fafc;
           border: 1px solid #e2e8f0;
           border-radius: 12px;
           margin-bottom: 0;
@@ -761,9 +794,135 @@ export default function InvestigationPathView({ caseId }) {
         .path-chain {
           display: flex;
           align-items: center;
-          min-width: max-content;
-          padding: 0.5rem 1rem;
-          gap: 0.25rem;
+          padding: 0.75rem 0.5rem;
+          gap: 0.5rem;
+        }
+        .path-chain-horizontal {
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          scrollbar-width: thin;
+        }
+        .path-chain-vertical {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0;
+          padding: 1.5rem 0.5rem;
+          width: 100%;
+          max-width: 460px;
+          margin: 0 auto;
+        }
+        .path-chain-vertical .path-node-card {
+          width: 100%;
+          max-width: 320px;
+          min-width: 280px;
+          text-align: center;
+        }
+        .path-vert-step-group {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 100%;
+        }
+        .path-vert-connector-wrap {
+          display: flex;
+          justify-content: center;
+          width: 100%;
+          margin: 2px 0;
+        }
+        .path-vert-arrow-btn {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          background: #ffffff;
+          border: 1.5px solid #cbd5e1;
+          border-radius: 10px;
+          cursor: pointer;
+          padding: 0.35rem 0.75rem;
+          transition: all 0.15s ease;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+        }
+        .path-vert-arrow-btn:hover {
+          border-color: #2563eb;
+          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+          transform: translateY(-1px);
+        }
+        .path-vert-arrow-active {
+          border-color: #2563eb;
+          background: #eff6ff;
+          box-shadow: 0 0 0 2px #bfdbfe;
+        }
+        .vert-arrow-stem-top {
+          width: 3px;
+          height: 16px;
+          background: var(--rel-color, #2563eb);
+          border-radius: 2px;
+        }
+        .vert-rel-pill {
+          margin: 4px 0;
+        }
+        .vert-arrow-stem-bottom {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+        .vert-arrow-bar {
+          width: 3px;
+          height: 16px;
+          background: var(--rel-color, #2563eb);
+          border-radius: 2px;
+        }
+        .vert-arrowhead {
+          margin-top: -1px;
+        }
+        .path-layout-toggle {
+          display: inline-flex;
+          align-items: center;
+          background: #ffffff;
+          padding: 3px;
+          border-radius: 8px;
+          border: 1.5px solid #cbd5e1;
+          gap: 4px;
+        }
+        .layout-toggle-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 5px 12px;
+          border-radius: 6px;
+          border: 1px solid transparent;
+          background: #ffffff;
+          font-size: 0.76rem;
+          font-weight: 700;
+          color: #475569;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .layout-toggle-btn:hover {
+          color: #0f172a;
+          background: #f1f5f9;
+        }
+        .layout-toggle-btn.active {
+          background: #0f172a;
+          color: #ffffff;
+          border-color: #0f172a;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+        }
+        .path-result-title-group {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .path-step-item {
+          display: inline-flex;
+          align-items: center;
+          flex-shrink: 0;
+        }
+        .path-step-group {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          flex-shrink: 0;
         }
         .path-node-card {
           border-radius: 10px;
@@ -803,14 +962,15 @@ export default function InvestigationPathView({ caseId }) {
           flex-direction: column;
           align-items: center;
           gap: 0.35rem;
-          padding: 0.5rem 0.75rem;
+          padding: 0.4rem 0.6rem;
           background: transparent;
           border: 1px solid transparent;
           border-radius: 8px;
           cursor: pointer;
           transition: all 0.15s;
           flex-shrink: 0;
-          min-width: 140px;
+          min-width: 110px;
+          max-width: 160px;
         }
         .path-rel-arrow:hover {
           background: rgba(37, 99, 235, 0.06);
@@ -1092,44 +1252,124 @@ export default function InvestigationPathView({ caseId }) {
         {!querying && pathResult && pathResult.found && chain && (
           <>
             <div className="path-result-header">
-              <h3 className="path-result-title">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </svg>
-                Connection Flow
-              </h3>
-              <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                Click any arrow to view evidence document snippet
-              </span>
+              <div className="path-result-title-group">
+                <h3 className="path-result-title">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                  Connection Flow
+                </h3>
+                <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                  Click any arrow to view evidence document snippet
+                </span>
+              </div>
+
+              <div className="path-layout-toggle">
+                <button
+                  type="button"
+                  className={`layout-toggle-btn ${flowLayout === "vertical" ? "active" : ""}`}
+                  onClick={() => setFlowLayout("vertical")}
+                  title="Vertical step flow with downward arrows"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6">
+                    <line x1="12" y1="3" x2="12" y2="21" />
+                    <polyline points="19 14 12 21 5 14" />
+                  </svg>
+                  <span>Vertical Flow (↓)</span>
+                </button>
+                <button
+                  type="button"
+                  className={`layout-toggle-btn ${flowLayout === "horizontal" ? "active" : ""}`}
+                  onClick={() => setFlowLayout("horizontal")}
+                  title="Horizontal step flow"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6">
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <polyline points="14 5 21 12 14 19" />
+                  </svg>
+                  <span>Horizontal Flow (➔)</span>
+                </button>
+              </div>
             </div>
 
             {/* BOX FLOW CONTAINER */}
             <div className="path-chain-container">
-              <div className="path-chain">
-                {chain.map((item, idx) => {
-                  if (item.kind === "node") {
-                    const nodeIndex = Math.floor(idx / 2) + 1;
-                    return (
+              {flowLayout === "vertical" ? (
+                <div className="path-chain-vertical">
+                  {pathResult.nodes && pathResult.nodes.length > 0 && (
+                    <div className="path-vert-node-step">
                       <PathNodeCard
-                        key={`node-${idx}`}
-                        node={item.data}
-                        isSource={item.data.entity_id === pathResult.source_entity_id}
-                        isTarget={item.data.entity_id === pathResult.target_entity_id}
-                        stepIndex={nodeIndex}
+                        node={pathResult.nodes[0]}
+                        isSource={true}
+                        isTarget={pathResult.nodes[0].entity_id === pathResult.target_entity_id}
+                        stepIndex={1}
                       />
+                    </div>
+                  )}
+
+                  {(pathResult.relationships || []).map((rel, idx) => {
+                    const nextNode = (pathResult.nodes || [])[idx + 1];
+                    const stepNum = idx + 2;
+                    const isTarget = nextNode && nextNode.entity_id === pathResult.target_entity_id;
+
+                    return (
+                      <div key={`v-step-${rel.relationship_id || idx}`} className="path-vert-step-group">
+                        <PathVerticalArrow
+                          rel={rel}
+                          onClick={handleRelClick}
+                          isSelected={selectedRel?.relationship_id === rel.relationship_id}
+                        />
+                        {nextNode && (
+                          <PathNodeCard
+                            node={nextNode}
+                            isSource={false}
+                            isTarget={isTarget}
+                            stepIndex={stepNum}
+                          />
+                        )}
+                      </div>
                     );
-                  }
-                  return (
-                    <PathRelationshipArrow
-                      key={`rel-${idx}`}
-                      rel={item.data}
-                      onClick={handleRelClick}
-                      isSelected={selectedRel?.relationship_id === item.data.relationship_id}
-                    />
-                  );
-                })}
-              </div>
+                  })}
+                </div>
+              ) : (
+                <div className="path-chain path-chain-horizontal">
+                  {pathResult.nodes && pathResult.nodes.length > 0 && (
+                    <div className="path-step-item">
+                      <PathNodeCard
+                        node={pathResult.nodes[0]}
+                        isSource={true}
+                        isTarget={pathResult.nodes[0].entity_id === pathResult.target_entity_id}
+                        stepIndex={1}
+                      />
+                    </div>
+                  )}
+
+                  {(pathResult.relationships || []).map((rel, idx) => {
+                    const nextNode = (pathResult.nodes || [])[idx + 1];
+                    const stepNum = idx + 2;
+                    const isTarget = nextNode && nextNode.entity_id === pathResult.target_entity_id;
+
+                    return (
+                      <div key={`h-step-${rel.relationship_id || idx}`} className="path-step-group">
+                        <PathRelationshipArrow
+                          rel={rel}
+                          onClick={handleRelClick}
+                          isSelected={selectedRel?.relationship_id === rel.relationship_id}
+                        />
+                        {nextNode && (
+                          <PathNodeCard
+                            node={nextNode}
+                            isSource={false}
+                            isTarget={isTarget}
+                            stepIndex={stepNum}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {selectedRel && (

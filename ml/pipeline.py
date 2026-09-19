@@ -25,7 +25,10 @@ ML produces structured contract JSON. It NEVER writes to PostgreSQL or Neo4j,
 mints zero database UUIDs, generates zero case_ids, and performs no guilt prediction.
 """
 
+import logging
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 from ml.ai.providers.groq_provider import groq_extractor
 from ml.config import MLConfig, default_config

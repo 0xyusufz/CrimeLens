@@ -380,10 +380,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   line-height: 1.55 !important;
 }
 .case-number-badge, .case-uuid-pill {
-  color: #ffffff !important;
-  background: #0f172a !important;
-  border: 1px solid #0f172a !important;
+  color: #1d4ed8 !important;
+  background: #eff6ff !important;
+  border: 1px solid #bfdbfe !important;
   font-weight: 700 !important;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.05) !important;
 }
 .status-pill-open, .status-active, .status-active-text {
   color: #475569 !important;
@@ -752,6 +753,25 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .path-rel-type {
   color: #1e293b !important;
 }
+.path-chain-horizontal {
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+}
+.path-chain-horizontal .path-step-group,
+.path-chain-horizontal .path-step-item {
+  flex-shrink: 0 !important;
+}
+.path-chain-vertical {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+.path-chain-vertical .path-node-card {
+  width: 100% !important;
+  max-width: 340px !important;
+  min-width: 280px !important;
+}
 
 
 /* Copilot & Intelligence Light Theme */
@@ -854,6 +874,66 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   color: #ffffff !important;
   border: 1px solid #1d4ed8 !important;
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Status Dropdown Clean Light Controls (Not Dark Black) */
+.status-dropdown-trigger {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.45rem !important;
+  height: 32px !important;
+  padding: 0 0.75rem !important;
+  border-radius: 7px !important;
+  font-size: 0.76rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  outline: none !important;
+  user-select: none !important;
+  transition: all 0.15s ease !important;
+}
+.status-dropdown-trigger:hover:not(:disabled) {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+}
+.status-dropdown-trigger.is-open {
+  background: #ffffff !important;
+  border-color: #2563eb !important;
+  color: #0f172a !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+}
+.status-dropdown-trigger .status-dropdown-text {
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+.status-dropdown-trigger .status-dropdown-chevron {
+  color: #64748b !important;
+}
+.status-dropdown-menu {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.1), 0 4px 6px -2px rgba(15, 23, 42, 0.04) !important;
+}
+.status-dropdown-item {
+  color: #334155 !important;
+}
+.status-dropdown-item:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+.status-dropdown-item.is-selected {
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  font-weight: 700 !important;
+}
+.status-dropdown-item.is-selected .status-dropdown-check {
+  color: #2563eb !important;
 }
 
 @media (max-width: 760px) {
