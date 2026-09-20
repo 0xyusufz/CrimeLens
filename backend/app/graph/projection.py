@@ -115,6 +115,10 @@ def project_relationship(
     cypher = (
         "MATCH (a {entity_id: $source_entity_id}) "
         "MATCH (b {entity_id: $target_entity_id}) "
+        "OPTIONAL MATCH ()-[old_r {relationship_id: $relationship_id}]-() "
+        f"WHERE startNode(old_r) <> a OR endNode(old_r) <> b OR type(old_r) <> '{rel_type}' "
+        "DELETE old_r "
+        "WITH a, b "
         f"MERGE (a)-[r:{rel_type} {{relationship_id: $relationship_id}}]->(b) "
         "SET r.confidence = $confidence, "
         "    r.status = $status, "
